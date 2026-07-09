@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8" />
+<title>Project: Birthday Reset</title>
+<link rel="stylesheet" href="style.css?v=19" />
+</head>
+<body>
+
+<div id="game-viewport">
+  <div id="game-stage">
+
+    <div id="title-screen" class="screen">
+      <h1>PROJECT: BIRTHDAY RESET</h1>
+      <p class="subtitle">Deltarune-stílusú szülinapi kaland</p>
+      <button id="start-btn" class="pixel-btn">KATTINTS A KEZDÉSHEZ</button>
+      <p class="hint-small">Mozgás harcban: nyilak / WASD · ACT-menü: nyilak/WASD + Enter/szóköz (vagy kattintás)</p>
+    </div>
+
+    <div id="overworld-screen" class="screen hidden">
+      <div id="overworld-stage">
+        <div id="overworld-world">
+          <img id="overworld-bg" src="" alt="" />
+          <div id="overworld-npcs"></div>
+          <div id="overworld-player"><img src="assets/sprites/Bazsa_placeholder_down.png" alt="" /></div>
+        </div>
+        <div id="overworld-prompt" class="hidden">▶ Enter</div>
+
+        <div id="computer-choice-box" class="hidden">
+          <div id="choice-text"></div>
+          <div id="choice-buttons">
+            <button id="choice-start" class="pixel-btn">START</button>
+            <button id="choice-dad" class="pixel-btn">INKÁBB KIMEGYEK APÁHOZ</button>
+          </div>
+        </div>
+
+        <div id="corner-popup" class="hidden">
+          <img id="corner-popup-portrait" src="" alt="" class="hidden" />
+          <div id="corner-popup-text"></div>
+        </div>
+      </div>
+      <p class="hint-small">Mozgás: nyilak / WASD · Interakció: Enter / szóköz / kattintás</p>
+    </div>
+
+    <div id="game-screen" class="screen hidden">
+      <img id="zone-bg" src="" alt="" />
+
+      <div id="hp-row">
+        <span id="hp-text">HP 5 / 5</span>
+        <div id="hp-bar"><div id="hp-fill"></div></div>
+      </div>
+
+      <div id="battle-wrap">
+        <canvas id="battle-canvas" width="480" height="300"></canvas>
+      </div>
+
+      <div id="menu-box"></div>
+
+      <div id="dialogue-box">
+        <img id="portrait" src="" alt="" />
+        <div id="dialogue-text-wrap">
+          <div id="speaker-name"></div>
+          <div id="dialogue-text"></div>
+          <div id="continue-hint">▶ kattints / szóköz</div>
+        </div>
+      </div>
+
+      <div id="style-tag"></div>
+
+      <div id="gameover-overlay" class="hidden">
+        <img src="assets/UI/Game Over.png" alt="" />
+      </div>
+    </div>
+
+    <div id="end-screen" class="screen hidden">
+      <h1>HAPPY 13TH BIRTHDAY!</h1>
+      <p class="subtitle">Project: Birthday Reset — Complete.</p>
+      <button id="restart-btn" class="pixel-btn">ÚJRA A CÍMKÉPERNYŐRE</button>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/engine.js?v=19"></script>
+<script src="js/battle.js?v=19"></script>
+<script src="js/overworld.js?v=19"></script>
+<script src="js/zones.js?v=19"></script>
+<script src="js/main.js?v=19"></script>
+
+</body>
+</html>

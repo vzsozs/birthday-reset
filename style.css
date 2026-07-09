@@ -1,0 +1,463 @@
+* { box-sizing: border-box; }
+
+@font-face {
+  font-family: "Minecraft";
+  src: url("assets/Font/MinecraftStandard.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Minecraft";
+  src: url("assets/Font/MinecraftStandardBold.otf") format("opentype");
+  font-weight: bold;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Minecraft";
+  src: url("assets/Font/MinecraftStandardOblique.otf") format("opentype");
+  font-weight: normal;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Minecraft";
+  src: url("assets/Font/MinecraftStandardBoldOblique.otf") format("opentype");
+  font-weight: bold;
+  font-style: italic;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  color: #fff;
+  font-family: "Minecraft", "Courier New", Courier, monospace;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Fix belso felbontas (mint Undertale/Deltarune), ami felskalazodik az
+   ablakmerethez, letterboxolva -- ld. main.js updateScale(). */
+#game-viewport {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  overflow: hidden;
+}
+
+#game-stage {
+  position: relative;
+  width: 800px;
+  height: 640px;
+  flex: none;
+  transform-origin: center center;
+  border: 3px solid #fff;
+  overflow: hidden;
+  background: #000;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px;
+}
+
+.hidden { display: none !important; }
+
+h1 {
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.subtitle {
+  opacity: 0.8;
+}
+
+.hint-small {
+  opacity: 0.5;
+  font-size: 12px;
+}
+
+.pixel-btn {
+  background: #000;
+  color: #fff;
+  border: 3px solid #fff;
+  padding: 12px 22px;
+  font-family: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+.pixel-btn:hover,
+.pixel-btn-selected {
+  background: #fff;
+  color: #000;
+}
+
+#overworld-stage {
+  position: relative;
+  width: 640px;
+  height: 480px;
+  border: 3px solid #fff;
+  overflow: hidden;
+  background: #000;
+}
+
+#overworld-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  will-change: transform;
+}
+
+#overworld-bg {
+  display: block;
+  height: 100%;
+  width: auto;
+  min-width: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+#overworld-player {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 58px;
+  height: 100px;
+  pointer-events: none;
+}
+#overworld-player img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: block;
+}
+
+.overworld-npc {
+  position: absolute;
+  object-fit: contain;
+  object-position: bottom;
+  image-rendering: pixelated;
+  pointer-events: none;
+  animation: npcFloat 2.4s ease-in-out infinite;
+}
+
+.overworld-decor {
+  position: absolute;
+  object-fit: contain;
+  object-position: bottom;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+@keyframes npcFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+#overworld-prompt {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: #000;
+  color: #ffd400;
+  border: 2px solid #ffd400;
+  padding: 4px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#computer-choice-box {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  border: 3px solid #fff;
+  background: #000;
+  padding: 12px 16px;
+}
+
+#choice-text {
+  font-size: 17px;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+#choice-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#choice-buttons .pixel-btn {
+  font-size: 13px;
+  padding: 8px 14px;
+}
+
+#corner-popup {
+  position: absolute;
+  right: 56px;
+  bottom: 16px;
+  width: 300px;
+  border: 3px solid #ffd400;
+  background: #000;
+  padding: 10px 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+#corner-popup img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  object-position: bottom;
+  image-rendering: pixelated;
+  flex: none;
+}
+
+#corner-popup-text {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* "room" variant: Speech Bubbles_rooms.png hattér, a portré abszolut
+   pozicioval jobb alul ul, a szoveg attol fuggetlenul, a doboz bal
+   (felso) reszen fut vegig -- igy nem csuszik a portré feje ala. Ld.
+   Overworld.showCornerPopup(..., "room") a szoba Tenna/Queen beszolasaihoz. */
+#corner-popup.corner-popup-room {
+  width: 380px;
+  min-height: 130px;
+  border: none;
+  background: url("assets/sprites/Speech Bubbles_rooms.png") no-repeat center / 100% 100%;
+  display: block;
+  padding: 18px 70px 18px 26px;
+  image-rendering: pixelated;
+}
+
+#corner-popup.corner-popup-room img#corner-popup-portrait {
+  position: absolute;
+  right: -50px;
+  bottom: 8px;
+  width: 80px;
+  height: 90px;
+}
+
+#corner-popup.corner-popup-room #corner-popup-text {
+  text-align: left;
+  color: #000;
+}
+
+body.screen-glitch {
+  animation: roomGlitch 0.5s steps(2, end) 1;
+}
+
+@keyframes roomGlitch {
+  0%   { filter: none; transform: none; }
+  10%  { filter: invert(1) hue-rotate(90deg); transform: translate(2px, -2px); }
+  20%  { filter: none; transform: translate(-3px, 2px); }
+  30%  { filter: contrast(2) saturate(0); transform: translate(2px, 2px); }
+  40%  { filter: none; transform: none; }
+  50%  { filter: invert(1); transform: translate(-2px, 1px); }
+  60%  { filter: none; transform: translate(1px, -1px); }
+  70%  { filter: contrast(3); transform: none; }
+  100% { filter: none; transform: none; }
+}
+
+#game-screen {
+  position: relative;
+  justify-content: flex-start;
+  padding-top: 30px;
+}
+
+#zone-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  z-index: 0;
+  opacity: 0.55;
+}
+
+#game-screen > *:not(#zone-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+#hp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+#hp-bar {
+  width: 160px;
+  height: 24px;
+  border-style: solid;
+  border-width: 8px;
+  border-image-source: url("assets/sprites/ui/hp_bar_frame.png");
+  border-image-slice: 12 fill;
+  border-image-width: 8px;
+  border-image-repeat: stretch;
+  background: #000;
+}
+
+#hp-fill {
+  height: 100%;
+  width: 100%;
+  background: #ffd400;
+  transition: width 0.2s ease;
+}
+
+#battle-wrap {
+  display: none;
+  margin-bottom: 10px;
+}
+
+#battle-canvas {
+  background: #000;
+}
+
+#menu-box {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 620px;
+  margin-bottom: 10px;
+}
+
+.act-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #000;
+  color: #ffd400;
+  border: 3px solid #ffd400;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+.act-btn:hover,
+.act-btn-selected {
+  background: #ffd400;
+  color: #000;
+}
+
+.act-btn-selected {
+  outline: 2px dashed #000;
+  outline-offset: -6px;
+}
+
+.act-icon {
+  width: 20px;
+  height: 22px;
+  flex: none;
+  image-rendering: pixelated;
+}
+
+#dialogue-box {
+  width: 620px;
+  min-height: 160px;
+  background: url("assets/sprites/ui/dialogue_box_frame.png") no-repeat center / 100% 100%;
+  padding: 24px 28px;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  cursor: pointer;
+  image-rendering: pixelated;
+}
+
+#portrait {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  object-position: bottom;
+  image-rendering: pixelated;
+  display: none;
+  flex: none;
+}
+
+#dialogue-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+#speaker-name {
+  color: #ffd400;
+  font-weight: bold;
+  font-size: 15px;
+}
+
+#dialogue-text {
+  font-size: 20px;
+  line-height: 1.6;
+  min-height: 66px;
+}
+
+#continue-hint {
+  align-self: flex-end;
+  font-size: 11px;
+  opacity: 0.6;
+  visibility: hidden;
+}
+
+#style-tag {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.6);
+  font-size: 34px;
+  font-weight: bold;
+  color: #ff3060;
+  opacity: 0;
+  pointer-events: none;
+  text-shadow: 2px 2px 0 #000, -2px -2px 0 #000;
+}
+
+.style-pop {
+  animation: stylePop 1.1s ease forwards;
+}
+
+@keyframes stylePop {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  15%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  30%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  80%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+}
+
+#gameover-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#gameover-overlay img {
+  width: 70%;
+  image-rendering: pixelated;
+}
