@@ -140,3 +140,16 @@ generált, "PLACEHOLDER" feliratos, egyszínű blokk. A vizuál-fázis (DESIGN.m
 
 **Nem lett tesztelve böngészőben ebben a menetben, mielőtt a felhasználó
 átvette** — a CLAUDE.md szabálya szerint a tesztelés a felhasználó dolga.
+
+**Finomítás a felhasználó visszajelzése alapján:** a glitch-átmenet szét-
+esős/torzulós szakasza tetszett, de a fekete pillanat után egyből, ugrás-
+szerűen jelent meg a folyosó. Ezt három lépésre bontottam: (1) a `worldGlitch`
+keyframes már nem tér vissza a végén `filter:none`-ra (korábban 774-900ms
+között visszavillant volna a régi szoba-kép), hanem `brightness(0)`-ban marad;
+(2) egy új, dedikált `#scene-fade` fekete fedő (`index.html`/`style.css`) a
+`screen-glitch` animáció végén azonnal (átmenet nélkül) teljesen fekete lesz,
+és 0.5 másodpercig (`GLITCH_BLACK_HOLD_MS`) így is marad -- eközben cserélődik
+a jelenet a DOM-ban, láthatatlanul; (3) utána a fedő `opacity` `transition`-nel
+(0.5s, `scene-fade-in` osztály) tűnik el, felfedve a folyosót. Lásd
+`enterGlitchWorld()` a `js/main.js`-ben, a pontos időzítések a
+`GLITCH_SHAKE_MS`/`GLITCH_BLACK_HOLD_MS`/`GLITCH_FADE_MS` konstansokban.

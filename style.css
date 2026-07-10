@@ -173,6 +173,27 @@ h1 {
   pointer-events: none;
 }
 
+/* Fejlesztoi debug-keret a walkBounds teruletekhez -- csak akkor jelenik
+   meg, ha a js/overworld.js DEBUG_WALKBOUNDS konstansa true. Ld. ott. */
+.overworld-debug-bounds {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid #39ff14;
+  background: rgba(57, 255, 20, 0.08);
+  pointer-events: none;
+}
+
+/* Fejlesztoi debug-kor a hotspotok aktivalasi sugarahoz -- csak akkor
+   jelenik meg, ha a js/overworld.js DEBUG_HOTSPOTS konstansa true. Ld. ott. */
+.overworld-debug-hotspot {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid #ff2b2b;
+  background: rgba(255, 43, 43, 0.1);
+  pointer-events: none;
+}
+
 @keyframes npcFloat {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-6px); }
@@ -321,9 +342,39 @@ h1 {
   54%  { filter: invert(1) hue-rotate(180deg); transform: translate(2px, -3px); clip-path: none; }
   62%  { filter: none; transform: none; clip-path: inset(35% 0 35% 0); }
   70%  { filter: contrast(2.5); transform: translate(-4px, 1px); clip-path: none; }
-  80%  { filter: brightness(0.1); transform: none; clip-path: none; }
-  86%  { filter: none; transform: none; clip-path: none; }
-  100% { filter: none; transform: none; clip-path: none; }
+  80%  { filter: brightness(0.15); transform: none; clip-path: none; }
+  100% { filter: brightness(0); transform: none; clip-path: none; }
+}
+
+/* Az #scene-fade a worldGlitch vegen (mar majdnem fekete kepen) atveszi a
+   staffetat: elobb egy teljesen fekete fedo (nincs uveg-mogott villanas a
+   regi jelenetbol), tartja 0.5 masodpercig (ez alatt csereli a JS a
+   jelenetet a hattérben), majd opacity-atmenettel eltunik, felfedve az uj
+   jelenetet. Ld. main.js enterGlitchWorld(). */
+#scene-fade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#scene-fade.scene-fade-black {
+  opacity: 1;
+}
+
+#scene-fade.scene-fade-in {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+/* Sima, atmenetes elsotetedes (NEM ugrasszeru, mint a scene-fade-black) --
+   a zona-ajton valo automatikus atsetalasnal hasznalja a
+   main.js enterZoneWithFade()-je, mielott a harc-kepernyore valt. */
+#scene-fade.scene-fade-out {
+  opacity: 1;
+  transition: opacity 0.4s ease;
 }
 
 #game-screen {

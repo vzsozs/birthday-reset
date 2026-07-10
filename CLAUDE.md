@@ -185,12 +185,16 @@ alláskor mindig a [0] (allo) kocka latszik, mozgas kozben a ket kocka
 (atlos mozgasnal a vizszintes irany elvez, allva a legutobb hasznalt irany
 marad). Ha tobb lepes-kockaval bovited (pl. 4 fazisu animacio), ez a map es a
 `walkFrame`/`WALK_FRAME_MS` logika az elso hely, ahol bovitheted. A
-`PLAYER_W`/`PLAYER_H` konstansok
-(es a megfelelo CSS `#overworld-player` meret) az aktualis kepek oldalaranyahoz
-(kb. 25×43) lettek hangolva, 100px magassagra felskalazva (58×100 — a szoba
-butoraihoz kepest ez lett a jol lathato meret) — ha ujra csereled a kepeket
-maskkora oldalaranyra, vagy megint nem stimmel a butorokhoz kepest,
-ellenorizd ujra ezt a ket helyet.
+`PLAYER_W`/`PLAYER_H` konstansok az aktualis kepek oldalaranyahoz (kb. 25×43)
+lettek hangolva, 100px magassagra felskalazva (58×100 — a szoba butoraihoz
+kepest ez lett a jol lathato meret) — ha ujra csereled a kepeket maskkora
+oldalaranyra, vagy megint nem stimmel a butorokhoz kepest, ellenorizd ujra
+ezt a helyet. Egy scene-config opcionalis `playerScale`-jevel (alapertelmezett
+1) ez a meret jelenetenkent felul-szorozhato -- pl. a folyoson `playerScale:
+0.8` (ld. `buildCorridorScene()` a `js/main.js`-ben) egy kicsit kisebb
+szereplot ad, tavlati-erzetet keltve. A jatekos DOM-elem `width`/`height`-jet
+`start()` allitja be inline stilussal a tenyleges (skalazott) meretre, nem a
+CSS-ben van fixen megadva.
 
 ## Harci dialógus: arcváltás időzítése és gépelés-hang
 

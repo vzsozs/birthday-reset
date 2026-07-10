@@ -21,15 +21,24 @@
  * objektumok tombje, ha a jarhato terulet nem egy egyszeru teglalap (pl.
  * L-alaku szoba) -- lasd isInsideWalkBounds().
  *
- * Hotspot = { id, xFrac, yFrac, radius, prompt, sprite:{src,w,h}?, onInteract }
+ * scene.playerScale (opcionalis, alapertelmezett 1): a jatekos-sprite
+ * alapmeretenek (58x100, ld. PLAYER_W/PLAYER_H) szorzoja -- pl. a folyoson
+ * kicsit 1-nel kisebb ertekkel kisebbnek/tavolabbinak hat a szereplo, mint a
+ * szobaban. Ld. start().
+ *
+ * Hotspot = { id, xFrac, yFrac, radius, prompt, sprite:{src,w,h}?, auto?, onInteract }
  *   - xFrac: a vilag-szelesseg aranyaban (0..1)
  *   - yFrac: a stage-magassag aranyaban (0..1)
  *   - radius: px, ekkora tavolsagon belul aktivalodik a prompt
  *   - sprite: ha van, egy kepet is megjelenit a hotspot helyen (NPC-k,
  *     zona-ellenfelek) -- ha nincs, a hotspot lathatatlan terulet (pl. gep)
- *   - onInteract(): Enter/kattintasra fut le. A hivo felelossege, hogy
- *     Overworld.pause()/resume()-t hasznaljon, ha a mozgast fel kell
- *     fuggeszteni a interakcio idejere.
+ *   - auto: ha true, nincs felirat/Enter -- a hotspot legkozelebb-eses
+ *     pillanataban (mihelyt a jatekos a radius-on belulre er ES ez a
+ *     legkozelebbi hotspot) magatol lefut az onInteract(), egyszer, ld.
+ *     checkHotspots(). Ilyenkor a `prompt` mezo figyelmen kivul marad.
+ *   - onInteract(): Enter/kattintasra (vagy `auto` eseten automatikusan)
+ *     fut le. A hivo felelossege, hogy Overworld.pause()/resume()-t
+ *     hasznaljon, ha a mozgast fel kell fuggeszteni a interakcio idejere.
  *
  * Decoration = { xFrac, yFrac, w, h?, frames:[...] | src, frameMs? }
  *   - tisztan vizualis, nem interaktiv elem (pl. macska az ablakparkanyon).
@@ -40,6 +49,13 @@
  *
  * Nem nyul a battle.js/engine.js-hez.
  */
+// Fejlesztoi debug-kapcsolok: allitsd true-ra barmelyiket, hogy a
+// megfelelo terulet(ek) kirajzolodjanak a jelenetben -- hasznos uj
+// hotspot/walkBounds hangolasakor. Csak kodbol kapcsolhatoak, nincs hozzajuk
+// kulon UI (szandekosan, ezek fejlesztoi eszkozok, nem jatek-elemek).
+const DEBUG_WALKBOUNDS = true; // halvany neonzold keret a jarhato teruletnek
+const DEBUG_HOTSPOTS = true; // piros kor a hotspotok aktivalasi sugaranak (radius)
+
 const Overworld = (() => {
   let dom = {};
   let active = false;
@@ -55,11 +71,21 @@ const Overworld = (() => {
   let decorEls = [];
   let decorTimers = [];
   let bgSegmentEls = [];
+  let debugEls = [];
+  let debugHotspotEls = [];
   let activeHotspot = null;
+  let triggeredAutoIds = new Set();
 
   const SPEED = 140;
+  // Alap jatekos-meret (a szoba butoraihoz hangolva, ld. CLAUDE.md). Egy
+  // scene-config opcionalis `playerScale`-jevel (pl. a folyoson, hogy a
+  // tavlati-erzet miatt kicsit kisebbnek hasson) felul-szorozhato -- ld.
+  // start() es a lejjebbi playerW/playerH allapotot, amit updatePositions()
+  // hasznal a fix PLAYER_W/PLAYER_H helyett.
   const PLAYER_W = 58;
   const PLAYER_H = 100;
+  let playerW = PLAYER_W;
+  let playerH = PLAYER_H;
 
   // Irany-fuggo jatekos-sprite-ok, 2 fazisu lepes-animacioval -- [0] az allo
   // (nyugalmi) kocka, [1] a lepes-kocka. Allva mindig [0] latszik, mozgas
@@ -183,6 +209,46 @@ const Overworld = (() => {
     });
   }
 
+  // DEBUG_WALKBOUNDS true eseten kirajzolja a scene.walkBounds
+  // teglalapjait (egyetlen objektum vagy tomb, ld. isInsideWalkBounds())
+  // halvany neonzold kerettel -- ld. a fajl elejen levo megjegyzest.
+  function spawnDebugWalkBounds() {
+    debugEls.forEach((el) => el.remove());
+    debugEls = [];
+    if (!DEBUG_WALKBOUNDS) return;
+    const rects = Array.isArray(scene.walkBounds) ? scene.walkBounds : [scene.walkBounds];
+    rects.forEach((wb) => {
+      const el = document.createElement("div");
+      el.className = "overworld-debug-bounds";
+      el.style.left = wb.xMin * worldW + "px";
+      el.style.top = wb.yMin * stageH + "px";
+      el.style.width = (wb.xMax - wb.xMin) * worldW + "px";
+      el.style.height = (wb.yMax - wb.yMin) * stageH + "px";
+      dom.world.insertBefore(el, dom.npcLayer);
+      debugEls.push(el);
+    });
+  }
+
+  // DEBUG_HOTSPOTS true eseten kirajzolja a scene.hotspots aktivalasi
+  // sugarat (radius) piros korkent -- a hotspot pontos xFrac/yFrac
+  // kozeppontja korul, ugyanugy szamolva, mint checkHotspots() a
+  // tavolsagot. Ld. a fajl elejen levo megjegyzest.
+  function spawnDebugHotspots() {
+    debugHotspotEls.forEach((el) => el.remove());
+    debugHotspotEls = [];
+    if (!DEBUG_HOTSPOTS) return;
+    scene.hotspots.forEach((h) => {
+      const el = document.createElement("div");
+      el.className = "overworld-debug-hotspot";
+      el.style.left = h.xFrac * worldW - h.radius + "px";
+      el.style.top = h.yFrac * stageH - h.radius + "px";
+      el.style.width = h.radius * 2 + "px";
+      el.style.height = h.radius * 2 + "px";
+      dom.world.insertBefore(el, dom.npcLayer);
+      debugHotspotEls.push(el);
+    });
+  }
+
   // scene.bgSrc egyetlen kep-utvonalat vagy (a folyosonal) tobb, egymas
   // mella illesztendo utvonalat tartalmazhat -- lasd a fajl elejen levo
   // megjegyzest. `callback(worldWidthPx)` fut le, amikor a hatter(ek)
@@ -239,11 +305,18 @@ const Overworld = (() => {
     keys = {};
     paused = false;
     activeHotspot = null;
+    triggeredAutoIds = new Set();
     facing = "down";
     walkFrame = 0;
     walkTimer = 0;
     setPlayerSprite(DIRECTION_SPRITES.down[0]);
     dom.prompt.classList.add("hidden");
+
+    const playerScale = scene.playerScale || 1;
+    playerW = PLAYER_W * playerScale;
+    playerH = PLAYER_H * playerScale;
+    dom.player.style.width = playerW + "px";
+    dom.player.style.height = playerH + "px";
 
     stageW = dom.stage.clientWidth;
     stageH = dom.stage.clientHeight;
@@ -253,6 +326,8 @@ const Overworld = (() => {
 
       spawnHotspotSprites();
       spawnDecorations();
+      spawnDebugWalkBounds();
+      spawnDebugHotspots();
 
       const spawn = typeof scene.spawn === "function" ? scene.spawn() : scene.spawn;
       pos.x = worldW * spawn.xFrac;
@@ -330,13 +405,13 @@ const Overworld = (() => {
   }
 
   function updatePositions() {
-    dom.player.style.transform = `translate(${pos.x - PLAYER_W / 2}px, ${pos.y - PLAYER_H}px)`;
+    dom.player.style.transform = `translate(${pos.x - playerW / 2}px, ${pos.y - playerH}px)`;
 
     const cameraX = Math.max(0, Math.min(worldW - stageW, pos.x - stageW / 2));
     dom.world.style.transform = `translateX(${-cameraX}px)`;
 
     const promptX = pos.x - cameraX;
-    dom.prompt.style.transform = `translate(calc(${promptX}px - 50%), calc(${pos.y - PLAYER_H - 14}px - 100%))`;
+    dom.prompt.style.transform = `translate(calc(${promptX}px - 50%), calc(${pos.y - playerH - 14}px - 100%))`;
   }
 
   function checkHotspots() {
@@ -353,7 +428,17 @@ const Overworld = (() => {
     }
     if (nearest !== activeHotspot) {
       activeHotspot = nearest;
-      if (activeHotspot) {
+      if (activeHotspot && activeHotspot.auto) {
+        // Nincs felirat/Enter -- a sima odasetalas egyszer, magatol
+        // lefuttatja az onInteract()-et (kesleltetve, ld. tryInteract()
+        // fenti megjegyzeset ugyanerrol az okrol).
+        dom.prompt.classList.add("hidden");
+        if (!triggeredAutoIds.has(activeHotspot.id)) {
+          triggeredAutoIds.add(activeHotspot.id);
+          const hotspot = activeHotspot;
+          setTimeout(() => hotspot.onInteract(), 0);
+        }
+      } else if (activeHotspot) {
         dom.prompt.textContent = activeHotspot.prompt || "▶ Enter";
         dom.prompt.classList.remove("hidden");
       } else {

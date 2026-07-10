@@ -1,6 +1,7 @@
 window.addEventListener("DOMContentLoaded", async () => {
   const gameStage = document.getElementById("game-stage");
   const gameViewport = document.getElementById("game-viewport");
+  const sceneFade = document.getElementById("scene-fade");
   const STAGE_W = 800;
   const STAGE_H = 640;
   function updateScale() {
@@ -195,8 +196,8 @@ window.addEventListener("DOMContentLoaded", async () => {
       },
       {
         id: "tv",
-        xFrac: 0.42,
-        yFrac: 0.55,
+        xFrac: 0.5,
+        yFrac: 0.5,
         radius: 50,
         prompt: "▶ Enter: megnézed a tévét",
         onInteract: () => flavorPopup(null, "A tévé már vagy tíz éve ugyanazt a port gyűjti."),
@@ -282,21 +283,31 @@ window.addEventListener("DOMContentLoaded", async () => {
       }
       hotspots.push({
         id: `door${i}`,
-        xFrac: doorFrac,
-        yFrac: 0.78,
-        radius: 55,
-        prompt: "▶ Enter: belépés a zónába",
+        xFrac: doorFrac + 0.005,
+        yFrac: 0.62,
+        radius: 35,
+        // auto: true -- nincs Enter/felirat, a puszta odasetalas belepteti
+        // a jatekost a zonaba, egy elsotetedes-atmenettel (ld.
+        // enterZoneWithFade()). Ld. meg overworld.js Hotspot-dokumentaciojat.
+        auto: true,
         sprite: { src: zone.enemy.sprite, w: 48 },
         onInteract: () => {
           Overworld.pause();
-          enterZone(i);
+          enterZoneWithFade(i);
         },
       });
     });
 
     return {
       bgSrc: CORRIDOR_ZONE_BACKGROUNDS,
-      walkBounds: { xMin: 0.01, xMax: 0.99, yMin: 0.6, yMax: 0.92 },
+      // A szobahoz kepest kicsit kisebb jatekos-sprite a folyoson (ld.
+      // overworld.js scene.playerScale) -- tavlati-erzetet ad, es jobban
+      // illeszkedik a folyoso tagasabb, "kifele vezeto" hangulatahoz.
+      playerScale: 0.75,
+      walkBounds: [
+      { xMin: 0.001, xMax: 0.99, yMin: 0.7, yMax: 0.88 },
+      { xMin: 0.123, xMax: 0.135, yMin: 0.65, yMax: 0.8 },
+      ],
       spawn: () => ({
         xFrac: spawnAfterDoorIndex == null ? 0.03 : Math.min(0.98, DOOR_FRACTIONS[spawnAfterDoorIndex] + 0.045),
         yFrac: 0.78,
@@ -321,30 +332,63 @@ window.addEventListener("DOMContentLoaded", async () => {
     roomMusic.play().catch(() => {});
   });
 
-  // A glitch-atvezetes idozitese a style.css worldGlitch keyframes-enek
-  // hosszahoz (0.9s) igazodik: a torodo-hangeffekt azonnal indul, a
-  // "belepo" jingle kicsit kesobb (mintha a folyoso csak a glitch kozepen
-  // "allna ossze"), a jelenetvaltas pedig csak az animacio vegen tortenik,
-  // amikor a brightness(0.1) lepes mar amugy is majdnem feketere viszi a
-  // kepet -- igy a mogotte cserelodo DOM nem latszik meg. FONTOS: az
-  // animacio a #game-viewport-on fut, NEM a #game-stage-en -- utobbinak
-  // mar van egy inline transform:scale()-je (updateScale()), amit egy ra
-  // kerulo CSS-animacio (ami szinten a transform-ot allitgatja) felulirna
-  // amig fut, es a jatek kizoomolna a glitch alatt.
+  // A glitch-atvezetes harom szakaszbol all, a style.css worldGlitch
+  // keyframes-enek hosszahoz (GLITCH_SHAKE_MS) igazodva:
+  //   1) szetesik/torodik a kep (worldGlitch animacio a #game-viewport-on --
+  //      FONTOS: nem a #game-stage-en, annak mar van egy inline
+  //      transform:scale()-je (updateScale()), amit egy ra kerulo
+  //      CSS-animacio felulirna amig fut, es a jatek kizoomolna), a vegen
+  //      mar majdnem fekete (brightness(0)).
+  //   2) a #scene-fade fedo azonnal (atmenet nelkul) teljesen feketere
+  //      valt, es ezt GLITCH_BLACK_HOLD_MS-ig tartja -- eközben csereli a
+  //      JS a jelenetet a fekete mogott, lathatatlanul.
+  //   3) a #scene-fade opacity-atmenettel (GLITCH_FADE_MS) eltunik, felfedve
+  //      az uj (folyoso-)jelenetet.
+  const GLITCH_SHAKE_MS = 900;
+  const GLITCH_BLACK_HOLD_MS = 500;
+  const GLITCH_FADE_MS = 500;
+
   function enterGlitchWorld() {
     Engine.playSound("glitchZap");
     gameViewport.classList.add("screen-glitch");
     setTimeout(() => Engine.playSound("zoneStart"), 550);
     setTimeout(() => {
       gameViewport.classList.remove("screen-glitch");
-      Overworld.start(buildCorridorScene(null));
-    }, 900);
+      sceneFade.classList.remove("scene-fade-in");
+      sceneFade.classList.add("scene-fade-black");
+      setTimeout(() => {
+        Overworld.start(buildCorridorScene(null));
+        sceneFade.classList.remove("scene-fade-black");
+        sceneFade.classList.add("scene-fade-in");
+        setTimeout(() => sceneFade.classList.remove("scene-fade-in"), GLITCH_FADE_MS);
+      }, GLITCH_BLACK_HOLD_MS);
+    }, GLITCH_SHAKE_MS);
   }
 
   restartBtn.addEventListener("click", () => {
     endScreen.classList.add("hidden");
     titleScreen.classList.remove("hidden");
   });
+
+  // Az ajtohoz (zona-belepesi ponthoz) automatikusan odasetalva (ld. a
+  // `door${i}` hotspot `auto:true`-ja a buildCorridorScene()-ben) ez a
+  // fuggveny egy sima, atmenetes elsotetedessel (nem a glitch-atvezetes
+  // "ugras a feketebe" jellegevel) valtja a folyosot a harc-kepernyore:
+  // a #scene-fade opacity-atmenettel feketere valt (ZONE_FADE_OUT_MS),
+  // eközben cserelodik a jelenet, majd ugyanugy opacity-atmenettel
+  // (GLITCH_FADE_MS-t ujrahasznalva) fel is fedi a harcot.
+  const ZONE_FADE_OUT_MS = 400;
+
+  function enterZoneWithFade(zoneIndex) {
+    sceneFade.classList.remove("scene-fade-in", "scene-fade-black");
+    sceneFade.classList.add("scene-fade-out");
+    setTimeout(() => {
+      enterZone(zoneIndex);
+      sceneFade.classList.remove("scene-fade-out");
+      sceneFade.classList.add("scene-fade-in");
+      setTimeout(() => sceneFade.classList.remove("scene-fade-in"), GLITCH_FADE_MS);
+    }, ZONE_FADE_OUT_MS);
+  }
 
   function enterZone(zoneIndex) {
     overworldScreen.classList.add("hidden");
