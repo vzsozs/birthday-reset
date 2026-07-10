@@ -97,8 +97,7 @@ h1 {
   cursor: pointer;
   letter-spacing: 1px;
 }
-.pixel-btn:hover,
-.pixel-btn-selected {
+.pixel-btn:hover {
   background: #fff;
   color: #000;
 }
@@ -126,6 +125,17 @@ h1 {
   width: auto;
   min-width: 100%;
   object-fit: cover;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+/* Tobb-szegmenses hatter (pl. a folyoso, zonankent kulon fajlbol
+   osszeillesztve) -- ld. overworld.js loadBackground()/placeBgSegments(). */
+.overworld-bg-segment {
+  position: absolute;
+  top: 0;
+  display: block;
+  height: 100%;
   image-rendering: pixelated;
   pointer-events: none;
 }
@@ -199,13 +209,37 @@ h1 {
 
 #choice-buttons {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
 }
 
-#choice-buttons .pixel-btn {
-  font-size: 13px;
-  padding: 8px 14px;
+.choice-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  padding: 4px 2px;
+  cursor: pointer;
+}
+
+.choice-heart {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  visibility: hidden;
+}
+
+.choice-option.choice-selected {
+  color: #ffd400;
+}
+
+.choice-option.choice-selected .choice-heart {
+  visibility: visible;
 }
 
 #corner-popup {
@@ -262,20 +296,34 @@ h1 {
   color: #000;
 }
 
-body.screen-glitch {
-  animation: roomGlitch 0.5s steps(2, end) 1;
+/* A szoba -> folyoso valtas "glitch a valosagban" atvezetese -- a
+   #game-viewport-on fut (NEM a #game-stage-en, aminek mar van egy inline
+   transform:scale()-je -- ld. a main.js enterGlitchWorld()-beli
+   megjegyzeset). Mivel a viewport hattere is fekete, a letterbox-sav
+   vizualisan nem valik el a glitcheles alatt. Jump-cut jellegu
+   (steps(1,end) az egesz animacion), nem sima easing -- ez adja a digitalis
+   akadozas-erzetet. */
+#game-viewport.screen-glitch {
+  animation: worldGlitch 0.9s steps(1, end) 1;
 }
 
-@keyframes roomGlitch {
-  0%   { filter: none; transform: none; }
-  10%  { filter: invert(1) hue-rotate(90deg); transform: translate(2px, -2px); }
-  20%  { filter: none; transform: translate(-3px, 2px); }
-  30%  { filter: contrast(2) saturate(0); transform: translate(2px, 2px); }
-  40%  { filter: none; transform: none; }
-  50%  { filter: invert(1); transform: translate(-2px, 1px); }
-  60%  { filter: none; transform: translate(1px, -1px); }
-  70%  { filter: contrast(3); transform: none; }
-  100% { filter: none; transform: none; }
+@keyframes worldGlitch {
+  0%   { filter: none; transform: none; clip-path: none; }
+  6%   { filter: invert(1) hue-rotate(90deg) drop-shadow(3px 0 0 #ff2b6e) drop-shadow(-3px 0 0 #23e0ff);
+         transform: translate(4px, -2px); clip-path: inset(10% 0 40% 0); }
+  12%  { filter: contrast(2) saturate(0); transform: translate(-6px, 3px); clip-path: inset(55% 0 5% 0); }
+  18%  { filter: none; transform: translate(3px, -1px); clip-path: inset(20% 0 60% 0); }
+  24%  { filter: invert(1) drop-shadow(4px 0 0 #ff2b6e) drop-shadow(-4px 0 0 #23e0ff);
+         transform: translate(-4px, 2px); clip-path: none; }
+  30%  { filter: none; transform: none; clip-path: inset(70% 0 0 0); }
+  38%  { filter: contrast(3) brightness(1.4); transform: translate(5px, 0); clip-path: none; }
+  46%  { filter: none; transform: translate(-3px, 2px); clip-path: inset(0 0 80% 0); }
+  54%  { filter: invert(1) hue-rotate(180deg); transform: translate(2px, -3px); clip-path: none; }
+  62%  { filter: none; transform: none; clip-path: inset(35% 0 35% 0); }
+  70%  { filter: contrast(2.5); transform: translate(-4px, 1px); clip-path: none; }
+  80%  { filter: brightness(0.1); transform: none; clip-path: none; }
+  86%  { filter: none; transform: none; clip-path: none; }
+  100% { filter: none; transform: none; clip-path: none; }
 }
 
 #game-screen {

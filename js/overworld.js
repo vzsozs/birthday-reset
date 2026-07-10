@@ -10,6 +10,13 @@
  * tolti ki (mint a szoba), nincs kamera-eltolas; ha szelesebb (mint a
  * folyoso), a kamera koveti a jatekost.
  *
+ * scene.bgSrc lehet egyetlen kep-utvonal VAGY ilyen utvonalak tombje -- ha
+ * tomb, a kepek egymas mella illesztve alkotjak a vilagot (mindegyik a
+ * stage magassagara skalazva, sajat oldalaranyat megtartva), ld.
+ * loadBackground(). Ezt hasznalja a folyoso, zonankent kulon fajlban (lasd
+ * CLAUDE.md) -- igy egy-egy zona hatterenek kesobbi lecserelese nem
+ * erinti a tobbi zona kepet.
+ *
  * walkBounds: egyetlen { xMin, xMax, yMin, yMax } (aranyok 0..1) VAGY ilyen
  * objektumok tombje, ha a jarhato terulet nem egy egyszeru teglalap (pl.
  * L-alaku szoba) -- lasd isInsideWalkBounds().
@@ -47,6 +54,7 @@ const Overworld = (() => {
   let npcEls = [];
   let decorEls = [];
   let decorTimers = [];
+  let bgSegmentEls = [];
   let activeHotspot = null;
 
   const SPEED = 140;
@@ -175,6 +183,56 @@ const Overworld = (() => {
     });
   }
 
+  // scene.bgSrc egyetlen kep-utvonalat vagy (a folyosonal) tobb, egymas
+  // mella illesztendo utvonalat tartalmazhat -- lasd a fajl elejen levo
+  // megjegyzest. `callback(worldWidthPx)` fut le, amikor a hatter(ek)
+  // betoltodtek es a vilag-szelesseg ismertte valt.
+  function loadBackground(callback) {
+    bgSegmentEls.forEach((el) => el.remove());
+    bgSegmentEls = [];
+    const srcs = Array.isArray(scene.bgSrc) ? scene.bgSrc : [scene.bgSrc];
+
+    if (srcs.length === 1) {
+      dom.bg.classList.remove("hidden");
+      dom.bg.src = srcs[0];
+      const done = () => callback(dom.bg.clientWidth || stageW);
+      if (dom.bg.complete) done();
+      else dom.bg.onload = done;
+      return;
+    }
+
+    dom.bg.classList.add("hidden");
+    dom.bg.removeAttribute("src");
+    let loaded = 0;
+    const probes = srcs.map((src) => {
+      const probe = new Image();
+      probe.src = src;
+      return probe;
+    });
+    probes.forEach((probe) => {
+      probe.onload = () => {
+        loaded++;
+        if (loaded === probes.length) placeBgSegments(probes, callback);
+      };
+    });
+  }
+
+  function placeBgSegments(probes, callback) {
+    let offset = 0;
+    probes.forEach((probe) => {
+      const w = probe.naturalWidth * (stageH / probe.naturalHeight);
+      const el = document.createElement("img");
+      el.className = "overworld-bg-segment";
+      el.src = probe.src;
+      el.style.left = offset + "px";
+      el.style.width = w + "px";
+      dom.world.insertBefore(el, dom.npcLayer);
+      bgSegmentEls.push(el);
+      offset += w;
+    });
+    callback(offset);
+  }
+
   function start(sceneConfig) {
     active = false; // barmilyen korabbi, meg futo loop() a kovetkezo keretben leall
     scene = sceneConfig;
@@ -186,12 +244,12 @@ const Overworld = (() => {
     walkTimer = 0;
     setPlayerSprite(DIRECTION_SPRITES.down[0]);
     dom.prompt.classList.add("hidden");
-    dom.bg.src = scene.bgSrc;
 
-    const beginAfterLoad = () => {
-      stageW = dom.stage.clientWidth;
-      stageH = dom.stage.clientHeight;
-      worldW = dom.bg.clientWidth || stageW;
+    stageW = dom.stage.clientWidth;
+    stageH = dom.stage.clientHeight;
+
+    loadBackground((w) => {
+      worldW = w || stageW;
 
       spawnHotspotSprites();
       spawnDecorations();
@@ -204,13 +262,7 @@ const Overworld = (() => {
       active = true;
       lastTime = performance.now();
       requestAnimationFrame(loop);
-    };
-
-    if (dom.bg.complete) {
-      beginAfterLoad();
-    } else {
-      dom.bg.onload = beginAfterLoad;
-    }
+    });
   }
 
   // scene.walkBounds lehet egyetlen { xMin, xMax, yMin, yMax } vagy ilyen
@@ -319,7 +371,7 @@ const Overworld = (() => {
   // Gepelos szoveg a sarok-buborekban -- Space/Enter/kattintas eloszor
   // kiirja a teljes szoveget (ha meg gepel), majd (ujabb Space/Enter/
   // kattintasra) bezarja a buborekot. Nincs automatikus, idozitett bezaras.
-  function typeCornerText(text) {
+  function typeCornerText(text, playTypeSound) {
     dom.cornerText.textContent = "";
     cornerTyping = true;
     cornerSkipRequested = false;
@@ -335,6 +387,7 @@ const Overworld = (() => {
       }
       if (i < text.length) {
         dom.cornerText.textContent += text[i];
+        if (playTypeSound && text[i] !== " ") Engine.playSound("type");
         i++;
         cornerTypeTimer = setTimeout(step, speed);
       } else {
@@ -356,7 +409,10 @@ const Overworld = (() => {
     dom.cornerPopup.classList.toggle("corner-popup-room", variant === "room");
     dom.cornerPopup.classList.remove("hidden");
     cornerDismiss = onDone;
-    typeCornerText(text);
+    // A gepeles-hang egyelore csak a "room" variansnal (Tenna/Queen szoba-
+    // beszolasai) szol, a folyoso-NPC-k es a polc/teve-beszolasok csendben
+    // gepelodnek -- ld. a hivast a main.js-ben.
+    typeCornerText(text, variant === "room");
   }
 
   function advanceCornerPopup() {
@@ -375,7 +431,11 @@ const Overworld = (() => {
     dom.cornerPopup.classList.add("hidden");
     const cb = cornerDismiss;
     cornerDismiss = null;
-    cb();
+    // Egy tick-kel kesleltetve hivjuk meg -- ha a callback egy masik, szinten
+    // Enter/szokozt figyelo dobozt nyit meg ujra (pl. a valaszto-dobozt),
+    // ne ugyanaz a billentyu-lenyomas dolgozza fel azt is (ugyanaz a hiba,
+    // mint a tryInteract()-nel -- ld. az ottani megjegyzest).
+    setTimeout(cb, 0);
   }
 
   return { init, start, pause, resume, showCornerPopup, dismissCornerPopup };

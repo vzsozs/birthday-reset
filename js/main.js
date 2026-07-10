@@ -1,5 +1,6 @@
 window.addEventListener("DOMContentLoaded", async () => {
   const gameStage = document.getElementById("game-stage");
+  const gameViewport = document.getElementById("game-viewport");
   const STAGE_W = 800;
   const STAGE_H = 640;
   function updateScale() {
@@ -71,15 +72,17 @@ window.addEventListener("DOMContentLoaded", async () => {
   // valtoztathato (pl. line.typingSound tamogatasaval, ha szukseg lesz ra).
   Engine.loadSound("type", "assets/Sounds/snd_txtasg.wav");
   Engine.loadSound("zoneStart", "assets/Sounds/snd_item.wav");
+  Engine.loadSound("glitchZap", "assets/Sounds/snd_error.wav");
   Engine.loadSound("jokerLaugh", "assets/Sounds/snd_joker_laugh1.wav");
   Engine.loadSound("flavorText", "assets/Sounds/snd_text.wav?v=2");
 
   // --- Szoba-jelenet -------------------------------------------------
 
-  const NARRATION_TEXT = "Uhh, ma még nem játszottam, pedig már reggel 7:30 van.";
+  const NARRATION_TEXT = "* Uhh, ma még nem játszottam, pedig már reggel 7:30 van.";
   const TENNA_LINE = "Biztos hogy nem kapcsolod be a gépet? Egy jó kis játék még nem árthat...";
   const QUEEN_LINE = "SYSTEM ERROR. KOCKA VAGYOK, AKKOR IS JÁTSZOM 10 PERCET.";
-  const DAD_BTN_LABEL = "INKÁBB KIMEGYEK APÁHOZ";
+  const START_LABEL = "Bekapcsolom a gépet";
+  const DAD_BTN_LABEL = "Inkább kimegyek apához";
   let dadClicks = 0;
 
   function flavorPopup(portraitSrc, text) {
@@ -88,13 +91,16 @@ window.addEventListener("DOMContentLoaded", async () => {
     Overworld.showCornerPopup(portraitSrc, text, () => Overworld.resume());
   }
 
-  // A valaszto-doboz (START / kimegyek apahoz) billentyuzetes navigacioja --
-  // nyilak/A-D valt a ket gomb kozott, Enter/szokoz aktivalja a kijeloltet.
+  // A valaszto-doboz (Bekapcsolom a gepet / kimegyek apahoz) billentyuzetes
+  // navigacioja -- nyilak/A-D valt a ket opcio kozott, Enter/szokoz
+  // aktivalja a kijeloltet. A kijelolt opcio sarga, es egy SOUL-sziv jelenik
+  // meg elotte (ld. .choice-selected a style.css-ben).
   const choiceButtons = [choiceStart, choiceDad];
+  const choiceLabels = [choiceStart.querySelector(".choice-label"), choiceDad.querySelector(".choice-label")];
   let choiceIndex = 0;
 
   function highlightChoice() {
-    choiceButtons.forEach((b, i) => b.classList.toggle("pixel-btn-selected", i === choiceIndex));
+    choiceButtons.forEach((b, i) => b.classList.toggle("choice-selected", i === choiceIndex));
   }
 
   window.addEventListener("keydown", (e) => {
@@ -114,7 +120,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   function openComputerChoice() {
     Overworld.pause();
     dadClicks = 0;
-    choiceDad.textContent = DAD_BTN_LABEL;
+    choiceLabels[1].textContent = DAD_BTN_LABEL;
     choiceText.textContent = NARRATION_TEXT;
     choiceIndex = 0;
     highlightChoice();
@@ -151,7 +157,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         QUEEN_LINE,
         () => {
           dadClicks = 2;
-          choiceDad.textContent = "START";
+          choiceLabels[1].textContent = START_LABEL;
           choiceIndex = 0;
           highlightChoice();
           choiceBox.classList.remove("hidden");
@@ -218,6 +224,19 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   const DOOR_FRACTIONS = [0.125, 0.375, 0.625, 0.875];
 
+  // A folyoso hattere zonankent kulon fajl (nem egy osszefuzott kep) -- ld.
+  // tools/gen_assets.py corridor_bg() es a CLAUDE.md. Az Overworld egymas
+  // mella illeszti oket; a DOOR_FRACTIONS fenti, egyenletes-negyedeles
+  // ertekei addig stimmelnek, amig a 4 kep kb. egyenlo szelessegu -- ha
+  // kesobb sajat rajzra cserelodnek, elteree szelessegekkel, ezeket az
+  // ertekeket is at kell hangolni.
+  const CORRIDOR_ZONE_BACKGROUNDS = [
+    "assets/sprites/corridor_zone1_bg_placeholder.png",
+    "assets/sprites/corridor_zone2_bg_placeholder.png",
+    "assets/sprites/corridor_zone3_bg_placeholder.png",
+    "assets/sprites/corridor_zone4_bg_placeholder.png",
+  ];
+
   function corridorFlavor(portraitSrc, text) {
     Overworld.pause();
     Overworld.showCornerPopup(portraitSrc, text, () => Overworld.resume());
@@ -276,7 +295,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
 
     return {
-      bgSrc: "assets/sprites/corridor_bg_placeholder.png",
+      bgSrc: CORRIDOR_ZONE_BACKGROUNDS,
       walkBounds: { xMin: 0.01, xMax: 0.99, yMin: 0.6, yMax: 0.92 },
       spawn: () => ({
         xFrac: spawnAfterDoorIndex == null ? 0.03 : Math.min(0.98, DOOR_FRACTIONS[spawnAfterDoorIndex] + 0.045),
@@ -302,13 +321,24 @@ window.addEventListener("DOMContentLoaded", async () => {
     roomMusic.play().catch(() => {});
   });
 
+  // A glitch-atvezetes idozitese a style.css worldGlitch keyframes-enek
+  // hosszahoz (0.9s) igazodik: a torodo-hangeffekt azonnal indul, a
+  // "belepo" jingle kicsit kesobb (mintha a folyoso csak a glitch kozepen
+  // "allna ossze"), a jelenetvaltas pedig csak az animacio vegen tortenik,
+  // amikor a brightness(0.1) lepes mar amugy is majdnem feketere viszi a
+  // kepet -- igy a mogotte cserelodo DOM nem latszik meg. FONTOS: az
+  // animacio a #game-viewport-on fut, NEM a #game-stage-en -- utobbinak
+  // mar van egy inline transform:scale()-je (updateScale()), amit egy ra
+  // kerulo CSS-animacio (ami szinten a transform-ot allitgatja) felulirna
+  // amig fut, es a jatek kizoomolna a glitch alatt.
   function enterGlitchWorld() {
-    Engine.playSound("zoneStart");
-    document.body.classList.add("screen-glitch");
+    Engine.playSound("glitchZap");
+    gameViewport.classList.add("screen-glitch");
+    setTimeout(() => Engine.playSound("zoneStart"), 550);
     setTimeout(() => {
-      document.body.classList.remove("screen-glitch");
+      gameViewport.classList.remove("screen-glitch");
       Overworld.start(buildCorridorScene(null));
-    }, 500);
+    }, 900);
   }
 
   restartBtn.addEventListener("click", () => {

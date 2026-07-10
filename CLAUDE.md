@@ -86,9 +86,17 @@ js/overworld.js       - EGYETLEN, ÚJRAFELHASZNÁLHATÓ DOM-alapú szabad-mozgas
                         ami majdnem szó szerint duplikált mozgás-kódot tartalmazott).
                         Egy scene-configot kap (`Overworld.start(scene)`): háttérkép,
                         jarhato hatarok (`walkBounds`), spawn-pont, és egy
-                        `hotspots` lista. A világ szélességét mindig a háttérkép
-                        tényleges méretezett szélessége adja -- ha az pontosan a
-                        stage-et tölti ki (szoba), nincs kamera-eltolás; ha szélesebb
+                        `hotspots` lista. A `bgSrc` egyetlen kép-útvonal VAGY (a
+                        folyosónál) ilyen útvonalak tömbje lehet -- tömb esetén a
+                        képek egymás mellé illesztve (mindegyik a stage magasságára
+                        skálázva, saját oldalarányát megtartva) alkotják a világot,
+                        lásd `loadBackground()`/`placeBgSegments()`. Ez teszi
+                        lehetővé, hogy a folyosó háttere zónánként külön fájlban
+                        legyen (`corridor_zoneN_bg_placeholder.png`), így egy zóna
+                        hátterének későbbi lecserélése nem érinti a többit. A világ
+                        szélességét mindig a betöltött háttér(ek) tényleges
+                        méretezett szélessége adja -- ha az pontosan a stage-et
+                        tölti ki (szoba), nincs kamera-eltolás; ha szélesebb
                         (folyosó), a kamera követi a játékost. Egy hotspot
                         `{ id, xFrac, yFrac, radius, prompt, sprite?, onInteract }`
                         -- ha van `sprite`, egy NPC/ellenfél-kepet is megjelenit
@@ -237,8 +245,18 @@ Mindkét jelenet ugyanazt a `js/overworld.js`-t használja, a `js/main.js`-ben
 - `buildCorridorScene()` (`js/main.js`): a `DOOR_FRACTIONS` (a 4 zóna-belépési
   pont közepe a teljes világ-szélesség arányában) és az ehhez képest eltolt
   kísérő-NPC (Kecske/Tenna/Queen) hotspot-pozíciók pontosan a
-  `corridor_bg_placeholder.png` 4 egyenlő szakaszához igazodnak (lásd
-  `tools/gen_assets.py` `corridor_bg()`).
+  `CORRIDOR_ZONE_BACKGROUNDS` (`corridor_zone1_bg_placeholder.png` ...
+  `corridor_zone4_bg_placeholder.png`, lásd `tools/gen_assets.py`
+  `corridor_bg()`) 4 egyenlő szélességű szakaszához igazodnak. A folyosó
+  háttere **4 külön fájl**, nem egy összefűzött kép -- az `Overworld`
+  (`bgSrc` tömb, ld. fent) egymás mellé illeszti őket. Ez azért fontos, mert
+  ha a 4 zóna közül csak egyhez készül el saját (kézzel rajzolt) háttér, azt
+  elég a megfelelő `corridor_zoneN_bg_placeholder.png` néven lecserélni --
+  nem kell újragenerálni vagy összefűzni a többivel. **Figyelem:** a
+  `DOOR_FRACTIONS` egyenletes negyedelése csak addig stimmel, amíg a 4 kép
+  kb. egyenlő szélességű; ha a végleges rajzok ettől eltérő (pl. zónánként
+  változó) szélességűek lesznek, ezt az értéket manuálisan újra kell
+  hangolni.
 
 Ha egy háttérkép változik, vagy a pozíció nem stimmel vizuálisan, ezeket a
 konstansokat kell újrahangolni — nincs pixel-pontos ütközésvizsgálat
@@ -310,7 +328,8 @@ végtelenítve marad.
   könnyű) — érdemes explicit letesztelni, mielőtt a végleges verzióba kerül.
 - A `js/main.js`-ben összeállított overworld-hotspotok (szoba + folyosó)
   pozíciója szemre van belőve a jelenlegi háttérképekhez — ha a
-  `bazsa_szoba.png`-t vagy a `corridor_bg_placeholder.png`-t lecseréled/módosítod,
+  `bazsa_szoba.png`-t vagy a `corridor_zoneN_bg_placeholder.png` fájlok
+  egyikét lecseréled/módosítod,
   ellenőrizd/hangold újra a `ROOM_SCENE`/`buildCorridorScene()` `xFrac`/`yFrac`/
   `radius` értékeit.
 - A `assets/sfx/menu_move.wav` fájl generálva van, de jelenleg csak az ACT-menü
@@ -321,6 +340,16 @@ végtelenítve marad.
   hiba a mozgás-kódban (éles, fókuszált böngészőben nem jelentkezik).
 
 ## Hátralévő munka (a DESIGN.md fejlesztési fázisai alapján)
+
+**Jelenleg folyamatban / a legutóbbi menet óta aktuális feladat:** lásd
+`osszefoglalo-260710.md` — a nyitó jelenet (cím → szoba → gép-választás →
+glitch-átmenet) kész. A glitch-átmenet ezután látványosabbra lett cserélve
+(`worldGlitch` keyframes, `style.css`), és a folyosó háttere technikailag
+elő lett készítve a zónánkénti cserére (`corridor_zoneN_bg_placeholder.png`,
+4 külön fájl egyetlen összefűzött kép helyett — lásd az "Az
+overworld-jelenetek hangolása" szakaszt). A **tényleges, kézzel rajzolt
+folyosó-háttér még nincs meg** — ez a következő szakasz feladata marad,
+zónánként egy-egy fájl lecserélésével.
 
 1. ~~Motor-prototípus~~ — kész (1. zóna)
 2. ~~Tartalom~~ — kész (mind a 4 zóna megírva, lásd `js/zones.js`)

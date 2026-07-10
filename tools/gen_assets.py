@@ -114,6 +114,12 @@ def zone_bg(filename, base_color, label_text, pattern="tile"):
 
 
 def corridor_bg():
+    # Kulon fajl zonankent (corridor_zoneN_bg_placeholder.png), nem egyetlen
+    # osszefuzott kep -- igy ha kesobb sajat rajzra cserelodik egy zona
+    # folyoso-szakasza, csak azt az egy fajlt kell lecserelni, a masik
+    # haromhoz nem kell ujra futtatni ezt a scriptet. A main.js
+    # buildCorridorScene()-je egy bgSrc-tombkent kapja meg a 4 fajlt, az
+    # Overworld.js pedig egymas mella illeszti oket (ld. CLAUDE.md).
     seg_w = 1100
     h = 480
     zones = [
@@ -122,24 +128,18 @@ def corridor_bg():
         ((60, 20, 20, 255), "ZONA 3: A CSOVEK"),
         ((70, 110, 70, 255), "ZONA 4: ROBLOX-LERAKAT"),
     ]
-    w = seg_w * len(zones)
-    img = Image.new("RGBA", (w, h), (20, 20, 30, 255))
-    d = ImageDraw.Draw(img)
 
     for i, (color, text) in enumerate(zones):
-        x0 = i * seg_w
-        d.rectangle([x0, 0, x0 + seg_w, h], fill=color)
+        img = Image.new("RGBA", (seg_w, h), color)
+        d = ImageDraw.Draw(img)
         door_w, door_h = 80, 170
-        dx = x0 + seg_w // 2 - door_w // 2
+        dx = seg_w // 2 - door_w // 2
         dy = h - door_h - 40
         d.rectangle([dx, dy, dx + door_w, dy + door_h], fill=(15, 15, 15, 255),
                     outline=(255, 255, 255, 255), width=4)
-        d.text((x0 + 24, 20), text, font=FONT, fill=(255, 255, 255, 255))
-        d.text((x0 + 24, 46), "PLACEHOLDER", font=FONT_SMALL, fill=(255, 80, 80, 255))
-        if i > 0:
-            d.line([(x0, 0), (x0, h)], fill=(255, 255, 255, 255), width=2)
-
-    save(img, "corridor_bg_placeholder.png")
+        d.text((24, 20), text, font=FONT, fill=(255, 255, 255, 255))
+        d.text((24, 46), "PLACEHOLDER", font=FONT_SMALL, fill=(255, 80, 80, 255))
+        save(img, f"corridor_zone{i + 1}_bg_placeholder.png")
 
 
 def tear_bullet():
