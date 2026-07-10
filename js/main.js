@@ -206,6 +206,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     decorations: [
       {
         // Feki, a macska -- az ablakparkanyon ul, 4 kockas korkoros animacioval.
+        // (A folyoson viszont mar egy kovető NPC, ld. buildCorridorScene().)
         xFrac: 0.238,
         yFrac: 0.276,
         w: 28,
@@ -300,7 +301,7 @@ window.addEventListener("DOMContentLoaded", async () => {
           prompt: "* Minecraft... mi más :)",
         });
       }
-      hotspots.push({
+      const doorHotspot = {
         id: `door${i}`,
         xFrac: doorFrac + 0.005,
         yFrac: 0.62,
@@ -309,12 +310,30 @@ window.addEventListener("DOMContentLoaded", async () => {
         // a jatekost a zonaba, egy elsotetedes-atmenettel (ld.
         // enterZoneWithFade()). Ld. meg overworld.js Hotspot-dokumentaciojat.
         auto: true,
-        sprite: { src: zone.enemy.sprite, w: 48 },
-        onInteract: () => {
+      };
+      if (i === 0) {
+        // Az 1. zona ajtaja NEM kozvetlenul a harcba visz, hanem egy kulon
+        // bevezeto szobaba (isaac_room.png, ld. buildIsaacRoomScene()) --
+        // ott all kulon hotspotkent a zona ellenfele, onnan indul a
+        // tenyleges harc, es a macska (follower) sem kovet be oda. A
+        // tobbi zona ajtaja valtozatlanul kozvetlenul a harcba visz.
+        doorHotspot.onInteract = () => {
+          Overworld.pause();
+          fadeToScene(buildIsaacRoomScene());
+        };
+      } else {
+        doorHotspot.sprite = { src: zone.enemy.sprite, w: 48 };
+        doorHotspot.onInteract = () => {
           Overworld.pause();
           enterZoneWithFade(i);
-        },
-      });
+        };
+      }
+      hotspots.push(doorHotspot);
+    });
+
+    const playerSpawn = () => ({
+      xFrac: spawnAfterDoorIndex == null ? 0.03 : Math.min(0.98, DOOR_FRACTIONS[spawnAfterDoorIndex] + 0.045),
+      yFrac: 0.78,
     });
 
     return {
@@ -327,11 +346,92 @@ window.addEventListener("DOMContentLoaded", async () => {
       { xMin: 0.001, xMax: 0.99, yMin: 0.7, yMax: 0.88 },
       { xMin: 0.123, xMax: 0.135, yMin: 0.65, yMax: 0.8 },
       ],
-      spawn: () => ({
-        xFrac: spawnAfterDoorIndex == null ? 0.03 : Math.min(0.98, DOOR_FRACTIONS[spawnAfterDoorIndex] + 0.045),
-        yFrac: 0.78,
-      }),
+      spawn: playerSpawn,
+      // Feki a folyoson kovető NPC-kent jelenik meg (a szobaban viszont
+      // csak statikusan ul az ablakban, ld. ROOM_SCENE.decorations) --
+      // ld. overworld.js scene.follower dokumentaciojat. A kezdopozicioja
+      // egy kicsit a jatekos spawn-pontja mogott van, nem pontosan azon.
+      follower: {
+        spawn: () => {
+          const s = playerSpawn();
+          return { xFrac: Math.max(0, s.xFrac - 0.02), yFrac: s.yFrac };
+        },
+        // A doboz merete a legnagyobb (jump, 34x26) kockahoz igazitva, kicsit
+        // ranyagva -- a kisebb kockak (ulo 24x24, futo 32x24) object-fit:
+        // contain-nel, torzitas nelkul, aljra igazitva fernek bele.
+        w: 34,
+        h: 30,
+        sitFrames: [
+          "assets/sprites/cat/feki_01.png",
+          "assets/sprites/cat/feki_02.png",
+          "assets/sprites/cat/feki_03.png",
+          "assets/sprites/cat/feki_04.png",
+        ],
+        runFrames: [
+          "assets/sprites/cat/feki_run_01.png",
+          "assets/sprites/cat/feki_run_02.png",
+          "assets/sprites/cat/feki_run_03.png",
+          "assets/sprites/cat/feki_run_04.png",
+        ],
+        jumpFrames: [
+          "assets/sprites/cat/feki_jump_01.png",
+          "assets/sprites/cat/feki_jump_02.png",
+          "assets/sprites/cat/feki_jump_03.png",
+          "assets/sprites/cat/feki_jump_04.png",
+        ],
+      },
       hotspots,
+    };
+  }
+
+  // Az 1. zona bevezeto kis-szobaja (isaac_room.png) -- a folyoso 1. zona
+  // ajtajan belepve ide jutunk (ld. buildCorridorScene() door0 hotspotjat),
+  // nem kozvetlenul a harcba. Egyetlen kepernyot toltő szoba, mint a
+  // ROOM_SCENE -- csak alul, a bejarati ajton keresztul lehet visszajutni a
+  // folyosora. Szandekosan NINCS `follower` mezoje, igy a macska nem kovet
+  // be ide (ld. overworld.js scene.follower dokumentaciojat -- follower
+  // hianyaban egyszeruen nincs kovető NPC). Az xFrac/yFrac ertekek szemre
+  // vannak belőve a kep sarokban lévő ajtonyilasahoz -- ha a kep valtozik,
+  // ellenorizd ujra (ld. CLAUDE.md "Ismert korlatok").
+  function buildIsaacRoomScene() {
+    const zone = ZONES[0];
+    return {
+      bgSrc: "assets/sprites/isaac_room.png",
+      walkBounds: [
+        { xMin: 0.12, xMax: 0.88, yMin: 0.2, yMax: 0.9 },
+        { xMin: 0.46, xMax: 0.56, yMin: 0.86, yMax: 0.97 },
+      ],
+      // A spawn szandekosan JOVAL messzebb van az alabbi kilepo hotspottol,
+      // mint annak radius-a -- kulonben belepeskor a jatekos mar eleve a
+      // kilepo hotspot aktivalasi sugaraban allna, es az `auto` azonnal
+      // (ugyanabban a kepkockaban) visszakuldene a folyosora, mielott
+      // barmit lathatna a szobabol.
+      spawn: { xFrac: 0.5, yFrac: 0.78 },
+      hotspots: [
+        {
+          id: "isaac-room-exit",
+          xFrac: 0.5,
+          yFrac: 0.93,
+          radius: 28,
+          auto: true,
+          onInteract: () => {
+            Overworld.pause();
+            fadeToScene(buildCorridorScene(0));
+          },
+        },
+        {
+          id: "isaac-room-enemy",
+          xFrac: 0.5,
+          yFrac: 0.48,
+          radius: 55,
+          auto: true,
+          sprite: { src: zone.enemy.sprite, w: 60 },
+          onInteract: () => {
+            Overworld.pause();
+            enterZoneWithFade(0);
+          },
+        },
+      ],
     };
   }
 
@@ -403,6 +503,21 @@ window.addEventListener("DOMContentLoaded", async () => {
     sceneFade.classList.add("scene-fade-out");
     setTimeout(() => {
       enterZone(zoneIndex);
+      sceneFade.classList.remove("scene-fade-out");
+      sceneFade.classList.add("scene-fade-in");
+      setTimeout(() => sceneFade.classList.remove("scene-fade-in"), GLITCH_FADE_MS);
+    }, ZONE_FADE_OUT_MS);
+  }
+
+  // Ugyanaz a sima elsotetedes-jelleg, mint enterZoneWithFade()-nel, de nem
+  // valt kepernyot (az overworld-screen lathato marad) -- csak az Overworld
+  // belso jelenete cserelodik a fekete mogott. Ezt hasznalja pl. a folyoso
+  // <-> isaac-szoba valtas (ld. buildIsaacRoomScene()).
+  function fadeToScene(sceneConfig) {
+    sceneFade.classList.remove("scene-fade-in", "scene-fade-black");
+    sceneFade.classList.add("scene-fade-out");
+    setTimeout(() => {
+      Overworld.start(sceneConfig);
       sceneFade.classList.remove("scene-fade-out");
       sceneFade.classList.add("scene-fade-in");
       setTimeout(() => sceneFade.classList.remove("scene-fade-in"), GLITCH_FADE_MS);

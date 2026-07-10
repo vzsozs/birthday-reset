@@ -58,6 +58,28 @@
  *     `frameMs`-enkent (alapertelmezett 220ms); egyetlen kephez eleg az
  *     `src` mezo.
  *
+ * scene.follower = { spawn:{xFrac,yFrac}|fn, w, h?, sitFrames:[...], runFrames:[...], jumpFrames:[...] }
+ *   - opcionalis, egyetlen "kovető" NPC (pl. Feki, a macska a folyoson --
+ *     a szobaban Feki egyszerű `decorations`-bejegyzes, statikusan ul az
+ *     ablakban, nincs kovető viselkedese ott), ami a
+ *     jatekost koveti, de nem tapad ra: ket KULON hatarral (hiszterezis,
+ *     FOLLOWER_CHASE_TRIGGER_DISTANCE / FOLLOWER_KEEP_DISTANCE, ld.
+ *     updateFollower() elejen levo megjegyzest) hagyja magat erdemben
+ *     lemaradni, mielott (veletlenszeru FOLLOWER_WAKE_MIN_MS..MAX_MS
+ *     reakcio-keses utan) elindul utolerni (runFrames-szel animalva, a
+ *     jatekosnal erezhetoen gyorsabb FOLLOWER_SPEED-del) -- igy latvanyos,
+ *     latszik-hogy-fut utoleres, nem allando lepestartas/"ratapadas". Utolerve
+ *     megall egy kis "szemelyes teret" tartva (FOLLOWER_KEEP_DISTANCE), es
+ *     csak akkor ul le (sitFrames-szel, ciklikusan), ha a jatekos mar regota
+ *     (FOLLOWER_SIT_IDLE_MS) all.
+ *     Kovetes kozben ritkan (veletlenszeruen) beugrik egy rovid jumpFrames-
+ *     animaciot valtozatossagert. A jatekoshoz hasonloan tiszteletben
+ *     tartja a scene.walkBounds-t (isInsideWalkBounds()) -- ha emiatt
+ *     erdemi elmozdulas nelkul "futna a helyben" (FOLLOWER_STUCK_MS-nel
+ *     tovabb), inkabb leul, nem ragad be a futas-animacioban. Ld.
+ *     spawnFollower()/updateFollower(). Csak egyszerre egy follower tamogatott jelenetenkent;
+ *     ha a scene-nek nincs `follower` mezoje, nincs kovető (pl. a folyoso).
+ *
  * Nem nyul a battle.js/engine.js-hez.
  */
 // Fejlesztoi debug-kapcsolok: allitsd true-ra barmelyiket, hogy a
@@ -86,6 +108,39 @@ const Overworld = (() => {
   let debugHotspotEls = [];
   let activeHotspot = null;
   let triggeredAutoIds = new Set();
+
+  // Kovető NPC (pl. Feki) allapota -- ld. a fajl elejen a "scene.follower"
+  // dokumentaciot es a spawnFollower()/updateFollower() fuggvenyeket.
+  let follower = null;
+  let followerCfg = null;
+  let followerPos = { x: 0, y: 0 };
+  let followerState = "sit"; // "sit" | "stand" | "follow" | "jump"
+  let followerFacing = 1; // 1 = jobbra nez (alapertelmezett sprite-irany), -1 = tukrozve
+  let followerAnimFrame = 0;
+  let followerAnimTimer = 0;
+  let followerCurrentSrc = "";
+  let followerWakeTimer = 0; // ms, hany ido mulva "veszi eszre", hogy kovetnie kell
+  let followerJumpTimer = 0; // ms, meddig tart meg a folyamatban levo ugras
+  let followerNextJumpCheck = 0; // ms, mikor probalkozzunk legkozelebb veletlenszeru ugrassal
+  let playerIdleTimer = 0; // ms, mioata a jatekos nem probal mozogni
+  let followerStuckTimer = 0; // ms, mioata nem halad erdemben "follow"/"jump" allapotban (ld. lejjebb)
+
+  const FOLLOWER_SPEED = 230; // erezhetoen gyorsabb a jatekosnal (SPEED), hogy az utoleres egy latvanyos, gyors "beeresztos" legyen, ne csak lassan araszoljon utana
+  const FOLLOWER_CHASE_TRIGGER_DISTANCE = 140; // px, csak EKKORA lemaradas utan kezd el futni utolerni -- ld. hiszterezis megjegyzest updateFollower()-nel
+  const FOLLOWER_KEEP_DISTANCE = 60; // px, addig fut az utoleres, amig ennyire nem er a jatekoshoz -- utana megall/leul, nem tapad ra
+  const FOLLOWER_WAKE_MIN_MS = 300;
+  const FOLLOWER_WAKE_MAX_MS = 900;
+  const FOLLOWER_SIT_IDLE_MS = 3000; // ennyi ideig mozdulatlan jatekos utan ul le a mar utolert kovető
+  const FOLLOWER_JUMP_CHECK_MS = 2200; // korulbelul ennyi idonkent probalkozik veletlenszeru ugrassal kovetes kozben
+  const FOLLOWER_JUMP_PROBABILITY = 0.2;
+  const FOLLOWER_JUMP_DURATION_MS = 480;
+  const FOLLOWER_ANIM_FRAME_MS = 120; // futas/ugras kocka-sebesseg
+  const FOLLOWER_SIT_FRAME_MS = 260; // ulo idle kocka-sebesseg (a regi dekoracios animacio utemezese)
+  // Ha "follow"/"jump" allapotban a kovető egy adott ideig (STUCK_MS)
+  // a szandekolt lepesenek kevesebb mint felet tudja csak megtenni --
+  // pl. mert a walkBounds nem engedi at a jatekos aktualis helyere --,
+  // akkor ne fusson a helyben vegtelenul: inkabb uljon le. Ld. updateFollower().
+  const FOLLOWER_STUCK_MS = 450;
 
   const SPEED = 140;
   // Alap jatekos-meret (a szoba butoraihoz hangolva, ld. CLAUDE.md). Egy
@@ -235,6 +290,212 @@ const Overworld = (() => {
     });
   }
 
+  function setFollowerSprite(src) {
+    if (followerCurrentSrc === src) return;
+    followerCurrentSrc = src;
+    follower.src = src;
+  }
+
+  // scene.follower (opcionalis, ld. a fajl elejen a dokumentaciot) -- ha
+  // nincs megadva, nincs kovető NPC (pl. a szobaban, ahol Feki statikus
+  // dekoraciokent ul az ablakban -- ld. scene.decorations).
+  function spawnFollower() {
+    if (follower) {
+      follower.remove();
+      follower = null;
+    }
+    followerCfg = scene.follower;
+    if (!followerCfg) return;
+
+    // followerCfg.spawn lehet egyszeru {xFrac,yFrac} objektum VAGY
+    // fuggveny (mint a scene.spawn), pl. hogy a folyoson a jatekos
+    // aktualis belepesi pontjahoz kepest szamitodjon ki.
+    const followerSpawn = typeof followerCfg.spawn === "function" ? followerCfg.spawn() : followerCfg.spawn;
+    followerPos.x = followerSpawn.xFrac * worldW;
+    followerPos.y = followerSpawn.yFrac * stageH;
+    followerState = "sit";
+    followerFacing = 1;
+    followerAnimFrame = 0;
+    followerAnimTimer = 0;
+    followerCurrentSrc = "";
+    followerWakeTimer = 0;
+    followerJumpTimer = 0;
+    followerNextJumpCheck = FOLLOWER_JUMP_CHECK_MS * (0.6 + Math.random() * 0.8);
+    followerStuckTimer = 0;
+    playerIdleTimer = 0;
+
+    follower = document.createElement("img");
+    follower.className = "overworld-follower";
+    follower.style.width = followerCfg.w + "px";
+    follower.style.height = (followerCfg.h || followerCfg.w) + "px";
+    dom.npcLayer.appendChild(follower);
+    setFollowerSprite(followerCfg.sitFrames[0]);
+    updateFollowerVisualPosition();
+  }
+
+  // dt masodpercben, playerMoving = a jatekos ebben a keretben TENYLEGESEN
+  // elmozdult-e (pos.x/y valtozott-e, ld. update() -- szandekosan NEM a
+  // nyers billentyu-bemenet, mert az fal neki nyomva is "igaz" maradna).
+  // Allapotgep: "sit" (regota
+  // mozdulatlan jatekos mellett ulve) <-> "stand" (utolerte, de a jatekos
+  // meg nem volt eleg regen mozdulatlan) <-> "follow" (a tavolsag
+  // FOLLOWER_CHASE_TRIGGER_DISTANCE fole nott, kesleltetve elindul) <->
+  // "jump" (kovetes kozbeni, ritka, veletlenszeru valtozatossag).
+  //
+  // Hiszterezis KET kulon hatarral (FOLLOWER_CHASE_TRIGGER_DISTANCE=140 es
+  // FOLLOWER_KEEP_DISTANCE=60), NEM egyetlen kozos hatarral: ha csak egy
+  // hatar lenne, a kovető minden egyes kepkockaban azonnal ujraindulna a
+  // jatekos mogott, mihelyt az akar 1px-t is lep, es folyamatos jatekos-
+  // mozgasnal soha nem esne le erdemben a jatekos mogott -- a ket sebesseg
+  // (FOLLOWER_SPEED vs SPEED) kozelsege miatt gyakorlatilag lepestartva,
+  // egy allando (szuk) tavolsagon "ragadt" mozogna a jatekossal, ami
+  // pontosan ugy nez ki, mintha ratapadna, nem pedig ugy, hogy utolerte
+  // volna (ld. felhasznaloi visszajelzes). A ket kulon hatarral ehelyett
+  // a kovető hagyja magat erdemben lemaradni (a CHASE_TRIGGER hatarig), majd
+  // egy latvanyos, gyors futassal utoleri (KEEP_DISTANCE-ig), es csak OTT
+  // all meg -- ez ad valodi "utanam szalad" erzetet lepestartas helyett.
+  function updateFollower(dt, playerMoving) {
+    if (!followerCfg) return;
+
+    if (playerMoving) {
+      playerIdleTimer = 0;
+    } else {
+      playerIdleTimer += dt * 1000;
+    }
+
+    const dx = pos.x - followerPos.x;
+    const dy = pos.y - followerPos.y;
+    const dist = Math.hypot(dx, dy);
+    const isChasing = followerState === "follow" || followerState === "jump";
+    const shouldChase = isChasing ? dist > FOLLOWER_KEEP_DISTANCE : dist > FOLLOWER_CHASE_TRIGGER_DISTANCE;
+
+    if (shouldChase) {
+      if (followerState === "sit") {
+        // A veletlenszeru reakcio-keses CSAK igazi (regota) ulesbol valo
+        // "felebredeskor" jar -- ha a kovető csak epp az imenti korben ert
+        // utol (allapot: "stand", meg nem ult le igazan), a jatekos
+        // folyamatos mozgasa eseten azonnal folytassa a kovetest, ne
+        // kezdjen minden egyes alkalommal ujra varakozni. Ellenkezo esetben
+        // (a regi viselkedes) folyamatos jatekos-mozgasnal az utolereskor
+        // mindig ujraindult a veletlen keses, es a kovető latszolag
+        // "leult-felallt-leult" ciklusban ragadt.
+        if (followerWakeTimer <= 0) {
+          followerWakeTimer = FOLLOWER_WAKE_MIN_MS + Math.random() * (FOLLOWER_WAKE_MAX_MS - FOLLOWER_WAKE_MIN_MS);
+        }
+        followerWakeTimer -= dt * 1000;
+        if (followerWakeTimer <= 0) {
+          followerState = "follow";
+        }
+      } else if (followerState === "stand") {
+        followerState = "follow";
+      }
+      if (followerState === "follow" || followerState === "jump") {
+        const beforeX = followerPos.x;
+        const beforeY = followerPos.y;
+        const speedCap = FOLLOWER_SPEED * dt;
+        const proximityCap = dist - FOLLOWER_KEEP_DISTANCE;
+        const moveDist = Math.min(speedCap, proximityCap);
+        const stepX = (dx / dist) * moveDist;
+        const stepY = (dy / dist) * moveDist;
+        const newX = followerPos.x + stepX;
+        const newY = followerPos.y + stepY;
+        // Ugyanugy tiszteletben tartja a walkBounds-t, mint a jatekos --
+        // tengelyenkent kulon, hogy a fal menten szepen vegigcsusszon.
+        if (isInsideWalkBounds(newX, followerPos.y)) followerPos.x = newX;
+        if (isInsideWalkBounds(followerPos.x, newY)) followerPos.y = newY;
+        if (dx !== 0) followerFacing = dx > 0 ? 1 : -1;
+
+        // "Beragadas" -eszleles: a tenyleges elmozdulast a SZANDEKOLT
+        // (moveDist) ARANYABAN nezzuk, nem fix px-epsilonnal -- egy fix
+        // px-hatar kepkocka-sebesseg-fuggo lenne (pl. gyors/valtozo dt
+        // eseten meg egy teljesen akadalytalan lepes is essen az
+        // "epsilon" ala, es tevesen beragadasnak tunne). Csak akkor
+        // szamit blokkoltnak, ha erdemi lepest (moveDist) akart tenni,
+        // de annak kevesebb mint felet sikerult csak megtennie -- ez
+        // jelzi, hogy a walkBounds nem engedi at a jatekos aktualis
+        // helyere, fuggetlenul a kepkocka-sebessegtol.
+        const actuallyMoved = Math.hypot(followerPos.x - beforeX, followerPos.y - beforeY);
+        const blocked = moveDist > 0.01 && actuallyMoved < moveDist * 0.5;
+        if (blocked) {
+          followerStuckTimer += dt * 1000;
+        } else {
+          followerStuckTimer = 0;
+        }
+
+        if (followerStuckTimer >= FOLLOWER_STUCK_MS) {
+          followerState = "sit";
+          followerAnimFrame = 0;
+          followerAnimTimer = 0;
+          followerStuckTimer = 0;
+        } else if (followerState === "follow") {
+          followerNextJumpCheck -= dt * 1000;
+          if (followerNextJumpCheck <= 0) {
+            followerNextJumpCheck = FOLLOWER_JUMP_CHECK_MS * (0.6 + Math.random() * 0.8);
+            if (Math.random() < FOLLOWER_JUMP_PROBABILITY) {
+              followerState = "jump";
+              followerJumpTimer = FOLLOWER_JUMP_DURATION_MS;
+              followerAnimFrame = 0;
+              followerAnimTimer = 0;
+            }
+          }
+        } else {
+          followerJumpTimer -= dt * 1000;
+          if (followerJumpTimer <= 0) followerState = "follow";
+        }
+      }
+    } else {
+      followerWakeTimer = 0;
+      if (followerState === "follow" || followerState === "jump") {
+        followerState = "stand";
+        followerAnimFrame = 0;
+        followerAnimTimer = 0;
+      }
+      if (playerIdleTimer >= FOLLOWER_SIT_IDLE_MS) {
+        if (followerState !== "sit") {
+          followerState = "sit";
+          followerAnimFrame = 0;
+          followerAnimTimer = 0;
+        }
+      } else if (followerState === "sit") {
+        followerState = "stand";
+        followerAnimFrame = 0;
+        followerAnimTimer = 0;
+      }
+    }
+
+    animateFollower(dt);
+    updateFollowerVisualPosition();
+  }
+
+  function animateFollower(dt) {
+    followerAnimTimer += dt * 1000;
+    let frames = followerCfg.sitFrames;
+    let frameMs = FOLLOWER_SIT_FRAME_MS;
+    if (followerState === "jump") {
+      frames = followerCfg.jumpFrames;
+      frameMs = FOLLOWER_ANIM_FRAME_MS;
+    } else if (followerState === "follow") {
+      frames = followerCfg.runFrames;
+      frameMs = FOLLOWER_ANIM_FRAME_MS;
+    } else if (followerState === "stand") {
+      // Nincs kulon "allo" kocka -- az elso ulo-kockat hasznaljuk
+      // statikusan (nem ciklikusan), amig el nem dol, hogy leul-e vagy fut.
+      frames = followerCfg.sitFrames.slice(0, 1);
+    }
+    if (followerAnimTimer >= frameMs) {
+      followerAnimTimer -= frameMs;
+      followerAnimFrame = (followerAnimFrame + 1) % frames.length;
+    }
+    setFollowerSprite(frames[followerAnimFrame % frames.length]);
+  }
+
+  function updateFollowerVisualPosition() {
+    if (!follower) return;
+    const w = followerCfg.w;
+    const h = followerCfg.h || followerCfg.w;
+    follower.style.transform = `translate(${followerPos.x - w / 2}px, ${followerPos.y - h}px) scaleX(${followerFacing})`;
+  }
+
   // DEBUG_WALKBOUNDS true eseten kirajzolja a scene.walkBounds
   // teglalapjait (egyetlen objektum vagy tomb, ld. isInsideWalkBounds())
   // halvany neonzold kerettel -- ld. a fajl elejen levo megjegyzest.
@@ -352,6 +613,7 @@ const Overworld = (() => {
 
       spawnHotspotSprites();
       spawnDecorations();
+      spawnFollower();
       spawnDebugWalkBounds();
       spawnDebugHotspots();
 
@@ -386,6 +648,8 @@ const Overworld = (() => {
   }
 
   function update(dt) {
+    const prevX = pos.x;
+    const prevY = pos.y;
     let dx = 0,
       dy = 0;
     if (keys["arrowleft"] || keys["a"]) dx -= 1;
@@ -428,6 +692,15 @@ const Overworld = (() => {
 
     updatePositions();
     checkHotspots();
+    // A kovető "jatekos-idle" eszleleset a TENYLEGES pozicio-valtozasra
+    // alapozzuk, nem a nyers billentyu-bemenetre (`moving`) -- kulonben ha
+    // a jatekos egy falnak/hataroknak tartva nyomva tartja az iranygombot,
+    // a pozicio nem valtozik, de a `moving` flag orokre igaz maradna, es a
+    // kovető sosem jutna el a valodi "sit" allapotig -- csak a "stand"
+    // (allo, meg le nem ult) pozan ragadna, latszolag orokre "ratapadva" a
+    // jatekosra (ld. felhasznaloi visszajelzes/teszteles).
+    const playerActuallyMoved = pos.x !== prevX || pos.y !== prevY;
+    updateFollower(dt, playerActuallyMoved);
   }
 
   function updatePositions() {

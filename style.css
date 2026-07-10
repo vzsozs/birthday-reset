@@ -173,6 +173,20 @@ h1 {
   pointer-events: none;
 }
 
+/* Kovető NPC (pl. Feki) -- top:0/left:0 + JS-beli translate() pozicionalja
+   (mint a jatekost), nem left/top px-ekkel (mint a statikus dekoraciokat),
+   mert folyamatosan mozog. A scaleX(-1)-et (iranyvaltas) is a JS transformja
+   adja hozza, ld. overworld.js updateFollowerVisualPosition(). */
+.overworld-follower {
+  position: absolute;
+  top: 0;
+  left: 0;
+  object-fit: contain;
+  object-position: bottom;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
 /* Fejlesztoi debug-keret a walkBounds teruletekhez -- csak akkor jelenik
    meg, ha a js/overworld.js DEBUG_WALKBOUNDS konstansa true. Ld. ott. */
 .overworld-debug-bounds {

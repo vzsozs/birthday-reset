@@ -31,11 +31,20 @@ szabad mozgás nyilakkal/WASD-vel) → a számítógéphez érve (interakció-ho
 Enter/kattintás) egy **narrációs választó-doboz** ("uhh, ma még nem
 játszottam...", START / INKÁBB KIMEGYEK APÁHOZ — ez utóbbi Tenna majd Queen
 vicces beszólását hozza be, végül a gomb magától Startra vált) → **glitch-átmenet**
-→ **oldalra scrollozó folyosó** (kamera követi a játékost, a folyosón látható
-kísérő-NPC-k és a zóna-ellenfelek sprite-jai most már **interakció-hotspotok**:
-oda kell menni és Entert/kattintást nyomni — a kísérő-NPC-khez (Kecske/Tenna/Queen)
-egy rövid, opcionális beszólás ugrik fel, a zóna-ellenfél sprite-ja pedig ez
-indítja el magát a zónát, nem egy láthatatlan "ajtó") → 1. "A Sírás"
+(többlépcsős, ld. "Képernyő-átmenetek" lejjebb) → **oldalra scrollozó folyosó**
+(kamera követi a játékost). A folyosón Kecske egy a játékost követő NPC (ld.
+"Az overworld-jelenetek hangolása" lejjebb) — hozzá odamenve Enterrel/kattintással rövid,
+opcionális, lapozható beszólás ugrik fel. A zóna-ellenfél sprite-jához
+(szintén hotspot, de **automatikus**: nem kell Enter, elég odasétálni) érve
+egy sima elsötétedéssel indul a harc, nem egy láthatatlan "ajtóval" — **kivéve
+az 1. zónát**, aminek az ajtaja egy külön kis bevezető szobába visz
+(`isaac_room.png`, ld. `buildIsaacRoomScene()` a `js/main.js`-ben) — ott áll
+a zóna ellenfele saját (szintén automatikus) hotspotként, és csak alul, egy
+külön ajtón át lehet visszajutni a folyosóra; a macska (follower) nem követ
+be ebbe a szobába, mert a scene-configjának nincs `follower` mezője. A
+másik 3 zóna ajtaja változatlanul közvetlenül a harcba visz. (Tenna/
+Queen korábban szintén megjelentek a folyosón külön hotspotként — ez
+egyelőre ki van kapcsolva, ld. "Ismert korlátok".) 1. "A Sírás"
 (Könny-lény, +DRY EYES) → 2. "A Cirkusz" (Bohóc-NPC, +TOO MUCH FUN) → 3. "A
 Csövek" (Cső-Automata, +OVERCLOCKED) → 4. "A Roblox-lerakat" (Blokkfejű
 Véghiba, +CUBED) → Tenna kapunyitása + Asgore-jelenet → vég-képernyő ("HAPPY
@@ -85,8 +94,16 @@ js/overworld.js       - EGYETLEN, ÚJRAFELHASZNÁLHATÓ DOM-alapú szabad-mozgas
                         (felváltja a korábbi, kettévált room.js+corridor.js párost,
                         ami majdnem szó szerint duplikált mozgás-kódot tartalmazott).
                         Egy scene-configot kap (`Overworld.start(scene)`): háttérkép,
-                        jarhato hatarok (`walkBounds`), spawn-pont, és egy
-                        `hotspots` lista. A `bgSrc` egyetlen kép-útvonal VAGY (a
+                        jarhato hatarok (`walkBounds`), spawn-pont, `hotspots` lista,
+                        opcionális `decorations` (statikus/animált díszek) és
+                        opcionális `follower` (a játékost követő NPC, ld. "Az
+                        overworld-jelenetek hangolása" lejjebb). **A fájl tetején lévő nagy
+                        docblock a forrás-igazság** minden scene-config mezőre
+                        (`bgSrc`, `walkBounds`, `playerScale`, `Hotspot`,
+                        `Decoration`, `follower`) -- itt csak a lényeg, a
+                        pontos mezőneveket/alapértelmezéseket ott ellenőrizd,
+                        mielőtt módosítasz, hogy ne menjen szét a kettő.
+                        A `bgSrc` egyetlen kép-útvonal VAGY (a
                         folyosónál) ilyen útvonalak tömbje lehet -- tömb esetén a
                         képek egymás mellé illesztve (mindegyik a stage magasságára
                         skálázva, saját oldalarányát megtartva) alkotják a világot,
@@ -98,39 +115,69 @@ js/overworld.js       - EGYETLEN, ÚJRAFELHASZNÁLHATÓ DOM-alapú szabad-mozgas
                         méretezett szélessége adja -- ha az pontosan a stage-et
                         tölti ki (szoba), nincs kamera-eltolás; ha szélesebb
                         (folyosó), a kamera követi a játékost. Egy hotspot
-                        `{ id, xFrac, yFrac, radius, prompt, sprite?, onInteract }`
+                        `{ id, xFrac, yFrac, radius, prompt, sprite?, auto?, onInteract }`
                         -- ha van `sprite`, egy NPC/ellenfél-kepet is megjelenit
                         ott, a `radius`-on belul kozeledve felugrik a `prompt`,
-                        Enter/kattintasra az `onInteract()` fut le. `Overworld.pause()`/
+                        Enter/kattintasra az `onInteract()` fut le. A `sprite` sajat
+                        `xFrac`/`yFrac`-a fuggetlenul allithato a hotspot interakcios
+                        teruletetol (pl. a karakter kicsit odebb allhat, mint ahol az
+                        Enter aktivalodik); `sprite.matchPlayerSize`/`noFloat` a
+                        jatekos-mererthez igazitja/kikapcsolja a lebego animaciot
+                        (ld. a Kecske-hotspotot `js/main.js`-ben). Az `auto: true`
+                        hotspotnak nincs felirata/Entere -- pusztan odasetalva
+                        magatol lefut az `onInteract()` (ezt hasznalja a zona-
+                        belepesi "ajto"). `Overworld.pause()`/
                         `resume()` fuggeszti fel a mozgast egy modalis interakcio
                         (pl. a szamitogep valaszto-doboza) idejere.
-                        `Overworld.showCornerPopup(portrait, text, onDone, variant?)` a
-                        kozos, ujrafelhasznalt sarok-buborek mind a szoba, mind a
-                        folyoso rovid NPC-beszolasaihoz -- a szoveg gepelve jelenik meg,
-                        Enter/szokoz/kattintas eloszor kiirja a teljes szoveget, majd
-                        (ujabb Enter/szokoz/kattintasra) bezarja, nincs automatikus
-                        idozitett bezaras. Az opcionalis `variant:"room"`
-                        a `.corner-popup-room` CSS-modositot kapcsolja be (a
-                        "Speech Bubbles_rooms.png" buborek-hatter, nagyobb portré
-                        jobb-alul, szoveg balra) -- ezt hasznalja a szoba Tenna/Queen
-                        beszolasa (`js/main.js`), a folyoso NPC-i tovabbra is a
-                        sima (variant nelkuli) kinezetet kapjak. Nem nyul a
-                        battle.js/engine.js-hez.
+                        `Overworld.showCornerPopup(portrait, text, onDone, variant?, opts?)`
+                        a kozos, ujrafelhasznalt sarok-buborek mind a szoba, mind a
+                        folyoso rovid NPC-beszolasaihoz -- a szoveg gepelve jelenik
+                        meg (mindig hanggal), Enter/szokoz/kattintas eloszor kiirja a
+                        teljes (aktualis oldalnyi) szoveget, majd tovabblapoz a
+                        kovetkezo oldalra, ha a `text` tomb (tobb "oldal"), vagy --
+                        az utolso oldalon -- bezarja a buborekot. Az opcionalis
+                        `opts: {boxWidth?, portraitSize?}` soronkent felulirhatja a
+                        doboz/portré CSS-alapertelmezett meretet (300px/40px), pl.
+                        egy szokasosnal hosszabb sornal (ld. `js/zones.js` ZONE_1
+                        Kecske-soranak `boxWidth`/`portraitSize` mezoit). A
+                        `variant:"room"` a `.corner-popup-room` CSS-modositot
+                        kapcsolja be (a "Speech Bubbles_rooms.png" buborek-hatter,
+                        nagyobb portré jobb-alul, szoveg balra) -- ezt hasznalja a
+                        szoba Tenna/Queen beszolasa (`js/main.js`), a folyoso NPC-i
+                        tovabbra is a sima (variant nelkuli) kinezetet kapjak, ahol a
+                        portré alapbol FELUL igazitott (a room-variansnal alul
+                        marad). Fejlesztoi debug-kapcsolok a fajl tetejen
+                        (`DEBUG_WALKBOUNDS`, `DEBUG_HOTSPOTS`, mindketto jelenleg
+                        `true`) -- zold keret a jarhato teruletnek, piros kor a
+                        hotspotok aktivalasi sugaranak, csak kodbol kapcsolhatoak.
+                        Nem nyul a battle.js/engine.js-hez.
 js/zones.js           - AZ EGYETLEN hely, ahol tényleges harc-tartalom van: szövegek,
                         ACT-ok, ellenfél-adatok, a `background` (zona-hatterkep) ES a
                         `companionChat` (a folyoson az adott zona elott felszedhetot
-                        Kecske/Tenna/Queen rovid beszolasai) zónánként. A ZONES tömb
-                        sorolja fel a zónákat sorrendben.
+                        Kecske/Tenna/Queen rovid beszolasai) zónánként. **Jelenleg
+                        csak a `companionChat[0]` (Kecske) sora jelenik meg
+                        ténylegesen a folyosón** -- a Tenna/Queen bejegyzések
+                        (`companionChat[1]`/`[2]`) tartalmilag megvannak, de nincs
+                        hozzájuk sprite/hotspot a `js/main.js` `buildCorridorScene()`-
+                        jében (ld. ott a megjegyzést). A ZONES tömb sorolja fel a
+                        zónákat sorrendben.
 js/main.js            - DOM-elemek összekötése, asset-betöltés, a fix-felbontas
                         skalazasa (updateScale()), a szoba- es folyoso-jelenet
                         scene-configjainak osszeallitasa (ROOM_SCENE,
-                        buildCorridorScene()) es Overworld.start()-tal valo
-                        elinditasuk, a szamitogep valaszto-doboz allapotgepe
-                        (openComputerChoice es a hozza tartozo gombok), a
-                        glitch-átmenet (`enterGlitchWorld()`), zóna-belepes
-                        (`enterZone(zoneIndex)` -- ez futtatja Battle.start-ot a
-                        zona hattereevel, es a zona vegeztevel vagy visszater a
-                        folyosora, vagy (utolso zona utan) megmutatja a veg-kepernyot).
+                        buildCorridorScene(), buildIsaacRoomScene() -- az 1.
+                        zona kulon bevezeto szobaja, ld. "Jelenlegi allapot"
+                        fentebb) es Overworld.start()-tal valo elinditasuk, a
+                        szamitogep valaszto-doboz allapotgepe (openComputerChoice
+                        es a hozza tartozo gombok), a kepernyo-atmenetek
+                        (`enterGlitchWorld()`, `enterZoneWithFade()`,
+                        `fadeToScene()` -- utobbi az enterZoneWithFade()-hez
+                        hasonlo sima elsotetedes, de kepernyovaltas nelkul,
+                        pusztan az Overworld belso jelenetenek cserejehez,
+                        pl. folyoso <-> isaac-szoba -- ld. "Kepernyo-atmenetek"
+                        lejjebb), zóna-belepes (`enterZone(zoneIndex)` -- ez
+                        futtatja Battle.start-ot a zona hattereevel, es a
+                        zona vegeztevel vagy visszater a folyosora, vagy
+                        (utolso zona utan) megmutatja a veg-kepernyot).
 assets/sprites/*.png  - ideiglenes, generált placeholder grafika (lásd tools/gen_assets.py),
                         KIVÉVE a `bazsa_szoba.png`-t, ami egy kézzel készített, végleges
                         szoba-háttérkép (nem placeholder, nem a gen_assets.py generálja).
@@ -191,7 +238,7 @@ kepest ez lett a jol lathato meret) — ha ujra csereled a kepeket maskkora
 oldalaranyra, vagy megint nem stimmel a butorokhoz kepest, ellenorizd ujra
 ezt a helyet. Egy scene-config opcionalis `playerScale`-jevel (alapertelmezett
 1) ez a meret jelenetenkent felul-szorozhato -- pl. a folyoson `playerScale:
-0.8` (ld. `buildCorridorScene()` a `js/main.js`-ben) egy kicsit kisebb
+0.75` (ld. `buildCorridorScene()` a `js/main.js`-ben) egy kicsit kisebb
 szereplot ad, tavlati-erzetet keltve. A jatekos DOM-elem `width`/`height`-jet
 `start()` allitja be inline stilussal a tenyleges (skalazott) meretre, nem a
 CSS-ben van fixen megadva.
@@ -248,7 +295,8 @@ Mindkét jelenet ugyanazt a `js/overworld.js`-t használja, a `js/main.js`-ben
   (640×480) viszonyított arányok/px-ek, szemre belőve a `bazsa_szoba.png`-hez.
 - `buildCorridorScene()` (`js/main.js`): a `DOOR_FRACTIONS` (a 4 zóna-belépési
   pont közepe a teljes világ-szélesség arányában) és az ehhez képest eltolt
-  kísérő-NPC (Kecske/Tenna/Queen) hotspot-pozíciók pontosan a
+  Kecske-hotspot (jelenleg az egyetlen folyosói kísérő-NPC, ld. lejjebb)
+  pozíciók pontosan a
   `CORRIDOR_ZONE_BACKGROUNDS` (`corridor_zone1_bg_placeholder.png` ...
   `corridor_zone4_bg_placeholder.png`, lásd `tools/gen_assets.py`
   `corridor_bg()`) 4 egyenlő szélességű szakaszához igazodnak. A folyosó
@@ -275,15 +323,90 @@ objektumokból álló **tömböt** adsz meg, a járható terület ezek uniója l
 lépést, így a terület szélén szépen végigcsúszik a játékos, nem akad meg egy
 sarokban.
 
-A tisztán vizuális, nem interaktív díszeknek (pl. Feki, a macska az
-ablakpárkányon) külön `decorations` lista való egy scene-configban (ld.
-`ROOM_SCENE` `js/main.js`-ben) — ugyanazokkal az `xFrac`/`yFrac`/`w`/`h`
-mezőkkel, mint a hotspot-sprite-oknál, plusz egy `frames` tömbbel (ha
-körkörösen animálódó, több kockás sprite-ról van szó) és egy `frameMs`
-időzítéssel. A `js/overworld.js` `spawnDecorations()`-je rajzolja ki és
-animálja őket. Feki pozíciója (`xFrac: 0.238, yFrac: 0.276`) szemre lett
-belőve a `bazsa_szoba.png` ablakpárkányához — ha nem stimmel pixelre
-pontosan, ezt az egy objektumot kell csak hangolni.
+A tisztán vizuális, nem interaktív díszeknek külön `decorations` lista való
+egy scene-configban — `xFrac`/`yFrac`/`w`/`h` mezőkkel, mint a hotspot-
+sprite-oknál, plusz egy `frames` tömbbel (ha körkörösen animálódó, több
+kockás sprite-ról van szó) és egy `frameMs` időzítéssel. A `js/overworld.js`
+`spawnDecorations()`-je rajzolja ki és animálja őket. Feki, a macska ilyen
+dekorációként ül az ablakban a `ROOM_SCENE`-ben (`js/main.js`) — a
+szobában NEM mozog, NEM követi a játékost, ez szándékos (a folyosón viszont
+igen, ld. lejjebb).
+
+**A folyosón Feki egy a játékost követő NPC** (`scene.follower`, ld. a
+`js/overworld.js` elején a dokumentációt és a `spawnFollower()`/
+`updateFollower()` függvényeket, beállítva a `buildCorridorScene()`
+visszatérési értékében). Egy `follower`-nek négy sprite-készlete van:
+`sitFrames` (ülő idle-hurok, ugyanaz a 4 kocka, mint a szobai ablakpárkány-
+dekorációnál), `runFrames`/`jumpFrames` (a `assets/sprites/cat/` mappában,
+`feki_run_0N.png`/`feki_jump_0N.png`) és egy `spawn` kezdőpozíció (lehet
+`{xFrac,yFrac}` VAGY egy függvény, mint a `scene.spawn` -- a folyosón a
+játékos aktuális belépési pontjához képest kicsit hátrébb számítódik ki,
+ld. `buildCorridorScene()`). Viselkedése: ha a játékostól mért távolság
+`FOLLOWER_KEEP_DISTANCE`-nál (50px) nagyobb, egy véletlenszerű
+(`FOLLOWER_WAKE_MIN_MS`..`MAX_MS`, 300-900ms) reakció-késés után elindul
+utána (`runFrames`-szel animálva, a `scene.walkBounds`-t tiszteletben
+tartva, mint a játékos), utolérve megáll a `FOLLOWER_KEEP_DISTANCE`
+tartásával (nem tapad rá), követés közben ritkán, véletlenszerűen beugrik
+egy rövid `jumpFrames`-animációt (`FOLLOWER_JUMP_PROBABILITY`), és csak
+akkor ül le újra (`sitFrames`, ciklikusan), ha a játékos már
+`FOLLOWER_SIT_IDLE_MS`-nél (3s) régebben mozdulatlan. Ezek a konstansok
+mind a `js/overworld.js` tetején vannak. Egyszerre csak egy `follower`
+támogatott jelenetenként; a `ROOM_SCENE`-nek nincs `follower` mezője (ott a
+`decorations`-beli statikus Feki van).
+
+**Ismert hiba, harmadik javítási kísérlet (státusz: felhasználói
+megerősítésre vár):** a follower-logikát korábban két körben javítottuk (ld.
+`osszefoglalo-260710.md` 5. szakasza) — a játékos idle-detektálását a nyers
+billentyű-bemenet helyett a tényleges pozícióváltozásra állítottuk át, és a
+"beragadás"-észlelőt fix px-epsilon helyett a szándékolt lépés arányára. Ezek
+után a felhasználó megerősítette a pontos tünetet (lásd alább kérdés-válasz):
+**"a macska szinte állandóan ott lóg közvetlenül mellettem/mögöttem, alig
+marad le, nincs látható futás-animáció — mintha csak a pozíciómat másolná".**
+Ez rávilágított az igazi okra: a `FOLLOWER_KEEP_DISTANCE` egyetlen közös
+határ volt mind az "induljon el utolérni", mind a "itt álljon meg" döntéshez
+— emiatt a `FOLLOWER_SPEED`/játékos-`SPEED` közelsége (160 vs 140) miatt a
+kísérő gyakorlatilag lépéstartásban, egy állandó szűk távolságon "ragadt"
+mozgott a játékossal, sosem esett le tőle látványosan, hogy aztán érdemben
+utána fusson. **Javítás (`js/overworld.js` `updateFollower()`):**
+hiszterezis két külön határral — `FOLLOWER_CHASE_TRIGGER_DISTANCE` (140px,
+ENNYIRE kell lemaradnia, hogy egyáltalán elinduljon utolérni) és
+`FOLLOWER_KEEP_DISTANCE` (60px, EDDIG fut, itt áll meg) —, plusz
+`FOLLOWER_SPEED` felemelve 160→230-ra, hogy az utolérés egy gyors, jól
+látható "beérős" mozdulat legyen, ne araszolás. **A tesztelést a
+felhasználó végzi saját maga (ld. a fájl tetején lévő szabály) — ne
+tekintsd megoldottnak, amíg vissza nem jelez.**
+
+## Képernyő-átmenetek
+
+A `js/main.js`-ben egy közös `#scene-fade` fedő (`index.html`, `style.css`)
+szolgál minden jelenetváltás elfedésére -- egy `#game-viewport` gyerek,
+teljes képernyős fekete `div`, alapból `opacity:0`. Két, egymástól eltérő
+karakterű átmenet használja, más-más CSS-osztályokkal:
+
+- **`enterGlitchWorld()`** (szoba → folyosó, a számítógépes választás
+  után): 1) `worldGlitch` CSS-animáció a `#game-viewport`-on (torzulás/
+  RGB-szétcsúszás/`clip-path`-sávok, `GLITCH_SHAKE_MS`=900ms, a végén már
+  majdnem fekete) -- FONTOS, hogy ez NEM a `#game-stage`-en fut, mert annak
+  már van egy inline `transform:scale()`-je (`updateScale()`), amit egy rá
+  kerülő CSS-animáció felülírna, kizoomolva a játékot; 2) a `#scene-fade`
+  azonnal (átmenet nélkül, `scene-fade-black` osztály) teljesen feketére
+  vált, és `GLITCH_BLACK_HOLD_MS`=500ms-ig így marad -- eközben cserélődik
+  a jelenet a fekete mögött; 3) a `#scene-fade` opacity-átmenettel
+  (`scene-fade-in` osztály, `GLITCH_FADE_MS`=500ms) eltűnik, felfedve a
+  folyosót. Jump-cut jellegű, "ugrás a feketébe" hangulat.
+- **`enterZoneWithFade()`** (folyosón az `auto` ajtó-hotspothoz sétálva, a
+  harc indítása előtt): sokkal egyszerűbb és lágyabb -- a `#scene-fade`
+  `scene-fade-out` osztállyal SIMA, átmenetes elsötétedéssel (nem
+  ugrásszerűen, `ZONE_FADE_OUT_MS`=400ms) vált feketére, a jelenet
+  cserélődik, majd `scene-fade-in`-nel (500ms) fel is fedi a harc-
+  képernyőt. Szándékosan más karakterű, mint a glitch-átmenet -- ez egy
+  nyugodt "besétálsz a harcba" pillanat, nem egy "megszakad a valóság"
+  pillanat.
+
+Ha egy harmadik, hasonló átmenetre lenne szükség, a `#scene-fade`
+CSS-osztályai (`scene-fade-black`/`scene-fade-in`/`scene-fade-out`,
+`style.css`) újrahasznosíthatók -- ne hozz létre új fedő-elemet, hacsak nem
+kell egyszerre két independens fade-hatás.
 
 ## Hogyan adj hozzá egy új zónát
 
@@ -342,26 +465,37 @@ végtelenítve marad.
   headless teszt-eszközök) erősen le lehet lassulva, mert a `requestAnimationFrame`
   háttérben futó lapokon throttle-ölve van — ez tesztelési-környezeti korlát, nem
   hiba a mozgás-kódban (éles, fókuszált böngészőben nem jelentkezik).
+- **A folyosói Feki-követő (`scene.follower`) hiszterezis-javítása
+  felhasználói megerősítésre vár** (a "rátapad, nem fut utánam" tünetre —
+  ld. részletesen az "Az overworld-jelenetek hangolása" szakaszban fentebb).
+  NE feltételezd, hogy ez meg van oldva, amíg a felhasználó nem erősíti meg.
 
 ## Hátralévő munka (a DESIGN.md fejlesztési fázisai alapján)
 
-**Jelenleg folyamatban / a legutóbbi menet óta aktuális feladat:** lásd
-`osszefoglalo-260710.md` — a nyitó jelenet (cím → szoba → gép-választás →
-glitch-átmenet) kész. A glitch-átmenet ezután látványosabbra lett cserélve
-(`worldGlitch` keyframes, `style.css`), és a folyosó háttere technikailag
-elő lett készítve a zónánkénti cserére (`corridor_zoneN_bg_placeholder.png`,
-4 külön fájl egyetlen összefűzött kép helyett — lásd az "Az
-overworld-jelenetek hangolása" szakaszt). A **tényleges, kézzel rajzolt
-folyosó-háttér még nincs meg** — ez a következő szakasz feladata marad,
-zónánként egy-egy fájl lecserélésével.
+**Jelenleg folyamatban / a legutóbbi menetek óta aktuális feladat:** lásd
+`osszefoglalo-260710.md` (több menet összefoglalója egy fájlban, dátum
+szerint bővül) a részletes történetért. Rövid összegzés:
+
+- A nyitó jelenet (cím → szoba → gép-választás → glitch-átmenet) kész.
+- A folyosó háttere zónánkénti külön fájlokra lett bontva
+  (`corridor_zoneN_bg_placeholder.png`, ld. "Az overworld-jelenetek
+  hangolása"), és **az 1. zóna háttere már kézzel rajzolt, végleges**
+  (nem placeholder) — a 2-4. zónáé még a generált placeholder.
+- A folyosón most Kecske egy a játékost követő NPC, automatikus (Enter
+  nélküli) zóna-belépéssel és több lépcsős képernyő-átmenetekkel (ld.
+  "Képernyő-átmenetek"), lapozható NPC-beszólásokkal.
+- **Nyitott hiba:** a Feki-követő időnként még bugos élesben — ld. "Az
+  overworld-jelenetek hangolása" szakasz vége.
 
 1. ~~Motor-prototípus~~ — kész (1. zóna)
 2. ~~Tartalom~~ — kész (mind a 4 zóna megírva, lásd `js/zones.js`)
-3. **Vizuál**: a placeholder zóna-hátterek/folyosó-háttér/ellenfél-sprite-ok
-   lecserélése saját rajzokra (ugyanazokkal a fájlnevekkel az `assets/sprites/`
-   mappában, akkor semmit nem kell kódban módosítani — legfeljebb a
-   `ROOM_SCENE`/`buildCorridorScene()` hotspot-pozíciókat a `main.js`-ben).
-   A harc-képernyő UI-ja (HP-csík, ACT-doboz, párbeszéd-keret, SOUL, Game
+3. **Vizuál** (folyamatban): a placeholder zóna-hátterek/folyosó-háttér/
+   ellenfél-sprite-ok lecserélése saját rajzokra (ugyanazokkal a
+   fájlnevekkel az `assets/sprites/` mappában, akkor semmit nem kell
+   kódban módosítani — legfeljebb a `ROOM_SCENE`/`buildCorridorScene()`
+   hotspot-pozíciókat a `main.js`-ben). A folyosó 1. zónás szakasza
+   (`corridor_zone1_bg_placeholder.png`) már kész, végleges rajz — a 2-4.
+   zónáé még hátravan. A harc-képernyő UI-ja (HP-csík, ACT-doboz, párbeszéd-keret, SOUL, Game
    Over) már valódi, kibányászott Deltarune-assetekkel megy (lásd
    `tools/slice_ui_assets.py`) — ide tartozó, még kihasznált stretch goal: a
    `Battle Box`/`Battleback` animáció-sorozatok (jelenleg csak statikus

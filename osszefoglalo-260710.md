@@ -153,3 +153,109 @@ a jelenet a DOM-ban, láthatatlanul; (3) utána a fedő `opacity` `transition`-n
 (0.5s, `scene-fade-in` osztály) tűnik el, felfedve a folyosót. Lásd
 `enterGlitchWorld()` a `js/main.js`-ben, a pontos időzítések a
 `GLITCH_SHAKE_MS`/`GLITCH_BLACK_HOLD_MS`/`GLITCH_FADE_MS` konstansokban.
+
+---
+
+## 5. Ugyanennek a napnak egy még későbbi menetében elkészült
+
+Ez a szakasz jó pár apró, egymásra épülő felhasználói kérést fog össze.
+Technikai részletek mindenhol a `CLAUDE.md`-ben (ez csak a "mi történt és
+miért" napló).
+
+**Folyosói karakter-méret:** `scene.playerScale` (alapértelmezett 1) —
+a folyosón `0.75`, kicsit kisebb, távlati-érzetet keltő szereplő. Ld.
+"Karakter-sprite-ok" a CLAUDE.md-ben.
+
+**Fejlesztői debug-kapcsolók** (`js/overworld.js` teteje): `DEBUG_WALKBOUNDS`
+(zöld keret a járható területnek) és `DEBUG_HOTSPOTS` (piros kör a hotspotok
+aktiválási sugarának) — mindkettő jelenleg `true`, csak kódból kapcsolható,
+tesztelés utáni visszaállítás a felhasználó dolga.
+
+**Zóna-belépés automatikussá tétele:** a folyosón az ajtó-hotspot mostantól
+`auto: true` — nem kell Enter, a puszta odasétálás indítja a harcot, egy
+sima, átmenetes elsötétedéssel (`enterZoneWithFade()`, `js/main.js`) —
+szándékosan más karakterű, mint a glitch-átvezetés "ugrás a feketébe"
+jellege. Ld. "Képernyő-átmenetek" a CLAUDE.md-ben.
+
+**Hotspot-sprite pozíció leválasztva az interakciós területről:** egy
+hotspot `sprite.xFrac`/`sprite.yFrac`-a mostantól függetlenül állítható a
+hotspot saját (interakciós/aktiválási) `xFrac`/`yFrac`-ától. Emellett
+`sprite.matchPlayerSize`/`noFloat` is bekerült (a karakter mérete pontosan
+a játékoséhoz igazodjon / ne lebegjen fel-le). Ezekkel lett átalakítva a
+folyosói Kecske-hotspot.
+
+**Csak Kecske maradt a folyosón:** a felhasználó kérésére a Tenna/Queen
+folyosói hotspotja (sprite+beszólás) el lett távolítva (túl zsúfolt volt
+egy helyen) — a `companionChat[1]`/`[2]` szövegük a `js/zones.js`-ben
+változatlanul megvan, csak jelenleg nincs hozzájuk sprite/hotspot.
+
+**Sarok-buborék lapozása + méret-felülbírálás:** `Overworld.showCornerPopup()`
+`text` paramétere mostantól lehet sztringtömb is (több "oldal",
+Enter/szóköz/kattintással lapozva) — ezt használja a `ZONE_1` hosszú
+Kecske-sora (`js/zones.js`). Kapott egy `opts: {boxWidth?, portraitSize?}`
+paramétert is, amivel egyetlen konkrét sor kaphat szélesebb dobozt/nagyobb
+portrét a CSS-alapértelmezett helyett. A gépelés-hang mostantól mindig szól
+(korábban csak a szoba "room" variánsánál szólt). A lapozás-jelző "▶" nyilat
+menet közben kivettük (a felhasználó nem kérte, zavaró volt), és a sima
+(nem "room") variáns portréja mostantól felül igazított (korábban alul,
+mint a "room" variáns, ami maradt alul-igazított).
+
+**Feki (a macska) mint követő NPC — ez volt a menet legnagyobb tétele.**
+A `assets/sprites/cat/` mappa bővült `feki_run_0N.png`/`feki_jump_0N.png`
+kockákkal (a meglévő `feki_0N.png` ülő-animáció mellé). Ebből épült egy
+általános `scene.follower` motor-funkció (`js/overworld.js`): egy NPC, ami
+késleltetve (véletlenszerű reakció-idővel) elindul a játékos után, ha a
+távolság megnő, futás-animációval követi, ritkán ugrik egyet
+változatosságért, és leül, ha a játékos régóta mozdulatlan.
+
+Első nekifutásra rossz helyre (a szobába) került — a felhasználó jelezte,
+hogy **fordítva kellene**: a szobában Feki maradjon egyszerű, statikus
+ablakpárkány-dekoráció (ahogy addig is volt), a follower-viselkedés pedig
+a **folyosóra** kerüljön. Ez át lett rakva (`ROOM_SCENE.decorations` vs.
+`buildCorridorScene().follower`).
+
+Utána **három kör hibajavítás** volt szükséges, mert a follower élesben
+furán viselkedett:
+
+1. Futás-animáció beragadt (a kovető sosem ért utol semmit, örökké futott
+   helyben) → egy "beragadás-észlelő" biztosíték: ha `walkBounds` miatt
+   érdemi elmozdulás nélkül telik az idő, inkább leül.
+2. Folyamatos játékos-mozgásnál "megindul-leül-megindul-leül" ciklusban
+   ragadt → kiderült, hogy a véletlen reakció-késés minden egyes
+   utolérésnél újraindult, még ha a kovető csak épp pillanatnyi "stand"
+   (álló, még nem ülő) állapotba került. Javítás: a késés csak valódi
+   (régóta tartó) "sit"-ből való ébredéskor jár, "stand"-ből azonnal
+   folytatódik a követés.
+3. A felhasználó jelezte, hogy ez **rosszabb** lett: fél perc után beragad,
+   utána folyamatosan a játékosra tapad. **Ezúttal a felhasználó kérésére
+   én magam is teszteltem** a preview-eszközökkel (statikus szerver +
+   szimulált billentyű-események + `Overworld.__debugFollower()` ideiglenes
+   debug-hook a belső állapot közvetlen kiolvasásához, utólag eltávolítva).
+   Két valódi hibát találtam és javítottam:
+   - a "jár-e a játékos" jelzés a NYERS billentyű-bemenetet nézte, nem a
+     tényleges pozícióváltozást — ha a játékos egy falnak nyomva tartotta
+     az irányt, a kovető sosem jutott el a valódi "leülésig", örökre az
+     "utolért, de még nem ült le" pózban ragadt, közvetlenül a játékos
+     mellett (ez volt a "rám van tapadva" panasz oka);
+   - a "beragadás-észlelő" saját maga is hibás volt: fix 1.5px-es
+     küszöbbel dolgozott, ami képkocka-sebesség-függő -- bizonyos
+     helyzetekben egy akadálytalan lépés is e alá esett, és idő előtt
+     leültette a kovető-t, még ha messze volt is. Javítás: a szándékolt
+     lépés ARÁNYÁT nézi mostantól (blokkoltnak csak akkor számít, ha a
+     tervezett lépés felénél kevesebbet sikerült csak megtennie).
+
+   Mindkét javítást élesben leteszteltem (nem csak kód-olvasással) --
+   falnak nyomva tartva a játékost most kb. 3mp valódi mozdulatlanság
+   után ül csak le a kovető, utána pedig azonnal felkel és követ, ha a
+   játékos újra elindul.
+
+**A felhasználó szerint azonban ÉLESBEN JÁTSZVA A KÖVETÉS MÉG MINDIG
+BUGOS**, a saját preview-teszt ellenére. A pontos reprodukálási lépéseket
+nem ismerjük — a felhasználó kifejezetten kérte, hogy **ezt most hagyjuk
+annyiban** (ne próbáljunk tovább vakon javítgatni), csak a dokumentáció
+legyen naprakész. **Ha legközelebb ezzel foglalkozol, először kérdezd meg a
+felhasználót, pontosan mikor/hogyan látta hibásnak** (merre mozgott, mennyi
+ideig, mit csinált közben) — ez minden eddigi javítás kiindulópontja volt,
+és a jelenség valószínűleg valami olyat takar, amit puszta preview-
+teszteléssel (billentyű-szimuláció, néhány perces megfigyelés) nem sikerült
+eddig reprodukálni.
