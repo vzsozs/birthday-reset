@@ -26,12 +26,23 @@
  * kicsit 1-nel kisebb ertekkel kisebbnek/tavolabbinak hat a szereplo, mint a
  * szobaban. Ld. start().
  *
- * Hotspot = { id, xFrac, yFrac, radius, prompt, sprite:{src,w,h}?, auto?, onInteract }
- *   - xFrac: a vilag-szelesseg aranyaban (0..1)
- *   - yFrac: a stage-magassag aranyaban (0..1)
+ * Hotspot = { id, xFrac, yFrac, radius, prompt, sprite:{src,w,h,xFrac?,yFrac?,noFloat?,matchPlayerSize?}?, auto?, onInteract }
+ *   - xFrac: a vilag-szelesseg aranyaban (0..1) -- az INTERAKCIOS terulet
+ *     (radius, prompt-felugras, `auto` aktivalas) kozeppontja.
+ *   - yFrac: a stage-magassag aranyaban (0..1) -- ua., mint xFrac.
  *   - radius: px, ekkora tavolsagon belul aktivalodik a prompt
  *   - sprite: ha van, egy kepet is megjelenit a hotspot helyen (NPC-k,
- *     zona-ellenfelek) -- ha nincs, a hotspot lathatatlan terulet (pl. gep)
+ *     zona-ellenfelek) -- ha nincs, a hotspot lathatatlan terulet (pl. gep).
+ *     `w`/`h` a megjelenitett kep merete pixelben (h hianyaban w-vel
+ *     negyzetes); `noFloat: true` kikapcsolja az alapertelmezett lebego
+ *     (`npcFloat`) animaciot; `matchPlayerSize: true` eseten a `w`/`h`
+ *     figyelmen kivul marad, es a sprite pontosan akkora lesz, mint az
+ *     aktualis (playerScale-lel mar szorzott) jatekos-sprite. `sprite.xFrac`/
+ *     `sprite.yFrac`: ha meg vannak adva, KULON allithato velük a KARAKTER
+ *     RAJZOLT POZICIOJA a hotspot sajat xFrac/yFrac-atol fuggetlenul (pl.
+ *     hogy a interakcios terulet az ajto kozeleben maradjon, de a szereplo
+ *     kicsit odebb alljon) -- hianyukban a sprite a hotspot xFrac/yFrac-an
+ *     jelenik meg (korabbi viselkedes).
  *   - auto: ha true, nincs felirat/Enter -- a hotspot legkozelebb-eses
  *     pillanataban (mihelyt a jatekos a radius-on belulre er ES ez a
  *     legkozelebbi hotspot) magatol lefut az onInteract(), egyszer, ld.
@@ -171,10 +182,25 @@ const Overworld = (() => {
       const img = document.createElement("img");
       img.src = h.sprite.src;
       img.className = "overworld-npc";
-      img.style.width = h.sprite.w + "px";
-      img.style.height = (h.sprite.h || h.sprite.w) + "px";
-      img.style.left = h.xFrac * worldW - h.sprite.w / 2 + "px";
-      img.style.top = h.yFrac * stageH - (h.sprite.h || h.sprite.w) + "px";
+      // matchPlayerSize: a jelenlegi (mar playerScale-lel szorzott)
+      // jatekos-meretet hasznalja w/h helyett -- ld. Hotspot dokumentacio.
+      const w = h.sprite.matchPlayerSize ? playerW : h.sprite.w;
+      const spriteH = h.sprite.matchPlayerSize ? playerH : h.sprite.h || h.sprite.w;
+      // sprite.xFrac/yFrac: ha meg vannak adva, a KARAKTER RAJZOLT
+      // POZICIOJAT ezek hatarozzak meg, a hotspot sajat xFrac/yFrac-a
+      // (fent) pedig csak az interakcios/aktivalasi terulet (radius,
+      // prompt) kozeppontja marad -- igy a ketto fuggetlenul allithato.
+      // Ha nincsenek megadva, a sprite ugyanott jelenik meg, mint a
+      // hotspot (a korabbi viselkedes).
+      const spriteXFrac = h.sprite.xFrac != null ? h.sprite.xFrac : h.xFrac;
+      const spriteYFrac = h.sprite.yFrac != null ? h.sprite.yFrac : h.yFrac;
+      img.style.width = w + "px";
+      img.style.height = spriteH + "px";
+      img.style.left = spriteXFrac * worldW - w / 2 + "px";
+      img.style.top = spriteYFrac * stageH - spriteH + "px";
+      // noFloat: kikapcsolja az alapertelmezett lebego (npcFloat) animaciot
+      // -- ld. Hotspot dokumentacio.
+      if (h.sprite.noFloat) img.style.animation = "none";
       dom.npcLayer.appendChild(img);
       npcEls.push(img);
     });
@@ -452,38 +478,54 @@ const Overworld = (() => {
   let cornerSkipRequested = false;
   let cornerReadyToClose = false;
   let cornerTypeTimer = null;
+  let cornerPages = [];
+  let cornerPageIndex = 0;
 
   // Gepelos szoveg a sarok-buborekban -- Space/Enter/kattintas eloszor
-  // kiirja a teljes szoveget (ha meg gepel), majd (ujabb Space/Enter/
-  // kattintasra) bezarja a buborekot. Nincs automatikus, idozitett bezaras.
-  function typeCornerText(text, playTypeSound) {
+  // kiirja a teljes (aktualis oldalnyi) szoveget (ha meg gepel), majd
+  // (ujabb Space/Enter/kattintasra) tovabblapoz a kovetkezo oldalra, ha
+  // van, vagy -- az utolso oldalon -- bezarja a buborekot. Nincs
+  // automatikus, idozitett bezaras. Minden ki nem hagyott karakternel
+  // lejatssza a gepeles-hangot (ld. Engine.loadSound("type", ...)).
+  function typeCornerText() {
+    const text = cornerPages[cornerPageIndex];
     dom.cornerText.textContent = "";
     cornerTyping = true;
     cornerSkipRequested = false;
     cornerReadyToClose = false;
     let i = 0;
     const speed = 24;
+    function finishPage() {
+      cornerTyping = false;
+      cornerReadyToClose = true;
+    }
     function step() {
       if (cornerSkipRequested) {
         dom.cornerText.textContent = text;
-        cornerTyping = false;
-        cornerReadyToClose = true;
+        finishPage();
         return;
       }
       if (i < text.length) {
         dom.cornerText.textContent += text[i];
-        if (playTypeSound && text[i] !== " ") Engine.playSound("type");
+        if (text[i] !== " ") Engine.playSound("type");
         i++;
         cornerTypeTimer = setTimeout(step, speed);
       } else {
-        cornerTyping = false;
-        cornerReadyToClose = true;
+        finishPage();
       }
     }
     step();
   }
 
-  function showCornerPopup(portraitSrc, text, onDone, variant) {
+  // text lehet egyetlen string VAGY tobb "oldalbol" allo tomb -- hosszu
+  // szovegeknel igy Enter/szokoz/kattintassal lapozhato a buborek egyben-
+  // kiirasa helyett (ld. tovabbi hasznalatot a js/zones.js companionChat
+  // bejegyzeseiben es a js/main.js corridorFlavor()/flavorPopup()-jaban).
+  // opts = { boxWidth?, portraitSize? } (mindketto px) -- pontonkent/
+  // szovegenkent felulirja a doboz/portré CSS-alapertelmezett meretet
+  // (300px / 40px), pl. egy szokasosnal hosszabb sornal. Hianyukban (vagy
+  // ha nincs opts) a CSS-alapertelmezett ervenyesul.
+  function showCornerPopup(portraitSrc, text, onDone, variant, opts) {
     if (cornerTypeTimer) clearTimeout(cornerTypeTimer);
     if (portraitSrc) {
       dom.cornerPortrait.src = portraitSrc;
@@ -493,11 +535,14 @@ const Overworld = (() => {
     }
     dom.cornerPopup.classList.toggle("corner-popup-room", variant === "room");
     dom.cornerPopup.classList.remove("hidden");
+    dom.cornerPopup.style.width = opts && opts.boxWidth ? opts.boxWidth + "px" : "";
+    const portraitSize = opts && opts.portraitSize;
+    dom.cornerPortrait.style.width = portraitSize ? portraitSize + "px" : "";
+    dom.cornerPortrait.style.height = portraitSize ? portraitSize + "px" : "";
     cornerDismiss = onDone;
-    // A gepeles-hang egyelore csak a "room" variansnal (Tenna/Queen szoba-
-    // beszolasai) szol, a folyoso-NPC-k es a polc/teve-beszolasok csendben
-    // gepelodnek -- ld. a hivast a main.js-ben.
-    typeCornerText(text, variant === "room");
+    cornerPages = Array.isArray(text) ? text : [text];
+    cornerPageIndex = 0;
+    typeCornerText();
   }
 
   function advanceCornerPopup() {
@@ -507,6 +552,11 @@ const Overworld = (() => {
       return;
     }
     if (!cornerReadyToClose) return;
+    if (cornerPageIndex < cornerPages.length - 1) {
+      cornerPageIndex++;
+      typeCornerText();
+      return;
+    }
     dismissCornerPopup();
   }
 

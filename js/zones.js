@@ -70,7 +70,20 @@ const ZONE_1 = {
   // zonaba -- a Battle.start() intro-jatol elteroen ezeket csak akkor latja,
   // ha odamegy az adott NPC-hez.
   companionChat: [
-    { speaker: "KECSKE", text: "Szerintem ez a rész még csak bemelegítés." },
+    {
+      speaker: "KECSKE",
+      // Tomb = tobb "oldal", Enter/szokozzel lapozhato (ld. Overworld.showCornerPopup()).
+      text: [
+        "Figyelj, számításaim szerint 98%-os valószínűséggel egy Roblox-szivárgás történt a szobádban.",
+        "A szoba struktúrája kezd gagyivá válni.",
+        "Ha nem állítjuk meg a fertőzést, az egész szobád -Ohh My God!- szintre süllyed.",
+      ],
+      // Ennel a (szokasosnal hosszabb) sornal szelesebb doboz es nagyobb
+      // portré -- ld. js/main.js corridorFlavor()/Overworld.showCornerPopup().
+      // A CSS-alapertelmezett 300px/40px, ha nincs itt megadva.
+      boxWidth: 380,
+      portraitSize: 70,
+    },
     { speaker: "TENNA", text: "A vezetékek itt még rendben vannak. Egyelőre." },
     { speaker: "QUEEN", text: "MEGJEGYZÉS: A PADLÓ MOST NEDVESEBB A SZOKÁSOSNÁL.", portrait: "assets/sprites/queen_placeholder_talk.png" },
   ],

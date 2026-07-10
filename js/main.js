@@ -238,9 +238,12 @@ window.addEventListener("DOMContentLoaded", async () => {
     "assets/sprites/corridor_zone4_bg_placeholder.png",
   ];
 
-  function corridorFlavor(portraitSrc, text) {
+  // opts = { boxWidth?, portraitSize? } -- tovabbadva az Overworld.showCornerPopup()-nak,
+  // ld. ott. Egy companionChat-bejegyzes (js/zones.js) sajat boxWidth/portraitSize
+  // mezojevel kerulhet be ide, ld. a kecske${i} hotspot onInteract()-jet lejjebb.
+  function corridorFlavor(portraitSrc, text, opts) {
     Overworld.pause();
-    Overworld.showCornerPopup(portraitSrc, text, () => Overworld.resume());
+    Overworld.showCornerPopup(portraitSrc, text, () => Overworld.resume(), undefined, opts);
   }
 
   function buildCorridorScene(spawnAfterDoorIndex) {
@@ -248,37 +251,53 @@ window.addEventListener("DOMContentLoaded", async () => {
     ZONES.forEach((zone, i) => {
       const doorFrac = DOOR_FRACTIONS[i];
       const chat = zone.companionChat || [];
+      // Egyelore csak Kecske all a folyoson zonankent -- Tenna/Queen
+      // hotspotja ideiglenesen ki van veve (osszevisszasag lett volna
+      // tobb NPC-vel egy helyen), a companionChat[1]/[2] szoveguk
+      // (js/zones.js) valtozatlanul megvan, csak jelenleg nincs hozza
+      // sprite/hotspot a folyoson. Ha visszateszed oket, a fenti (mar
+      // torolt) tenna${i}/queen${i} blokkok mintajat kovetheted.
       if (chat[0]) {
         hotspots.push({
           id: `kecske${i}`,
-          xFrac: doorFrac - 0.05,
-          yFrac: 0.78,
+          // Ez az INTERAKCIOS terulet kozeppontja (radius, prompt-felugras)
+          // -- nem feltetlenul ugyanott van, ahol Kecske ALL, ld. lejjebb.
+          xFrac: doorFrac - 0.06,
+          yFrac: 0.7,
           radius: 45,
-          prompt: "▶ Enter: szólsz Kecskének",
-          sprite: { src: "assets/sprites/kecske_placeholder.png", w: 44 },
-          onInteract: () => corridorFlavor("assets/sprites/kecske_placeholder.png", chat[0].text),
+          prompt: "▶ Enter: odaszólsz Eriknek",
+          sprite: {
+            src: "assets/sprites/kecske_placeholder.png",
+            // matchPlayerSize: ugyanakkora, mint a jatekos-sprite (ld.
+            // overworld.js); noFloat: nem lebeg fel-le (nincs npcFloat
+            // animacio) -- ld. Hotspot-dokumentacio az overworld.js elejen.
+            matchPlayerSize: true,
+            noFloat: true,
+            // A KARAKTER TENYLEGES, RAJZOLT POZICIOJA -- EZT allitsd, ha
+            // csak azt akarod mozgatni, hogy Kecske hol all a folyoson (a
+            // fenti xFrac/yFrac addig valtozatlan maradhat, az csak az
+            // interakcios teruletet mozgatja).
+            xFrac: doorFrac - 0.06,
+            yFrac: 0.7,
+          },
+          // A chat[0].boxWidth/portraitSize (ha meg van adva a js/zones.js-ben)
+          // ennel a konkret sornal szelesebb dobozt/nagyobb portrét ad --
+          // ld. Overworld.showCornerPopup() opts-dokumentaciojat.
+          onInteract: () =>
+            corridorFlavor("assets/sprites/kecske_placeholder_talk.png", chat[0].text, {
+              boxWidth: chat[0].boxWidth,
+              portraitSize: chat[0].portraitSize,
+            }),
         });
-      }
-      if (chat[1]) {
+
         hotspots.push({
-          id: `tenna${i}`,
-          xFrac: doorFrac - 0.035,
-          yFrac: 0.78,
+          id: `minecraft${i}`,
+          // Ez az INTERAKCIOS terulet kozeppontja (radius, prompt-felugras)
+          // -- nem feltetlenul ugyanott van, ahol Kecske ALL, ld. lejjebb.
+          xFrac: doorFrac - 0.095,
+          yFrac: 0.65,
           radius: 45,
-          prompt: "▶ Enter: szólsz Tennának",
-          sprite: { src: "assets/sprites/tenna_placeholder.png", w: 44 },
-          onInteract: () => corridorFlavor("assets/sprites/tenna_placeholder.png", chat[1].text),
-        });
-      }
-      if (chat[2]) {
-        hotspots.push({
-          id: `queen${i}`,
-          xFrac: doorFrac - 0.02,
-          yFrac: 0.78,
-          radius: 45,
-          prompt: "▶ Enter: szólsz Queennek",
-          sprite: { src: "assets/sprites/queen_placeholder.png", w: 44 },
-          onInteract: () => corridorFlavor("assets/sprites/queen_placeholder.png", chat[2].text),
+          prompt: "* Minecraft... mi más :)",
         });
       }
       hotspots.push({

@@ -280,7 +280,7 @@ h1 {
   width: 40px;
   height: 40px;
   object-fit: contain;
-  object-position: bottom;
+  object-position: top;
   image-rendering: pixelated;
   flex: none;
 }
@@ -310,6 +310,10 @@ h1 {
   bottom: 8px;
   width: 80px;
   height: 90px;
+  /* A default #corner-popup img mostantol top-igazitott (ld. fent) -- itt
+     visszaallitjuk bottom-ra, mert ez a varians a portret a buborek aljahoz
+     rogzitve tervezte (ld. a fenti megjegyzest). */
+  object-position: bottom;
 }
 
 #corner-popup.corner-popup-room #corner-popup-text {
