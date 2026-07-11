@@ -9,17 +9,21 @@
 const ZONE_1 = {
   id: "zone1_siras",
   background: "assets/sprites/zone1_bg_placeholder.png",
-  intro: [
-    { speaker: "QUEEN", text: "ÓÓÓ, NÉZD MÁR. A VALÓSÁGOD ÉPP MOST VÁLTOTT „OLCSÓ-GAGYI” MÓDBA.", portrait: "assets/sprites/queen_placeholder_talk.png" },
-    { speaker: "QUEEN", text: "SZERENCSÉRE NÁLAM VAN A RESET-KÓD. DE ELŐBB KI KELL TAKARÍTANI PÁR HIBÁT.", portrait: "assets/sprites/queen_placeholder_talk.png" },
+  // Fordulos FIGHT/ACT/SPARE harc -- ld. js/battle.js startRoundBattle()
+  // dokumentaciojat a teljes adatformatumhoz. Jelenleg csak ez az 1. zona
+  // hasznalja ezt a formatumot, a 2-4. zona a regi (intro/acts/dodge/
+  // victoryLines) "legacy" formatumon marad.
+  cornerIntro: [
     {
-      speaker: "KECSKE",
-      text: "Ez a padló... szerintem sír. {{meglepett}}Az még jó, vagy ez most baj?",
-      portrait: "assets/sprites/kecske_placeholder.png",
-      faces: { meglepett: "assets/sprites/kecske_placeholder_talk.png" },
+      speaker: "QUEEN",
+      portrait: "assets/sprites/queen_placeholder_talk.png",
+      text: "Úgy Látom Egy Sírós Gyerek Elállja Az Utat. Kellemetlen. Javaslom A Törlőkendő Használatát.",
     },
-    { speaker: "TENNA", text: "Nem, nem, ez tuti csak egy laza kábel... vagy a router. Mindig a router.", portrait: "assets/sprites/tenna_placeholder.png" },
-    { speaker: "KECSKE", text: "Oké, gyere, nézzük meg mi szivárog itt.", portrait: "assets/sprites/kecske_placeholder.png" },
+    {
+      speaker: "TENNA",
+      portrait: "assets/sprites/tenna_placeholder.png",
+      text: "Hagyd a kendőt, Queen! Nézd azt a drámát! Ez igazi nézettség! Csináljunk belőle műsort, kölyök!",
+    },
   ],
   enemy: {
     name: "KÖNNY-LÉNY",
@@ -27,45 +31,126 @@ const ZONE_1 = {
     introLines: [
       { speaker: "KÖNNY-LÉNY", text: "*A Könny-lény felbukkan a padlóhasadékból. Csöpög.*" },
     ],
-    attackLines: [
-      { speaker: "KÖNNY-LÉNY", text: "*A Könny-lény könnycseppeket zápor-szerűen ereget rád!*" },
-    ],
   },
-  dodge: {
-    duration: 4200,
-    rate: 380,
-    speed: 110,
-    size: [7, 12],
-  },
-  acts: [
+  rounds: [
     {
-      id: "adj_zsepit",
-      label: "ACT: ADJ ZSEBKENDŐT",
-      repeatable: false,
-      reactionLines: [
-        { speaker: "TE", text: "Odanyújtasz egy zsebkendőt a Könny-lénynek." },
-        { speaker: "KÖNNY-LÉNY", text: "*A Könny-lény meglepődik. Egy pillanatra abbahagyja... aztán folytatja.*" },
+      // 1. Fordulo
+      enemyLine: { speaker: "KÖNNY-LÉNY", text: "Minden... elveszett... A kapcsolat megszakadt a szerverrel..." },
+      dodge: { duration: 4800, rate: 300, speed: 130, size: [7, 12], pattern: "rain" },
+      options: [
+        {
+          type: "fight",
+          label: "FIGHT",
+          reactionLines: [
+            { speaker: "TE", text: "Nekiütközöl a Könny-lénynek." },
+            { speaker: "KÖNNY-LÉNY", text: "*A könnyei hirtelen vörösre váltanak.*" },
+          ],
+        },
+        {
+          type: "act",
+          id: "megkerdez",
+          label: "ACT: MEGKÉRDEZ",
+          reactionLines: [
+            { speaker: "TE", text: "Megkérdezed, mi történt." },
+            { speaker: "KÖNNY-LÉNY", text: "A Neon Unikornisom... elcseréltem egy sima macskára... Átvertek az Adopt Me-ben!" },
+          ],
+        },
       ],
-      endsFight: false,
     },
     {
-      id: "ne_sirj",
-      label: "ACT: NE SÍRJ",
-      repeatable: false,
-      reactionLines: [
-        { speaker: "TE", text: "Határozottan azt mondod: „Ne sírj, csak rossz felbontásban vagy renderelve.”" },
-        { speaker: "KÖNNY-LÉNY", text: "*A Könny-lény elgondolkodik ezen. Aztán megnyugszik, és szárazra törli magát.*" },
+      // 2. Fordulo
+      preLines: [
+        { speaker: "TENNA", portrait: "assets/sprites/tenna_placeholder.png", text: "Átverés a virtuális kisállatokkal? Ez a legősibb trükk a tévézés történetében! Imádom!" },
+        { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder.png", text: "Ez Tragikus. Én Is Elcseréltem Volna A Macskát. De Csak Azért Mert A Macskák Nem Tudnak Kereket Csereként Használni." },
       ],
-      endsFight: true,
+      dodge: { duration: 5200, rate: 260, speed: 150, size: [6, 11], pattern: "bounce", life: 2600 },
+      options: [
+        {
+          type: "fight",
+          label: "FIGHT",
+          enemyPortraitAfter: "assets/sprites/enemy_konnyleny_placeholder-dying-01.png",
+          reactionLines: [
+            { speaker: "TE", text: "Tovább ütöd." },
+            { speaker: "KÖNNY-LÉNY", text: "*Az élete gyorsan fogy. A támadásai egyre kaotikusabbak.*" },
+          ],
+        },
+        {
+          type: "act",
+          id: "vigasztal",
+          label: "ACT: VIGASZTAL",
+          reactionLines: [
+            { speaker: "TE", text: "Megpróbálod megnyugtatni." },
+            { speaker: "KÖNNY-LÉNY", text: "Te nem érted! Az a pet 400 Robuxba került!" },
+          ],
+        },
+        {
+          type: "act",
+          id: "roblox_tanc",
+          label: "ACT: ROBLOX TÁNC",
+          mercy: 50,
+          reactionLines: [
+            { speaker: "TE", text: "Elkezded járni az ikonikus Roblox alap-táncot." },
+            { speaker: "KÖNNY-LÉNY", text: "Ez a... /e dance? Te is ismered?" },
+          ],
+        },
+      ],
+    },
+    {
+      // 3. Fordulo
+      enemyLine: { speaker: "KÖNNY-LÉNY", text: "Lehet, hogy... nem vagyok egyedül a szerveren?" },
+      dodge: { duration: 5600, rate: 220, speed: 150, size: [6, 10], pattern: "spiral", spiralStep: 0.45, arms: 2 },
+      options: [
+        {
+          type: "fight",
+          label: "FIGHT",
+          enemyPortraitAfter: "assets/sprites/enemy_konnyleny_placeholder-dying-02.png",
+          reactionLines: [
+            { speaker: "TE", text: "Utoljára nekimész." },
+            { speaker: "KÖNNY-LÉNY", text: "*Majdnem vereséget szenved -- de az utolsó erejével még egyszer visszatámad.*" },
+          ],
+        },
+        {
+          type: "act",
+          id: "oof_korus",
+          label: "ACT: OOF KÓRUS",
+          mercy: 100,
+          reactionLines: [
+            { speaker: "TE", text: "Megkéred Queent és Tennát, hogy veled együtt utánozzák a klasszikus Roblox halál-hangot." },
+            { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder.png", text: "Rendben. OOF." },
+            { speaker: "TENNA", portrait: "assets/sprites/tenna_placeholder.png", text: "OOF! (Ez jó volt a mikrofonba?)" },
+            { speaker: "KÖNNY-LÉNY", text: "*Teljesen megdöbben.*" },
+          ],
+        },
+      ],
     },
   ],
+  // A 4. "fordulo" mar nem tamad -- csak egy FIGHT/SPARE zaro-valasztas
+  // (ld. js/battle.js resolveEnding()). SPARE csak akkor sikerul, ha a
+  // Spare-mero (mercy) mar elerte a 100-at (roblox_tanc + oof_korus egyutt,
+  // vagy onmagaban az oof_korus); kulonben a failLines utan a FIGHT-
+  // kimenetellel zarul.
+  ending: {
+    spare: {
+      lines: [
+        { speaker: "KÖNNY-LÉNY", text: "Köszönöm. Azt hiszem, ideje kicsit offline lennem és sétálni egyet." },
+        { speaker: "KÖNNY-LÉNY", text: "Amúgy is lejárt a képernyőidőm." },
+        { speaker: "TE", text: "A Könny-lény elpárolog, és hátrahagy egy kis sárga kockát." },
+        { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder.png", text: "EGY VIRTUÁLIS KIEGÉSZÍTŐ. FELSZERELHETED VÉDEKEZÉS GYANÁNT. HA MÁR MINDENKI EZT CSINÁLJA." },
+      ],
+      failLines: [
+        { speaker: "KÖNNY-LÉNY", text: "*Még nem áll készen erre.*" },
+      ],
+    },
+    fight: {
+      enemyPortrait: "assets/sprites/enemy_konnyleny_placeholder-die.png",
+      roomDecoration: true,
+      lines: [
+        { speaker: "TE", text: "A Könny-lény elcsendesedik." },
+        { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder.png", text: "Ez Kicsit Durva Volt. De Legalább Megszáradt A Padló." },
+      ],
+    },
+  },
   styleTag: "+DRY EYES",
-  victoryLines: [
-    { speaker: "QUEEN", text: "NAGYSZERŰ. EGGYEL KEVESEBB NEDVESSÉGGEL TERHELT HIBA A RENDSZEREMBEN.", portrait: "assets/sprites/queen_placeholder.png" },
-    { speaker: "KECSKE", text: "Ez... simán ment. Mehetünk tovább?", portrait: "assets/sprites/kecske_placeholder.png" },
-    { speaker: "TENNA", text: "Mondtam, hogy a router volt. Na jó, majdnem biztos.", portrait: "assets/sprites/tenna_placeholder.png" },
-    { speaker: "RENDSZER", text: "1. ZÓNA KÉSZ — A PROTOTÍPUS ITT VÉGET ÉR. A TOVÁBBI ZÓNÁK KÖVETKEZNEK." },
-  ],
   // Rovid, opcionalis beszolasok a folyoson, mielott a jatekos belep a
   // zonaba -- a Battle.start() intro-jatol elteroen ezeket csak akkor latja,
   // ha odamegy az adott NPC-hez.

@@ -54,9 +54,15 @@ window.addEventListener("DOMContentLoaded", async () => {
     menuBox: document.getElementById("menu-box"),
     hpFill: document.getElementById("hp-fill"),
     hpText: document.getElementById("hp-text"),
+    mercyRow: document.getElementById("mercy-row"),
+    mercyFill: document.getElementById("mercy-fill"),
+    mercyText: document.getElementById("mercy-text"),
     battleWrap: document.getElementById("battle-wrap"),
     styleTag: document.getElementById("style-tag"),
     gameoverOverlay: document.getElementById("gameover-overlay"),
+    battleCornerPopup: document.getElementById("battle-corner-popup"),
+    battleCornerPortrait: document.getElementById("battle-corner-popup-portrait"),
+    battleCornerText: document.getElementById("battle-corner-popup-text"),
   });
 
   Engine.init(canvas, boxBounds, Battle.onHit);
@@ -396,8 +402,45 @@ window.addEventListener("DOMContentLoaded", async () => {
   // hianyaban egyszeruen nincs kovető NPC). Az xFrac/yFrac ertekek szemre
   // vannak belőve a kep sarokban lévő ajtonyilasahoz -- ha a kep valtozik,
   // ellenorizd ujra (ld. CLAUDE.md "Ismert korlatok").
+  // Igazra valtozik, ha az 1. zona harca FIGHT-kimenetellel zarult (ld. az
+  // enterZone() callback-jenek result.roomDecoration agat) -- ekkor a
+  // Konny-leny "marad utana" (ld. js/zones.js ZONE_1.ending.fight), es a
+  // buildIsaacRoomScene() ujboli meghivasakor (akar a folyoso ajtajan
+  // visszalepve is) mar nem az elo ellenfel-hotspot, hanem egy statikus
+  // "die" sprite-diszites jelenik meg a helyen.
+  let zone1Defeated = false;
+
   function buildIsaacRoomScene() {
     const zone = ZONES[0];
+    const hotspots = [
+      {
+        id: "isaac-room-exit",
+        xFrac: 0.5,
+        yFrac: 0.96,
+        radius: 28,
+        auto: true,
+        onInteract: () => {
+          Overworld.pause();
+          isaacMusic.pause();
+          roomMusic.play().catch(() => {});
+          fadeToScene(buildCorridorScene(0));
+        },
+      },
+    ];
+    if (!zone1Defeated) {
+      hotspots.push({
+        id: "isaac-room-enemy",
+        xFrac: 0.5,
+        yFrac: 0.25,
+        radius: 40,
+        auto: true,
+        sprite: { src: zone.enemy.sprite, w: 60 },
+        onInteract: () => {
+          Overworld.pause();
+          enterZoneWithFade(0);
+        },
+      });
+    }
     return {
       bgSrc: "assets/sprites/isaac_room.png",
       walkBounds: [
@@ -410,33 +453,10 @@ window.addEventListener("DOMContentLoaded", async () => {
       // (ugyanabban a kepkockaban) visszakuldene a folyosora, mielott
       // barmit lathatna a szobabol.
       spawn: { xFrac: 0.5, yFrac: 0.78 },
-      hotspots: [
-        {
-          id: "isaac-room-exit",
-          xFrac: 0.5,
-          yFrac: 0.96,
-          radius: 28,
-          auto: true,
-          onInteract: () => {
-            Overworld.pause();
-            isaacMusic.pause();
-            roomMusic.play().catch(() => {});
-            fadeToScene(buildCorridorScene(0));
-          },
-        },
-        {
-          id: "isaac-room-enemy",
-          xFrac: 0.5,
-          yFrac: 0.25,
-          radius: 40,
-          auto: true,
-          sprite: { src: zone.enemy.sprite, w: 60 },
-          onInteract: () => {
-            Overworld.pause();
-            enterZoneWithFade(0);
-          },
-        },
-      ],
+      hotspots,
+      decorations: zone1Defeated
+        ? [{ xFrac: 0.5, yFrac: 0.25, w: 70, h: 70, src: "assets/sprites/enemy_konnyleny_placeholder-die.png" }]
+        : [],
     };
   }
 
@@ -542,7 +562,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     overworldScreen.classList.add("hidden");
     gameScreen.classList.remove("hidden");
     zoneBg.src = ZONES[zoneIndex].background || "";
-    Battle.start(ZONES[zoneIndex], () => {
+    Battle.start(ZONES[zoneIndex], (result) => {
       if (zoneIndex + 1 >= ZONES.length) {
         Engine.playSound("victory");
         gameScreen.classList.add("hidden");
@@ -550,15 +570,26 @@ window.addEventListener("DOMContentLoaded", async () => {
         return;
       }
       gameScreen.classList.add("hidden");
-      overworldScreen.classList.remove("hidden");
       // A zona0 (1. zona) harca az Isaac-szobabol indult, sajat zeneevel --
-      // gyozelem utan a folyosora terunk vissza, nem oda, ugyhogy itt is
-      // vissza kell valtani a roomMusic-ra (ld. a door0/isaac-room-exit
+      // gyozelem utan altalaban a folyosora terunk vissza, nem oda, ugyhogy
+      // itt is vissza kell valtani a roomMusic-ra (ld. a door0/isaac-room-exit
       // hotspotok onInteract()-jenel levo megjegyzest).
       if (zoneIndex === 0) {
         isaacMusic.pause();
         roomMusic.play().catch(() => {});
+        if (result && result.roomDecoration) {
+          // FIGHT-kimenetel: a Konny-leny "marad utana" -- meg egyszer
+          // visszaterunk az Isaac-szobaba (a die-sprite statikus diszkent
+          // latszik az egykori hotspot helyen), a jatekos onnan a mar
+          // meglevo also kijarat-hotspoton keresztul setal ki a folyosora
+          // (ld. buildIsaacRoomScene()).
+          zone1Defeated = true;
+          overworldScreen.classList.remove("hidden");
+          Overworld.start(buildIsaacRoomScene());
+          return;
+        }
       }
+      overworldScreen.classList.remove("hidden");
       Overworld.start(buildCorridorScene(zoneIndex));
     });
   }

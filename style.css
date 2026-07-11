@@ -283,7 +283,12 @@ h1 {
   visibility: visible;
 }
 
-#corner-popup {
+/* #battle-corner-popup a harc-kepernyon ugyanezt a kinezetet hasznalja
+   (Queen/Tenna rovid beugrasai a harc alatt) -- ld. js/battle.js
+   showCornerBanter(), ami szandekosan onallo (nem az Overworld-modult
+   hasznalja, ld. overworld.js dokumentaciojat). */
+#corner-popup,
+#battle-corner-popup {
   position: absolute;
   right: 56px;
   bottom: 16px;
@@ -296,7 +301,8 @@ h1 {
   align-items: center;
 }
 
-#corner-popup img {
+#corner-popup img,
+#battle-corner-popup img {
   width: 40px;
   height: 40px;
   object-fit: contain;
@@ -305,7 +311,8 @@ h1 {
   flex: none;
 }
 
-#corner-popup-text {
+#corner-popup-text,
+#battle-corner-popup-text {
   font-size: 15px;
   line-height: 1.5;
 }
@@ -440,18 +447,24 @@ h1 {
   opacity: 0.55;
 }
 
-#battle-stage > *:not(#zone-bg) {
+/* #battle-corner-popup kimarad ebbol -- annak sajat position:absolute-ja
+   (ld. fent, a jobb-also sarokba rogzitve) kulonben felulirodna, mert ez a
+   szabaly ID-specificitassal versenyezne vele (ugyanaz az ok, amiert
+   #zone-bg is ki van zarva). */
+#battle-stage > *:not(#zone-bg):not(#battle-corner-popup) {
   position: relative;
   z-index: 1;
 }
 
-#hp-row {
+#hp-row,
+#mercy-row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-#hp-bar {
+#hp-bar,
+#mercy-bar {
   width: 160px;
   height: 24px;
   border-style: solid;
@@ -463,11 +476,19 @@ h1 {
   background: #000;
 }
 
-#hp-fill {
+#hp-fill,
+#mercy-fill {
   height: 100%;
-  width: 100%;
   background: #ffd400;
   transition: width 0.2s ease;
+}
+
+#hp-fill {
+  width: 100%;
+}
+
+#mercy-fill {
+  width: 0%;
 }
 
 #battle-wrap {

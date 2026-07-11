@@ -22,6 +22,7 @@ const Engine = (() => {
   let elapsed = 0;
   let dodgeDuration = 0;
   let onDodgeComplete = null;
+  let spiralAngle = 0;
 
   function loadImage(name, src) {
     return new Promise((resolve) => {
@@ -77,11 +78,16 @@ const Engine = (() => {
     soul.invuln = 0;
   }
 
-  // spawnConfig: { rate: ms kozotti spawn, speed: px/s, size: [min,max] }
+  // spawnConfig: { rate: ms kozotti spawn, speed: px/s, size: [min,max],
+  // pattern?: "rain" (alapertelmezett, egyenesen lefele hullo lovedekek) |
+  // "bounce" (a doboz falairol visszaverodo lovedekek, lassan kifulladva a
+  // `life` ms utan) | "spiral" (a doboz kozepebol korbeforgo karokban
+  // kilott lovedekek, `spiralStep`/`arms` finomhangolhato) }
   function startDodgePhase(duration, config, completeCallback) {
     bullets = [];
     spawnTimer = 0;
     elapsed = 0;
+    spiralAngle = 0;
     dodgeDuration = duration;
     spawnConfig = config;
     onDodgeComplete = completeCallback;
@@ -100,12 +106,47 @@ const Engine = (() => {
     const size = spawnConfig.size
       ? spawnConfig.size[0] + Math.random() * (spawnConfig.size[1] - spawnConfig.size[0])
       : 6;
-    bullets.push({
-      x: box.x + Math.random() * box.w,
-      y: box.y - 10,
-      vy: spawnConfig.speed || 90,
-      r: size,
-    });
+    const pattern = spawnConfig.pattern || "rain";
+    const speed = spawnConfig.speed || 90;
+
+    if (pattern === "bounce") {
+      // Isaac-stilusu "gumi-konny": lefele indul kis oldalirany-szorassal,
+      // majd a doboz falairol visszaverodik ahelyett, hogy egyszer atesne
+      // rajta -- update()-ben kezelve. `life` ms utan eltunik.
+      const spread = (Math.random() - 0.5) * 1.4; // kb. +-40 fok az egyenes-le iranytol
+      bullets.push({
+        x: box.x + Math.random() * box.w,
+        y: box.y - 10,
+        vx: Math.sin(spread) * speed,
+        vy: Math.cos(spread) * speed,
+        r: size,
+        bounce: true,
+        life: spawnConfig.life || 2600,
+      });
+    } else if (pattern === "spiral") {
+      // A doboz kozepebol korbeforgo lovedek-karok -- a jatekosnak korbe
+      // kell mozognia a szivvel a tulelshez.
+      spiralAngle += spawnConfig.spiralStep || 0.5;
+      const armCount = spawnConfig.arms || 1;
+      for (let a = 0; a < armCount; a++) {
+        const angle = spiralAngle + (a * (Math.PI * 2)) / armCount;
+        bullets.push({
+          x: box.x + box.w / 2,
+          y: box.y + box.h / 2,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          r: size,
+        });
+      }
+    } else {
+      bullets.push({
+        x: box.x + Math.random() * box.w,
+        y: box.y - 10,
+        vx: 0,
+        vy: speed,
+        r: size,
+      });
+    }
   }
 
   function loop(t) {
@@ -154,11 +195,42 @@ const Engine = (() => {
     // lovedekek mozgatasa + utkozes
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i];
+      b.x += (b.vx || 0) * dt;
       b.y += b.vy * dt;
-      if (b.y - b.r > box.y + box.h) {
-        bullets.splice(i, 1);
-        continue;
+
+      if (b.bounce) {
+        b.life -= dt * 1000;
+        if (b.x - b.r < box.x) {
+          b.x = box.x + b.r;
+          b.vx = Math.abs(b.vx);
+        } else if (b.x + b.r > box.x + box.w) {
+          b.x = box.x + box.w - b.r;
+          b.vx = -Math.abs(b.vx);
+        }
+        if (b.y - b.r < box.y) {
+          b.y = box.y + b.r;
+          b.vy = Math.abs(b.vy);
+        } else if (b.y + b.r > box.y + box.h) {
+          b.y = box.y + box.h - b.r;
+          b.vy = -Math.abs(b.vy);
+        }
+        if (b.life <= 0) {
+          bullets.splice(i, 1);
+          continue;
+        }
+      } else {
+        const margin = 20;
+        if (
+          b.x < box.x - margin ||
+          b.x > box.x + box.w + margin ||
+          b.y < box.y - margin ||
+          b.y > box.y + box.h + margin
+        ) {
+          bullets.splice(i, 1);
+          continue;
+        }
       }
+
       const ddx = b.x - soul.x;
       const ddy = b.y - soul.y;
       const dist = Math.sqrt(ddx * ddx + ddy * ddy);
@@ -178,6 +250,24 @@ const Engine = (() => {
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 3;
     ctx.strokeRect(box.x, box.y, box.w, box.h);
+
+    // "orias konny" -- a spiral-mintazat kozponti emitter-vizualja
+    // (placeholder: a mar meglevo konny-lovedek felnagyitva, ld. CLAUDE.md
+    // "placeholder-eloszor" konvenciojat -- sajat rajz kesobb ide kerulhet).
+    if (running && spawnConfig && spawnConfig.pattern === "spiral") {
+      const cx = box.x + box.w / 2;
+      const cy = box.y + box.h / 2;
+      const R = 26;
+      const tearImgBig = images["tear"];
+      if (tearImgBig && tearImgBig.complete && tearImgBig.naturalWidth) {
+        ctx.drawImage(tearImgBig, cx - R, cy - R, R * 2, R * 2.2);
+      } else {
+        ctx.fillStyle = "#5aaaff";
+        ctx.beginPath();
+        ctx.arc(cx, cy, R, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
 
     // lovedekek
     const tearImg = images["tear"];

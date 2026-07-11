@@ -11,6 +11,15 @@ const Battle = (() => {
   let skipRequested = false;
   let typing = false;
 
+  // Az 1. zona fordulos FIGHT/ACT/SPARE harcahoz -- ld. startRoundBattle().
+  // A 2-4. zona valtozatlanul a legacy (lapos ACT-listas) folyamatot hasznalja,
+  // ld. start() elagazasat.
+  let battleMode = "legacy"; // "legacy" | "rounds"
+  let mercy = 0; // 0-100, a "Spare" barat-mero -- csak a rounds-modban hasznalt
+  let enemyPortrait = null; // a KÖNNY-LÉNY sorok alapertelmezett portreja, FIGHT-tal valtozhat
+  let currentRoundZone = null;
+  let currentRoundIndex = 0;
+
   // ACT-menu billentyuzetes navigacio allapota
   let menuActive = false;
   let menuCols = 2;
@@ -22,6 +31,7 @@ const Battle = (() => {
   function initDom(elements) {
     dom = elements;
     dom.dialogueBox.addEventListener("click", advanceOrSkip);
+    dom.battleCornerPopup.addEventListener("click", advanceOrSkip);
     window.addEventListener("keydown", handleKeydown);
   }
 
@@ -102,10 +112,26 @@ const Battle = (() => {
     return { clean, changes };
   }
 
-  function typeText(speaker, text, portrait, faces) {
+  // `target` opcionalisan felulirja, hova irjon a gepeles -- alapertelmezetten
+  // a fo parbeszed-doboz elemeire (dom.*), de a harc-sarok-buborek
+  // (showCornerBanter()) ugyanezt a gepelos logikat hasznalja a sajat
+  // (battleCorner*) elemeire irva. { speakerName?, dialogueText, portrait,
+  // continueHint? } -- a speakerName/continueHint elhagyhato (nincs neve/
+  // "tovabb" jelzese a sarok-buboreknak).
+  function defaultTarget() {
+    return {
+      speakerName: dom.speakerName,
+      dialogueText: dom.dialogueText,
+      portrait: dom.portrait,
+      continueHint: dom.continueHint,
+    };
+  }
+
+  function typeText(speaker, text, portrait, faces, target) {
+    target = target || defaultTarget();
     return new Promise((resolve) => {
-      dom.speakerName.textContent = speaker || "";
-      dom.dialogueText.textContent = "";
+      if (target.speakerName) target.speakerName.textContent = speaker || "";
+      target.dialogueText.textContent = "";
       typing = true;
       skipRequested = false;
       const rawText = text.startsWith("*") ? text : "*" + text;
@@ -117,21 +143,21 @@ const Battle = (() => {
         if (!faces) return;
         for (const change of faceChanges) {
           if (change.index <= index && faces[change.key]) {
-            dom.portrait.src = faces[change.key];
+            target.portrait.src = faces[change.key];
           }
         }
       }
 
       function step() {
         if (skipRequested) {
-          dom.dialogueText.textContent = displayText;
+          target.dialogueText.textContent = displayText;
           applyFaceChangesUpTo(displayText.length);
           typing = false;
           finish();
           return;
         }
         if (i < displayText.length) {
-          dom.dialogueText.textContent += displayText[i];
+          target.dialogueText.textContent += displayText[i];
           if (displayText[i] !== " ") Engine.playSound("type");
           applyFaceChangesUpTo(i);
           i++;
@@ -142,9 +168,9 @@ const Battle = (() => {
         }
       }
       function finish() {
-        dom.continueHint.style.visibility = "visible";
+        if (target.continueHint) target.continueHint.style.visibility = "visible";
         advanceCallback = () => {
-          dom.continueHint.style.visibility = "hidden";
+          if (target.continueHint) target.continueHint.style.visibility = "hidden";
           resolve();
         };
       }
@@ -152,22 +178,55 @@ const Battle = (() => {
     });
   }
 
-  async function showSequence(lines) {
+  async function showSequence(lines, target) {
+    target = target || defaultTarget();
     for (const line of lines) {
       if (line.portrait) {
-        dom.portrait.src = line.portrait;
-        dom.portrait.style.display = "block";
+        target.portrait.src = line.portrait;
+        target.portrait.style.display = "block";
       } else {
-        dom.portrait.style.display = "none";
+        target.portrait.style.display = "none";
       }
-      await typeText(line.speaker, line.text, line.portrait, line.faces);
+      await typeText(line.speaker, line.text, line.portrait, line.faces, target);
     }
+  }
+
+  // A harc-kepernyo sajat sarok-buboreke (Queen/Tenna rovid beugrasaihoz a
+  // harc alatt) -- ld. Overworld.showCornerPopup() az overworld-valtozatert;
+  // ez itt szandekosan onallo (nem hasznalja az overworld.js-t, ld. annak
+  // dokumentaciojat: "Nem nyul a battle.js/engine.js-hez"), de ugyanazt a
+  // gepelos typeText()-et hasznalja a target-parameterrel.
+  async function showCornerBanter(lines) {
+    if (!lines || !lines.length) return;
+    dom.battleCornerPopup.classList.remove("hidden");
+    const target = {
+      speakerName: null,
+      dialogueText: dom.battleCornerText,
+      portrait: dom.battleCornerPortrait,
+      continueHint: null,
+    };
+    for (const line of lines) {
+      dom.battleCornerPortrait.src = line.portrait;
+      dom.battleCornerPortrait.classList.remove("hidden");
+      await typeText(line.speaker, line.text, line.portrait, line.faces, target);
+    }
+    dom.battleCornerPopup.classList.add("hidden");
   }
 
   function setHpDisplay() {
     const pct = Math.max(0, (hp / maxHp) * 100);
     dom.hpFill.style.width = pct + "%";
     dom.hpText.textContent = `HP  ${Math.max(0, hp)} / ${maxHp}`;
+  }
+
+  const ACT_ICON = "assets/sprites/ui/act_icon.png";
+  const FIGHT_ICON = "assets/sprites/ui/fight_icon.png";
+  const SPARE_ICON = "assets/sprites/ui/spare_icon.png";
+
+  function setMercyDisplay() {
+    const pct = Math.max(0, Math.min(100, mercy));
+    dom.mercyFill.style.width = pct + "%";
+    dom.mercyText.textContent = `SPARE  ${pct}%`;
   }
 
   function showActMenu(acts) {
@@ -192,7 +251,7 @@ const Battle = (() => {
         btn.className = "act-btn";
         const icon = document.createElement("img");
         icon.className = "act-icon";
-        icon.src = "assets/sprites/ui/act_icon.png";
+        icon.src = act.icon || ACT_ICON;
         icon.alt = "";
         const label = document.createElement("span");
         label.textContent = act.label;
@@ -262,7 +321,13 @@ const Battle = (() => {
     ]);
     hp = maxHp;
     setHpDisplay();
-    startPlayerTurn(currentZone);
+    if (battleMode === "rounds") {
+      // Ugyanazt a fordulot probalja ujra (a halal a dodge-fazisban tortent,
+      // meg a menu elott -- ld. runRound()), nem az egesz harcot az elejetol.
+      runRound();
+    } else {
+      startPlayerTurn(currentZone);
+    }
   }
 
   let currentZone = null;
@@ -292,10 +357,16 @@ const Battle = (() => {
   let usedActs = new Set();
 
   async function start(zoneData, doneCallback) {
+    if (zoneData.rounds) {
+      await startRoundBattle(zoneData, doneCallback);
+      return;
+    }
+    battleMode = "legacy";
     hp = maxHp;
     usedActs = new Set();
     onCompleteZone = doneCallback;
     setHpDisplay();
+    dom.mercyRow.classList.add("hidden");
     dom.battleWrap.style.display = "none";
     dom.menuBox.style.display = "none";
 
@@ -303,6 +374,118 @@ const Battle = (() => {
     dom.portrait.style.display = "none";
     await showSequence(zoneData.enemy.introLines);
     startPlayerTurn(zoneData);
+  }
+
+  // --- Fordulos FIGHT/ACT/SPARE harc (jelenleg csak az 1. zona hasznalja,
+  // ld. js/zones.js ZONE_1.rounds/ending) ---------------------------------
+  //
+  // zoneData.cornerIntro: rovid Queen/Tenna sarok-buborek-beszolas a harc
+  //   legelejen (ld. showCornerBanter()).
+  // zoneData.enemy.introLines: a szokasos parbeszed-dobozos bevezeto sor(ok),
+  //   a cornerIntro utan, meg az 1. fordulo elott.
+  // zoneData.rounds: [{ preLines?, enemyLine?, dodge:{...,pattern}, options:[
+  //   { type:"fight", label, reactionLines?, enemyPortraitAfter? } |
+  //   { type:"act", id, label, reactionLines?, mercy? }
+  // ] }, ...] -- fordulonkent a jatekos EGY opciot valaszt egy menubol; a
+  //   FIGHT mindig azonnal "talal" (nincs kulon mini-jatek), a valasztott
+  //   opciotol fuggetlenul a KOVETKEZO fordulo dodge-mintazata objektíve
+  //   nehezebb (ez adja az eszkalaciot, nem szamszeru elonf/vedekezes-logika).
+  // zoneData.ending: { spare: { lines, failLines }, fight: { lines,
+  //   enemyPortrait, roomDecoration? } } -- az utolso (4.) "fordulo" mar nem
+  //   tamad, csak egy FIGHT/SPARE zaro-valasztas: SPARE csak akkor sikerul,
+  //   ha `mercy` mar elerte a 100-at, kulonben rovid failLines utan a FIGHT-
+  //   kimenetellel zarul (ld. resolveEnding()).
+
+  function fillEnemyPortrait(line) {
+    if (line.portrait || !currentRoundZone || line.speaker !== currentRoundZone.enemy.name) return line;
+    return { ...line, portrait: enemyPortrait };
+  }
+
+  async function startRoundBattle(zoneData, doneCallback) {
+    battleMode = "rounds";
+    hp = maxHp;
+    mercy = 0;
+    enemyPortrait = zoneData.enemy.sprite;
+    onCompleteZone = doneCallback;
+    currentRoundZone = zoneData;
+    currentRoundIndex = 0;
+    setHpDisplay();
+    setMercyDisplay();
+    dom.mercyRow.classList.remove("hidden");
+    dom.battleWrap.style.display = "none";
+    dom.menuBox.style.display = "none";
+
+    await showCornerBanter(zoneData.cornerIntro);
+    dom.portrait.style.display = "none";
+    await showSequence(zoneData.enemy.introLines);
+    await runRound();
+  }
+
+  async function runRound() {
+    const zoneData = currentRoundZone;
+    while (currentRoundIndex < zoneData.rounds.length) {
+      const round = zoneData.rounds[currentRoundIndex];
+      if (round.preLines) await showSequence(round.preLines.map(fillEnemyPortrait));
+      if (round.enemyLine) await showSequence([fillEnemyPortrait(round.enemyLine)]);
+
+      dom.battleWrap.style.display = "block";
+      await new Promise((resolve) => {
+        Engine.startDodgePhase(round.dodge.duration, round.dodge, () => {
+          dom.battleWrap.style.display = "none";
+          resolve();
+        });
+      });
+      // Ha elfogyott a HP, az onHit() mar elinditotta a gameOver()-t, ami
+      // (feltoltott HP-val) ujra meghivja ezt a fuggvenyt -- itt csak
+      // kilepunk, nehogy ketszer fusson tovabb a fordulo.
+      if (hp <= 0) return;
+
+      const options = round.options.map((opt) => ({
+        ...opt,
+        icon: opt.type === "fight" ? FIGHT_ICON : ACT_ICON,
+      }));
+      const chosen = await showActMenu(options);
+      if (chosen.type === "fight" && chosen.enemyPortraitAfter) {
+        enemyPortrait = chosen.enemyPortraitAfter;
+      }
+      if (typeof chosen.mercy === "number") {
+        mercy = chosen.mercy;
+        setMercyDisplay();
+      }
+      if (chosen.reactionLines) {
+        await showSequence(chosen.reactionLines.map(fillEnemyPortrait));
+      }
+
+      currentRoundIndex++;
+    }
+    await resolveEnding();
+  }
+
+  async function resolveEnding() {
+    const zoneData = currentRoundZone;
+    const options = [
+      { type: "fight", label: "FIGHT", icon: FIGHT_ICON },
+      { type: "spare", label: "SPARE", icon: SPARE_ICON },
+    ];
+    const chosen = await showActMenu(options);
+    if (chosen.type === "spare" && mercy >= 100) {
+      await finishZone("spare");
+      return;
+    }
+    if (chosen.type === "spare") {
+      await showSequence(zoneData.ending.spare.failLines.map(fillEnemyPortrait));
+    }
+    await finishZone("fight");
+  }
+
+  async function finishZone(outcome) {
+    const zoneData = currentRoundZone;
+    const branch = zoneData.ending[outcome];
+    if (branch.enemyPortrait) enemyPortrait = branch.enemyPortrait;
+    await showStyleTag(zoneData.styleTag || "+STYLE");
+    await showSequence(branch.lines.map(fillEnemyPortrait));
+    dom.mercyRow.classList.add("hidden");
+    if (onCompleteZone) onCompleteZone({ outcome, roomDecoration: !!branch.roomDecoration });
   }
 
   return { initDom, start, onHit };

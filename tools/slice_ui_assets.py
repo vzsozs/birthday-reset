@@ -64,11 +64,27 @@ def save(img, name):
 
 def act_icon():
     # assets/UI/UI icons.png: 6 ikon egy sorban (FIGHT, ACT, ITEM, SPARE,
-    # DEFEND, MAGIC), fejenkent kb. 31px, 3px atlatszo res kozottuk.
+    # DEFEND, MAGIC), fejenkent pontosan 33px cella (198px / 6).
     sheet = load("assets", "UI", "UI icons.png")
     crop = sheet.crop((33, 0, 64, 33))
     crop = autocrop(crop)
     save(crop, "act_icon.png")
+
+
+def fight_icon():
+    # 0. cella (FIGHT) -- ugyanaz a 33px-es racs, mint act_icon()-nal.
+    sheet = load("assets", "UI", "UI icons.png")
+    crop = sheet.crop((0, 0, 31, 33))
+    crop = autocrop(crop)
+    save(crop, "fight_icon.png")
+
+
+def spare_icon():
+    # 3. cella (SPARE).
+    sheet = load("assets", "UI", "UI icons.png")
+    crop = sheet.crop((99, 0, 130, 33))
+    crop = autocrop(crop)
+    save(crop, "spare_icon.png")
 
 
 def hp_bar_frame():
@@ -125,6 +141,8 @@ def speech_bubble():
 
 if __name__ == "__main__":
     act_icon()
+    fight_icon()
+    spare_icon()
     hp_bar_frame()
     dialogue_box_frame()
     soul_heart_red()
