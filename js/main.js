@@ -319,6 +319,9 @@ window.addEventListener("DOMContentLoaded", async () => {
         // tobbi zona ajtaja valtozatlanul kozvetlenul a harcba visz.
         doorHotspot.onInteract = () => {
           Overworld.pause();
+          roomMusic.pause();
+          isaacMusic.currentTime = 0;
+          isaacMusic.play().catch(() => {});
           fadeToScene(buildIsaacRoomScene());
         };
       } else {
@@ -332,7 +335,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
 
     const playerSpawn = () => ({
-      xFrac: spawnAfterDoorIndex == null ? 0.03 : Math.min(0.98, DOOR_FRACTIONS[spawnAfterDoorIndex] + 0.045),
+      xFrac: spawnAfterDoorIndex == null ? 0.03 : Math.min(0.7, DOOR_FRACTIONS[spawnAfterDoorIndex] + 0.005),
       yFrac: 0.78,
     });
 
@@ -411,19 +414,21 @@ window.addEventListener("DOMContentLoaded", async () => {
         {
           id: "isaac-room-exit",
           xFrac: 0.5,
-          yFrac: 0.93,
+          yFrac: 0.96,
           radius: 28,
           auto: true,
           onInteract: () => {
             Overworld.pause();
+            isaacMusic.pause();
+            roomMusic.play().catch(() => {});
             fadeToScene(buildCorridorScene(0));
           },
         },
         {
           id: "isaac-room-enemy",
           xFrac: 0.5,
-          yFrac: 0.48,
-          radius: 55,
+          yFrac: 0.25,
+          radius: 40,
           auto: true,
           sprite: { src: zone.enemy.sprite, w: 60 },
           onInteract: () => {
@@ -443,6 +448,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   const roomMusic = new Audio("assets/music/DELTARUNE-Chapter-5_Media_KTOreU_aOr4_009_128k.mp3");
   roomMusic.loop = true;
   roomMusic.volume = 0.25;
+
+  // Az Isaac-szoba (buildIsaacRoomScene()) sajat zeneje -- a szobaba
+  // belepve leallitjuk (pause, NEM stop) a roomMusic-ot, es ezt inditjuk
+  // el helyette; kilepeskor forditva. A `pause()` megtartja a `currentTime`-ot,
+  // igy a roomMusic a kilepeskor pontosan onnan folytatodik, ahol
+  // abbamaradt, kulon allapot-kezeles nelkul.
+  const isaacMusic = new Audio("assets/music/Isaac_Innocence-Glitched-Binding-of-Isaac.mp3");
+  isaacMusic.loop = true;
+  isaacMusic.volume = 0.25;
 
   startBtn.addEventListener("click", () => {
     titleScreen.classList.add("hidden");
@@ -537,6 +551,14 @@ window.addEventListener("DOMContentLoaded", async () => {
       }
       gameScreen.classList.add("hidden");
       overworldScreen.classList.remove("hidden");
+      // A zona0 (1. zona) harca az Isaac-szobabol indult, sajat zeneevel --
+      // gyozelem utan a folyosora terunk vissza, nem oda, ugyhogy itt is
+      // vissza kell valtani a roomMusic-ra (ld. a door0/isaac-room-exit
+      // hotspotok onInteract()-jenel levo megjegyzest).
+      if (zoneIndex === 0) {
+        isaacMusic.pause();
+        roomMusic.play().catch(() => {});
+      }
       Overworld.start(buildCorridorScene(zoneIndex));
     });
   }

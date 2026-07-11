@@ -1,5 +1,10 @@
 FONTOS: A TESZTELÉSEKET MEGCSINÁLOM ÉN, csak írd le röviden mit. !!!
 
+FONTOS: Ha bármi nem egyértelmű (dizájn-döntés, hogyan tovább, melyik megoldást
+válaszd), **KÉRDEZZ VISSZA eldöntendő/választós kérdésekkel**, mielőtt
+nekiállnál kitalálni. Ezt a funkciót szeretem, használd sűrűbben — inkább
+kérdezz egyet többször, mint hogy rossz irányba fuss bele egy feltételezésbe.
+
 # Project: Birthday Reset — kontextus Claude Code-nak
 
 Ez egy kb. 10 perces, egyszemélyes böngészős játék, amit egy apa csinál a fiának a 13. szülinapjára. Deltarune/Undertale-stílusú, ACT-alapú harcrendszer, saját sztorival.
@@ -42,6 +47,10 @@ az 1. zónát**, aminek az ajtaja egy külön kis bevezető szobába visz
 a zóna ellenfele saját (szintén automatikus) hotspotként, és csak alul, egy
 külön ajtón át lehet visszajutni a folyosóra; a macska (follower) nem követ
 be ebbe a szobába, mert a scene-configjának nincs `follower` mezője. A
+szobának saját háttérzenéje van (`isaacMusic`, ld. `js/main.js` a
+`roomMusic` deklarációja mellett) — belépéskor a `roomMusic` `pause()`-ol
+(a `currentTime`-ja megmarad), kilépéskor/a zóna1 harc győzelme után pedig
+pontosan onnan folytatódik, ahol abbamaradt. A
 másik 3 zóna ajtaja változatlanul közvetlenül a harcba visz. (Tenna/
 Queen korábban szintén megjelentek a folyosón külön hotspotként — ez
 egyelőre ki van kapcsolva, ld. "Ismert korlátok".) 1. "A Sírás"
@@ -76,7 +85,23 @@ index.html            - #game-viewport (teljes ablak) > #game-stage (fix 800x640
                         Minden asset-hivatkozas (script/link/kep) `?v=N`
                         cache-busting query-vel van ellatva -- fejlesztes
                         kozben bovitsd a szamot, ha a bongeszo regi valtozatot
-                        gyorsitotarazna.
+                        gyorsitotarazna. A game-screen (harc-kepernyo) BELUL
+                        egy `#battle-stage` dobozba van csomagolva (fix
+                        640x480, 3px feher keret, ld. style.css) -- ez
+                        MERETBEN es keretben szandekosan MEGEGYEZIK az
+                        overworld-screen `#overworld-stage`-jevel (kulso
+                        keret > "Mozgas harcban: ..." hint-szoveg > belso
+                        keret > tenyleges harc-UI). FONTOS ELTERES: nincs
+                        rajta `overflow:hidden` (az overworld-stage-en van),
+                        mert a harc-tartalom (dodge-canvas 300px + hp-row +
+                        dialogue-box egyszerre lathato) legrosszabb esetben
+                        (egy 3 sorra tordelodo tamado-sor) magassaga
+                        MEGHALADJA a 480px-t -- overflow:hidden mellett ez
+                        levagna/elrejtene a dialogue-box aljat, igy inkabb
+                        egyszeruen tulnyulik a kereten, ha nagyon hosszu egy
+                        sor. Ha ez zavaro lesz, a canvas/dialogue-box meretet
+                        vagy a zona-szovegek hosszat kell csokkenteni, nem az
+                        overflow-t visszaallitani hidden-re.
 style.css             - fekete-fehér, Undertale-stílusú doboz-UI, nincs framework.
                         A szoveg globalisan a bekotott Minecraft fontot hasznalja
                         (`@font-face`, `assets/Font/*.otf`).
@@ -354,17 +379,17 @@ mind a `js/overworld.js` tetején vannak. Egyszerre csak egy `follower`
 támogatott jelenetenként; a `ROOM_SCENE`-nek nincs `follower` mezője (ott a
 `decorations`-beli statikus Feki van).
 
-**Ismert hiba, harmadik javítási kísérlet (státusz: felhasználói
-megerősítésre vár):** a follower-logikát korábban két körben javítottuk (ld.
+**Javítva, felhasználó megerősítette ("Most jónak néz ki, köszi").** A
+follower-logikát korábban két körben javítottuk sikertelenül (ld.
 `osszefoglalo-260710.md` 5. szakasza) — a játékos idle-detektálását a nyers
 billentyű-bemenet helyett a tényleges pozícióváltozásra állítottuk át, és a
-"beragadás"-észlelőt fix px-epsilon helyett a szándékolt lépés arányára. Ezek
-után a felhasználó megerősítette a pontos tünetet (lásd alább kérdés-válasz):
-**"a macska szinte állandóan ott lóg közvetlenül mellettem/mögöttem, alig
-marad le, nincs látható futás-animáció — mintha csak a pozíciómat másolná".**
-Ez rávilágított az igazi okra: a `FOLLOWER_KEEP_DISTANCE` egyetlen közös
-határ volt mind az "induljon el utolérni", mind a "itt álljon meg" döntéshez
-— emiatt a `FOLLOWER_SPEED`/játékos-`SPEED` közelsége (160 vs 140) miatt a
+"beragadás"-észlelőt fix px-epsilon helyett a szándékolt lépés arányára. A
+harmadik körben a felhasználó megerősítette a pontos tünetet: **"a macska
+szinte állandóan ott lóg közvetlenül mellettem/mögöttem, alig marad le,
+nincs látható futás-animáció — mintha csak a pozíciómat másolná".** Ez
+rávilágított az igazi okra: a `FOLLOWER_KEEP_DISTANCE` egyetlen közös határ
+volt mind az "induljon el utolérni", mind a "itt álljon meg" döntéshez —
+emiatt a `FOLLOWER_SPEED`/játékos-`SPEED` közelsége (160 vs 140) miatt a
 kísérő gyakorlatilag lépéstartásban, egy állandó szűk távolságon "ragadt"
 mozgott a játékossal, sosem esett le tőle látványosan, hogy aztán érdemben
 utána fusson. **Javítás (`js/overworld.js` `updateFollower()`):**
@@ -372,9 +397,11 @@ hiszterezis két külön határral — `FOLLOWER_CHASE_TRIGGER_DISTANCE` (140px,
 ENNYIRE kell lemaradnia, hogy egyáltalán elinduljon utolérni) és
 `FOLLOWER_KEEP_DISTANCE` (60px, EDDIG fut, itt áll meg) —, plusz
 `FOLLOWER_SPEED` felemelve 160→230-ra, hogy az utolérés egy gyors, jól
-látható "beérős" mozdulat legyen, ne araszolás. **A tesztelést a
-felhasználó végzi saját maga (ld. a fájl tetején lévő szabály) — ne
-tekintsd megoldottnak, amíg vissza nem jelez.**
+látható "beérős" mozdulat legyen, ne araszolás. Ez oldotta meg végleg —
+**tanulság:** a korábbi két kör kódolvasásból levezetett, plauzibilis
+hipotézisekre épült, de csak a pontos, felhasználó által leírt tünet vezetett
+el a valódi okhoz. Hasonló, nehezen reprodukálható hibáknál előbb kérdezz
+vissza a pontos tünetre, ne találgass tovább kódból.
 
 ## Képernyő-átmenetek
 
@@ -465,16 +492,28 @@ végtelenítve marad.
   headless teszt-eszközök) erősen le lehet lassulva, mert a `requestAnimationFrame`
   háttérben futó lapokon throttle-ölve van — ez tesztelési-környezeti korlát, nem
   hiba a mozgás-kódban (éles, fókuszált böngészőben nem jelentkezik).
-- **A folyosói Feki-követő (`scene.follower`) hiszterezis-javítása
-  felhasználói megerősítésre vár** (a "rátapad, nem fut utánam" tünetre —
-  ld. részletesen az "Az overworld-jelenetek hangolása" szakaszban fentebb).
-  NE feltételezd, hogy ez meg van oldva, amíg a felhasználó nem erősíti meg.
+- A `#battle-stage` (harc-képernyő belső kerete) fix 640×480 méretű,
+  `overflow` nélkül — egy nagyon hosszú, 3 sorra törő támadó-sor a
+  dodge-fázissal egyszerre elméletileg kilóghat a keretből (ld. az
+  Architektúra `index.html` bejegyzését fentebb). Nem konfirmált éles hiba,
+  csak egy ismert, szándékosan vállalt kompromisszum.
 
 ## Hátralévő munka (a DESIGN.md fejlesztési fázisai alapján)
 
+**Következő kör (a felhasználó kifejezett kérése):** az 1. zóna harcát kell
+megcsinálni/kikerekíteni, és a harcrendszert (`js/battle.js`, `js/engine.js`,
+esetleg `js/zones.js` ACT/dodge-adatstruktúrája) **kibővíteni és
+átalakítani**. A pontos irány (mi legyen más/több az ACT-okban, a
+dodge-fázisban, a kör-logikában) még **nincs kitalálva** — ez a
+legközelebbi menet első lépése legyen: **kérdezz vissza** a felhasználótól
+konkrét, eldöntendő kérdésekkel (pl. milyen jellegű ACT-ok, mennyire
+bonyolultabb dodge-mechanika, van-e új állapot/mechanika mint a HP/SOUL
+mellett), mielőtt kódot írnál — ld. a fájl tetején lévő szabályt erről.
+
 **Jelenleg folyamatban / a legutóbbi menetek óta aktuális feladat:** lásd
 `osszefoglalo-260710.md` (több menet összefoglalója egy fájlban, dátum
-szerint bővül) a részletes történetért. Rövid összegzés:
+szerint bővül) a részletes történetért. Rövid összegzés (ez a lista a
+legutóbbi menetek — köztük a jelen menet — végén friss):
 
 - A nyitó jelenet (cím → szoba → gép-választás → glitch-átmenet) kész.
 - A folyosó háttere zónánkénti külön fájlokra lett bontva
@@ -484,11 +523,23 @@ szerint bővül) a részletes történetért. Rövid összegzés:
 - A folyosón most Kecske egy a játékost követő NPC, automatikus (Enter
   nélküli) zóna-belépéssel és több lépcsős képernyő-átmenetekkel (ld.
   "Képernyő-átmenetek"), lapozható NPC-beszólásokkal.
-- **Nyitott hiba:** a Feki-követő időnként még bugos élesben — ld. "Az
-  overworld-jelenetek hangolása" szakasz vége.
+- **A Feki-követő "rátapad" hibája javítva és felhasználó által
+  megerősítve** — ld. "Az overworld-jelenetek hangolása" szakasz vége.
+- **Új: az 1. zóna ajtaja egy külön bevezető szobába (`isaac_room.png`,
+  `buildIsaacRoomScene()`) visz**, ahol a zóna ellenfele saját hotspotként
+  áll, és csak alul lehet kijönni — ld. "Jelenlegi állapot". A szobának
+  saját háttérzenéje van, ami a `roomMusic`-kal vált (pause/resume,
+  megtartva a lejátszási pozíciót).
+- **Új: a harc-képernyőnek (`#game-screen`) is van már belső kerete**
+  (`#battle-stage`, fix 640×480, ugyanaz a vizuális nyelv, mint az
+  overworld-stage-é), plusz a "Mozgás harcban: ..." hint-szöveg, amit eddig
+  csak a címképernyőn lehetett látni — ld. az Architektúra `index.html`
+  bejegyzését.
 
 1. ~~Motor-prototípus~~ — kész (1. zóna)
-2. ~~Tartalom~~ — kész (mind a 4 zóna megírva, lásd `js/zones.js`)
+2. ~~Tartalom~~ — kész (mind a 4 zóna megírva, lásd `js/zones.js`), **de az
+   1. zóna harca a következő körben bővül/átalakul** (ld. "Következő kör"
+   fentebb) — ne tekintsd ezt már véglegesnek.
 3. **Vizuál** (folyamatban): a placeholder zóna-hátterek/folyosó-háttér/
    ellenfél-sprite-ok lecserélése saját rajzokra (ugyanazokkal a
    fájlnevekkel az `assets/sprites/` mappában, akkor semmit nem kell
@@ -500,8 +551,13 @@ szerint bővül) a részletes történetért. Rövid összegzés:
    `tools/slice_ui_assets.py`) — ide tartozó, még kihasznált stretch goal: a
    `Battle Box`/`Battleback` animáció-sorozatok (jelenleg csak statikus
    kockaként/nem használva) pop-in/animált háttérré alakítása.
-4. **Hang**: a generált beep-ek lecserélése a beszerzett valódi zenére/
-   effektekre (`assets/music/`, `assets/Sounds/`) — ezek még nincsenek bekötve.
+4. **Hang**: a szoba/folyosó és az Isaac-szoba háttérzenéje már be van kötve
+   (`roomMusic`/`isaacMusic`, ld. "Jelenlegi állapot"), néhány effekt is
+   (gépelés, zóna-indítás, glitch, joker-nevetés, flavor-szöveg — ld.
+   `js/main.js` `Engine.loadSound()` hívásait) — de a legtöbb generált beep
+   (`assets/sfx/*.wav`) még cserére vár a beszerzett valódi
+   `assets/Sounds/`-beli hangokra, és a 2-4. zónának nincs saját
+   háttérzenéje.
 5. ~~Összefűzés~~ — kész (cím → szoba → gép-választás → folyosó → mind a 4 zóna
    → Asgore-zárás → vég-képernyő, egyben, teljesképernyős skálázással)
 6. **Polish**: átmenetek zónák között, finomítás, a `ZONE_4` `[SZERKESZTENDŐ]`

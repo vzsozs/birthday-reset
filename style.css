@@ -83,8 +83,14 @@ h1 {
 }
 
 .hint-small {
+  margin: 0;
   opacity: 0.5;
   font-size: 12px;
+  /* Explicit line-height, mert a Minecraft-font "normal" sormagassaga
+     szokatlanul nagy (kb. 2x a font-size) -- a hint-szoveg tobbnyire ket
+     sorra tordelodik (kb. 780px szeles helyen), es a #game-screen-en ez
+     mar szamit a szukos fuggoleges helykeretben (ld. #battle-stage). */
+  line-height: 1.3;
 }
 
 .pixel-btn {
@@ -396,9 +402,31 @@ h1 {
 }
 
 #game-screen {
+  padding: 6px;
+  gap: 6px;
+}
+
+/* A "belso keret" a harc-kepernyon -- MERETBEN es keretben szandekosan
+   MEGEGYEZIK az #overworld-stage-dzsal (fix 640x480, 3px feher keret), a
+   felhasznaloi keres szerint. FONTOS ELTERES: nincs rajta `overflow:hidden`
+   (az overworld-stage-en van) -- a harc-tartalom (dodge-canvas 300px +
+   hp-row + dialogue-box egyszerre) legrosszabb esetben (egy 3 sorra
+   tordelodo tamado-sor) magassaga MEGHALADJA a 480px-t, es overflow:hidden
+   mellett ez nemet levagna/elrejtene a dialogue-box aljat (pl. a
+   continue-hint-et) -- overflow:visible mellett legfeljebb tulnyulik a
+   kereten, de semmi sem veszik el. Ha ez zavaro, a canvas/dialogue-box
+   meretet vagy a zona-szovegek hosszat kellene csokkenteni, nem az
+   overflow-t visszaallitani hidden-re. */
+#battle-stage {
   position: relative;
-  justify-content: flex-start;
-  padding-top: 30px;
+  width: 640px;
+  height: 480px;
+  border: 3px solid #fff;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
 #zone-bg {
@@ -412,7 +440,7 @@ h1 {
   opacity: 0.55;
 }
 
-#game-screen > *:not(#zone-bg) {
+#battle-stage > *:not(#zone-bg) {
   position: relative;
   z-index: 1;
 }
@@ -421,7 +449,6 @@ h1 {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
 }
 
 #hp-bar {
@@ -445,7 +472,6 @@ h1 {
 
 #battle-wrap {
   display: none;
-  margin-bottom: 10px;
 }
 
 #battle-canvas {
@@ -457,7 +483,6 @@ h1 {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   width: 620px;
-  margin-bottom: 10px;
 }
 
 .act-btn {

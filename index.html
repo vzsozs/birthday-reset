@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <title>Project: Birthday Reset</title>
-<link rel="stylesheet" href="style.css?v=41" />
+<link rel="stylesheet" href="style.css?v=46" />
 </head>
 <body>
 
@@ -50,32 +50,36 @@
     </div>
 
     <div id="game-screen" class="screen hidden">
-      <img id="zone-bg" src="" alt="" />
+      <p class="hint-small">Mozgás harcban: nyilak / WASD · ACT-menü: nyilak/WASD + Enter/szóköz (vagy kattintás)</p>
 
-      <div id="hp-row">
-        <span id="hp-text">HP 5 / 5</span>
-        <div id="hp-bar"><div id="hp-fill"></div></div>
-      </div>
+      <div id="battle-stage">
+        <img id="zone-bg" src="" alt="" />
 
-      <div id="battle-wrap">
-        <canvas id="battle-canvas" width="480" height="300"></canvas>
-      </div>
-
-      <div id="menu-box"></div>
-
-      <div id="dialogue-box">
-        <img id="portrait" src="" alt="" />
-        <div id="dialogue-text-wrap">
-          <div id="speaker-name"></div>
-          <div id="dialogue-text"></div>
-          <div id="continue-hint">▶ kattints / szóköz</div>
+        <div id="hp-row">
+          <span id="hp-text">HP 5 / 5</span>
+          <div id="hp-bar"><div id="hp-fill"></div></div>
         </div>
-      </div>
 
-      <div id="style-tag"></div>
+        <div id="battle-wrap">
+          <canvas id="battle-canvas" width="480" height="300"></canvas>
+        </div>
 
-      <div id="gameover-overlay" class="hidden">
-        <img src="assets/UI/Game Over.png" alt="" />
+        <div id="menu-box"></div>
+
+        <div id="dialogue-box">
+          <img id="portrait" src="" alt="" />
+          <div id="dialogue-text-wrap">
+            <div id="speaker-name"></div>
+            <div id="dialogue-text"></div>
+            <div id="continue-hint">▶ kattints / szóköz</div>
+          </div>
+        </div>
+
+        <div id="style-tag"></div>
+
+        <div id="gameover-overlay" class="hidden">
+          <img src="assets/UI/Game Over.png" alt="" />
+        </div>
       </div>
     </div>
 
@@ -88,11 +92,11 @@
   </div>
 </div>
 
-<script src="js/engine.js?v=41"></script>
-<script src="js/battle.js?v=41"></script>
-<script src="js/overworld.js?v=41"></script>
-<script src="js/zones.js?v=41"></script>
-<script src="js/main.js?v=41"></script>
+<script src="js/engine.js?v=46"></script>
+<script src="js/battle.js?v=46"></script>
+<script src="js/overworld.js?v=46"></script>
+<script src="js/zones.js?v=46"></script>
+<script src="js/main.js?v=46"></script>
 
 </body>
 </html>
