@@ -254,20 +254,67 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   // --- Folyoso-jelenet -------------------------------------------------
 
-  const DOOR_FRACTIONS = [0.125, 0.375, 0.625, 0.875];
-
   // A folyoso hattere zonankent kulon fajl (nem egy osszefuzott kep) -- ld.
   // tools/gen_assets.py corridor_bg() es a CLAUDE.md. Az Overworld egymas
-  // mella illeszti oket; a DOOR_FRACTIONS fenti, egyenletes-negyedeles
-  // ertekei addig stimmelnek, amig a 4 kep kb. egyenlo szelessegu -- ha
-  // kesobb sajat rajzra cserelodnek, elteree szelessegekkel, ezeket az
-  // ertekeket is at kell hangolni.
+  // mella illeszti oket, a stage magassagara (480px) skalazva, sajat
+  // oldalaranyat megtartva -- igy a vilag-szelesseg kepenkent elter, ha a
+  // kepek nem egyenlo szelesseguek. A 2. zona hattere (corridor_zone2_bg_placeholder.png)
+  // mar a vegleges, kezzel/AI-jal keszult "Cirkusz"-rajz (1260px szeles),
+  // NEM ugyanolyan szelessegu, mint a masik harom (1100px) meg placeholder
+  // kep -- ezert a DOOR_FRACTIONS ertekei alant a TENYLEGES (osszeadott)
+  // szelessegekbol vannak ujraszamolva, nem egyszeru negyedelessel. Ha egy
+  // tovabbi zona hattere is lecserelodik maskkora szelessegure, ezt a
+  // tombot (es a ZONE2_LAYOUT-hoz hasonlo, uj zona-specifikus felulirast,
+  // ha kell) ujra kell hangolni.
   const CORRIDOR_ZONE_BACKGROUNDS = [
     "assets/sprites/corridor_zone1_bg_placeholder.png",
     "assets/sprites/corridor_zone2_bg_placeholder.png",
     "assets/sprites/corridor_zone3_bg_placeholder.png",
     "assets/sprites/corridor_zone4_bg_placeholder.png",
   ];
+  const CORRIDOR_SEGMENT_WIDTHS = [1100, 1260, 1100, 1100];
+  const CORRIDOR_TOTAL_WIDTH = CORRIDOR_SEGMENT_WIDTHS.reduce((a, b) => a + b, 0);
+  const CORRIDOR_SEGMENT_OFFSETS = CORRIDOR_SEGMENT_WIDTHS.reduce((offsets, w, i) => {
+    offsets.push(i === 0 ? 0 : offsets[i - 1] + CORRIDOR_SEGMENT_WIDTHS[i - 1]);
+    return offsets;
+  }, []);
+  // Zonankent a sajat szegmensenek (lokalis) kozeppontja -- ez a zona1/3/4
+  // meg placeholder hattereinel (tools/gen_assets.py corridor_bg()) pontosan
+  // ott van, ahol az a generikus ajto rajzolva van (seg_w//2).
+  const DOOR_FRACTIONS = CORRIDOR_SEGMENT_OFFSETS.map(
+    (offset, i) => (offset + CORRIDOR_SEGMENT_WIDTHS[i] / 2) / CORRIDOR_TOTAL_WIDTH
+  );
+  // A 2. zona (Cirkusz) uj hatterehez kezzel hangolt overworld-pozicio --
+  // a generikus doorFrac-bol szarmaztatott -0.06/-0.095-os eltolas (ld.
+  // lejjebb a fo ciklusban) csak a regi, szimmetrikus placeholder-ajtohoz
+  // illett; ez a rajz zsufoltabb (korhinta a kozepen, ket ajtonyilas
+  // oldalt), ezert a Bohoc-NPC/Kecske/"minecraft" hotspotok sajat,
+  // kulon eltalalt xFrac/yFrac-ot kapnak. Mind vilag-fraction (a teljes,
+  // 4 kepbol osszeillesztett folyoso szelessegehez viszonyitva) -- ld.
+  // buildCorridorScene() `layout` valtozojat. A Bohoc-NPC a korhinta
+  // mellett all (a "attrakcio" resze), Kecske/a minecraft-beszolas tole
+  // balra, a belepesi oldal fele, ugyanazon a padlo-szinten (yFrac 0.79,
+  // ami ennel a rajznal jobban illik, mint a tobbi zona 0.62/0.7/0.65-e).
+  // companionSprite/companionPrompt/minecraftPrompt: a 2. zona folyoso-
+  // szakaszan NEM Kecske (Erik) all a szokasos "kecske${i}" hotspoton,
+  // hanem egy uj, egyelore csak PLACEHOLDER szereplo, "Caine" (ld.
+  // assets/sprites/caine_placeholder.png, tools/gen_assets.py) -- se
+  // vegleges nev, se vegleges parbeszed, se sajat "_talk" portre meg
+  // nincs, ezert a companionSprite-ot hasznaljuk a beszed-buborek
+  // portrejakent is (nincs kulon "beszelo" kockaja). A "minecraft${i}"
+  // nema beszolas szovege is csere (ld. minecraftPrompt), a pozicioja
+  // valtozatlan maradt.
+  const ZONE2_LAYOUT = {
+    doorXFrac: (CORRIDOR_SEGMENT_OFFSETS[1] + 680) / CORRIDOR_TOTAL_WIDTH,
+    doorYFrac: 0.79,
+    companionXFrac: (CORRIDOR_SEGMENT_OFFSETS[1] + 540) / CORRIDOR_TOTAL_WIDTH,
+    companionYFrac: 0.65,
+    companionSprite: "assets/sprites/caine_placeholder.png",
+    companionPrompt: "▶ Enter: odaszólsz Caine-nek",
+    minecraftXFrac: (CORRIDOR_SEGMENT_OFFSETS[1] + 252) / CORRIDOR_TOTAL_WIDTH,
+    minecraftYFrac: 0.79,
+    minecraftPrompt: "* Bubble Fight... mi más :)",
+  };
 
   // opts = { boxWidth?, portraitSize? } -- tovabbadva az Overworld.showCornerPopup()-nak,
   // ld. ott. Egy companionChat-bejegyzes (js/zones.js) sajat boxWidth/portraitSize
@@ -281,6 +328,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     const hotspots = [];
     ZONES.forEach((zone, i) => {
       const doorFrac = DOOR_FRACTIONS[i];
+      // A 2. zona (Cirkusz) uj hattere zsufoltabb/aszimmetrikus, sajat
+      // kezzel hangolt pozicio-keszlettel (ZONE2_LAYOUT) -- a masik harom
+      // zona valtozatlanul a generikus doorFrac-bol szarmaztatott
+      // eltolast hasznalja (ld. lejjebb).
+      const layout = i === 1 ? ZONE2_LAYOUT : null;
       const chat = zone.companionChat || [];
       // Egyelore csak Kecske all a folyoson zonankent -- Tenna/Queen
       // hotspotja ideiglenesen ki van veve (osszevisszasag lett volna
@@ -289,16 +341,24 @@ window.addEventListener("DOMContentLoaded", async () => {
       // sprite/hotspot a folyoson. Ha visszateszed oket, a fenti (mar
       // torolt) tenna${i}/queen${i} blokkok mintajat kovetheted.
       if (chat[0]) {
+        const companionXFrac = layout ? layout.companionXFrac : doorFrac - 0.06;
+        const companionYFrac = layout ? layout.companionYFrac : 0.7;
+        // A 2. zonaban Caine (placeholder) all itt Kecske helyett -- ld.
+        // ZONE2_LAYOUT megjegyzeset. Nincs kulon "_talk" portreja, a
+        // sima allo-kepet hasznaljuk a beszed-buborekban is.
+        const companionSprite = layout ? layout.companionSprite : "assets/sprites/kecske_placeholder.png";
+        const companionTalkSprite = layout ? layout.companionSprite : "assets/sprites/kecske_placeholder_talk.png";
+        const companionPrompt = layout ? layout.companionPrompt : "▶ Enter: odaszólsz Eriknek";
         hotspots.push({
           id: `kecske${i}`,
           // Ez az INTERAKCIOS terulet kozeppontja (radius, prompt-felugras)
           // -- nem feltetlenul ugyanott van, ahol Kecske ALL, ld. lejjebb.
-          xFrac: doorFrac - 0.06,
-          yFrac: 0.7,
+          xFrac: companionXFrac,
+          yFrac: companionYFrac,
           radius: 45,
-          prompt: "▶ Enter: odaszólsz Eriknek",
+          prompt: companionPrompt,
           sprite: {
-            src: "assets/sprites/kecske_placeholder.png",
+            src: companionSprite,
             // matchPlayerSize: ugyanakkora, mint a jatekos-sprite (ld.
             // overworld.js); noFloat: nem lebeg fel-le (nincs npcFloat
             // animacio) -- ld. Hotspot-dokumentacio az overworld.js elejen.
@@ -308,14 +368,14 @@ window.addEventListener("DOMContentLoaded", async () => {
             // csak azt akarod mozgatni, hogy Kecske hol all a folyoson (a
             // fenti xFrac/yFrac addig valtozatlan maradhat, az csak az
             // interakcios teruletet mozgatja).
-            xFrac: doorFrac - 0.06,
-            yFrac: 0.7,
+            xFrac: companionXFrac,
+            yFrac: companionYFrac,
           },
           // A chat[0].boxWidth/portraitSize (ha meg van adva a js/zones.js-ben)
           // ennel a konkret sornal szelesebb dobozt/nagyobb portrét ad --
           // ld. Overworld.showCornerPopup() opts-dokumentaciojat.
           onInteract: () =>
-            corridorFlavor("assets/sprites/kecske_placeholder_talk.png", chat[0].text, {
+            corridorFlavor(companionTalkSprite, chat[0].text, {
               boxWidth: chat[0].boxWidth,
               portraitSize: chat[0].portraitSize,
             }),
@@ -325,16 +385,16 @@ window.addEventListener("DOMContentLoaded", async () => {
           id: `minecraft${i}`,
           // Ez az INTERAKCIOS terulet kozeppontja (radius, prompt-felugras)
           // -- nem feltetlenul ugyanott van, ahol Kecske ALL, ld. lejjebb.
-          xFrac: doorFrac - 0.095,
-          yFrac: 0.65,
+          xFrac: layout ? layout.minecraftXFrac : doorFrac - 0.095,
+          yFrac: layout ? layout.minecraftYFrac : 0.65,
           radius: 45,
-          prompt: "* Minecraft... mi más :)",
+          prompt: layout ? layout.minecraftPrompt : "* Minecraft... mi más :)",
         });
       }
       const doorHotspot = {
         id: `door${i}`,
-        xFrac: doorFrac + 0.005,
-        yFrac: 0.62,
+        xFrac: layout ? layout.doorXFrac : doorFrac + 0.005,
+        yFrac: layout ? layout.doorYFrac : 0.62,
         radius: 35,
         // auto: true -- nincs Enter/felirat, a puszta odasetalas belepteti
         // a jatekost a zonaba, egy elsotetedes-atmenettel (ld.
@@ -376,8 +436,14 @@ window.addEventListener("DOMContentLoaded", async () => {
       // illeszkedik a folyoso tagasabb, "kifele vezeto" hangulatahoz.
       playerScale: 0.75,
       walkBounds: [
-      { xMin: 0.001, xMax: 0.99, yMin: 0.7, yMax: 0.88 },
-      { xMin: 0.123, xMax: 0.135, yMin: 0.65, yMax: 0.8 },
+      { xMin: 0.001, xMax: 0.259, yMin: 0.7, yMax: 0.88 },
+      // Keskeny "felvezeto sav" az 1. zona ajtajahoz (yFrac 0.62), ami a
+      // fenti fo sav (yMin 0.7) felett van -- DOOR_FRACTIONS[0]-hoz kepest
+      // relativ eltolassal szamolva, hogy a zona1 ajtaja korul maradjon,
+      // barhogy is alakul a tobbi zona hattereinek szelessege (ld. fent).
+      { xMin: DOOR_FRACTIONS[0] - 0.002, xMax: DOOR_FRACTIONS[0] + 0.01, yMin: 0.65, yMax: 0.8 },
+      { xMin: 0.258, xMax: 0.45, yMin: 0.8, yMax: 0.88 },
+      { xMin: 0.344, xMax: 0.358, yMin: 0.65, yMax: 0.88 },
       ],
       spawn: playerSpawn,
       // Feki a folyoson kovető NPC-kent jelenik meg (a szobaban viszont

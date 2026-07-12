@@ -198,6 +198,14 @@ def make_jingle(filename, notes, note_dur=0.09, vol=0.28):
 
 
 if __name__ == "__main__":
+    # FIGYELEM: ezt a blokkot mar NEM biztonsagos egyben, teljesen ujra
+    # lefuttatni -- a kecske_placeholder.png (es masok) idokozben valodi,
+    # kezzel kivagott kepre cserelodtek (ld. CLAUDE.md "Karakter-sprite-ok"),
+    # a corridor_bg() pedig felulirna a mar vegleges corridor_zone1/2_bg_
+    # placeholder.png rajzokat is. Uj, MEG NEM letezo placeholder
+    # hozzaadasakor inkabb csak azt az egy fuggvenyhivast futtasd le kulon
+    # (pl. `python -c "import gen_assets as g; g.blob_sprite(...)"`), ne az
+    # egesz fajlt.
     os.makedirs(SPRITES, exist_ok=True)
     os.makedirs(SFX, exist_ok=True)
 
@@ -208,6 +216,7 @@ if __name__ == "__main__":
     blob_sprite("kecske_placeholder.png", (230, 220, 140, 255), "KECSKE", shape="ellipse")
     blob_sprite("queen_placeholder.png", (140, 60, 160, 255), "QUEEN")
     blob_sprite("tenna_placeholder.png", (200, 140, 60, 255), "TENNA", shape="ellipse")
+    blob_sprite("caine_placeholder.png", (180, 30, 50, 255), "CAINE")
     blob_sprite("enemy_konnyleny_placeholder.png", (80, 150, 220, 255), "KONNY-LENY")
     blob_sprite("enemy_bohoc_placeholder.png", (230, 60, 140, 255), "BOHOC-NPC", shape="ellipse")
     blob_sprite("enemy_csoautomata_placeholder.png", (200, 30, 30, 255), "CSO-AUTOMATA")

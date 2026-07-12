@@ -281,7 +281,10 @@ const ZONE_2 = {
     { speaker: "RENDSZER", text: "2. ZÓNA KÉSZ." },
   ],
   companionChat: [
-    { speaker: "KECSKE", text: "Ez most komolyan konfetti-szagú." },
+    // PLACEHOLDER: Caine (uj szereplo a 2. zonahoz) -- ld. js/main.js
+    // ZONE2_LAYOUT.companionSprite/companionPrompt. Vegleges szoveg/nev
+    // meg nincs eldontve, ez csak egy ideiglenes sor.
+    { speaker: "CAINE", text: "Hölgyeim és uraim, illetve te: ISTEN HOZOTT A DIGITÁLIS CIRKUSZBAN!" },
     { speaker: "TENNA", text: "A villanykörte állítólag jól van. Állítólag." },
     { speaker: "QUEEN", text: "A TAPS-HANGERŐ IRÁNYÍTHATATLAN. ÉRDEKES.", portrait: "assets/sprites/queen_placeholder.png" },
   ],
