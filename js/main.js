@@ -70,6 +70,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   await Promise.all([
     Engine.loadImage("heart", "assets/sprites/ui/soul_heart_red.png"),
     Engine.loadImage("tear", "assets/sprites/tear_bullet.png"),
+    Engine.loadImage("tearRed", "assets/sprites/tear_bullet-red.png"),
   ]);
   Engine.loadSound("blip", "assets/sfx/menu_blip.wav");
   Engine.loadSound("move", "assets/sfx/menu_move.wav");
@@ -97,6 +98,28 @@ window.addEventListener("DOMContentLoaded", async () => {
     Overworld.pause();
     Engine.playSound("flavorText");
     Overworld.showCornerPopup(portraitSrc, text, () => Overworld.resume());
+  }
+
+  // Tobb, valtakozo beszelos (portrait-onkent kulon) sor egymas utan, egy
+  // Overworld.showCornerPopup()-lancolassal -- ld. flavorPopup() az egyetlen-
+  // beszelos valtozatert. Minden `lines[i]` egy { portrait, text } objektum
+  // (a `portrait` lehet null, ha "TE" beszelsz -- akkor nincs kep, mint a
+  // harci dialogus TE-sorainal). `onDone` a teljes sorozat vegen fut le.
+  function showOverworldDialogue(lines, onDone) {
+    Overworld.pause();
+    Engine.playSound("flavorText");
+    let i = 0;
+    function next() {
+      if (i >= lines.length) {
+        Overworld.resume();
+        if (onDone) onDone();
+        return;
+      }
+      const line = lines[i];
+      i++;
+      Overworld.showCornerPopup(line.portrait, line.text, next);
+    }
+    next();
   }
 
   // A valaszto-doboz (Bekapcsolom a gepet / kimegyek apahoz) billentyuzetes
@@ -410,6 +433,44 @@ window.addEventListener("DOMContentLoaded", async () => {
   // visszalepve is) mar nem az elo ellenfel-hotspot, hanem egy statikus
   // "die" sprite-diszites jelenik meg a helyen.
   let zone1Defeated = false;
+  // Igazra valtozik, ha az 1. zona harca SPARE-kimenetellel zarult (ld. az
+  // enterZone() callback-jenek result.outcome agat) -- ekkor a Konny-leny
+  // tovabbra is ott all a szobaban, de mar csak egy rovid, baratsagos
+  // "viszontlatas" beszelgetest ad (KONNYLENY_REUNION_LINES), harc nelkul.
+  let zone1Spared = false;
+
+  // A SPARE utan visszatero jatekost fogado, egyszeri "viszontlatas"-jelenet
+  // -- ld. buildIsaacRoomScene() isaac-room-enemy hotspotjat. Valtakozo
+  // beszelok: a Konny-leny sorai kapnak portrét, a jatekos ("TE") sorai nem,
+  // ugyanugy, mint a harci dialogusban.
+  const KONNYLENY_REUNION_LINES = [
+    {
+      portrait: "assets/sprites/enemy_konnyleny_placeholder.png",
+      text: "Te... te vagy az Bazsa. Azt hittem, a múltkori Combat után törlődtél, vagy legalábbis visszakerültem a Baseplate-re.",
+    },
+    {
+      portrait: null,
+      text: "Nyugi, nem jöttem harcolni. Csak... erre jártam. Emlékszem a múltkorira. Nem akartam, hogy a Debris alatt végezd.",
+    },
+    {
+      portrait: "assets/sprites/enemy_konnyleny_placeholder.png",
+      text: [
+        "Jól bántál velem. Pedig akkor a Health pontjaim a nullához konvergáltak. Senki sem állt még meg így... mindenki csak a robuxot hajszolja.",
+        "Te viszont adtál nekem egy kis vidámságot. Köszönöm. Azt a szintet... azt a közös Sessiont sosem felejtem el. Felvidítottál, pedig már majdnem kiakadtam.",
+      ],
+    },
+    {
+      portrait: null,
+      text: "Örülök, hogy segített. Tudod, néha csak egy kis jófejség kell.",
+    },
+    {
+      portrait: "assets/sprites/enemy_konnyleny_placeholder.png",
+      text: [
+        "Megyek, a Server Console jelzi, hogy lejár a limit, restartol a map. Vigyázz magadra!",
+        "Remélem, legközelebb nem PvP módban találkozunk, hanem csak simán Social közegben. Köszi még egyszer, majd találkozunk!",
+      ],
+    },
+  ];
 
   function buildIsaacRoomScene() {
     const zone = ZONES[0];
@@ -428,7 +489,21 @@ window.addEventListener("DOMContentLoaded", async () => {
         },
       },
     ];
-    if (!zone1Defeated) {
+    if (!zone1Defeated && zone1Spared) {
+      // A SPARE utani viszontlatas -- mar nem `auto`, kell hozza Enter (mint
+      // egy sima NPC-beszelgetesnel), es NEM inditja ujra a harcot.
+      hotspots.push({
+        id: "isaac-room-enemy",
+        xFrac: 0.5,
+        yFrac: 0.25,
+        radius: 40,
+        prompt: "▶ Enter: odaszólsz a Könny-lénynek",
+        sprite: { src: zone.enemy.sprite, w: 60 },
+        onInteract: () => {
+          showOverworldDialogue(KONNYLENY_REUNION_LINES);
+        },
+      });
+    } else if (!zone1Defeated) {
       hotspots.push({
         id: "isaac-room-enemy",
         xFrac: 0.5,
@@ -578,6 +653,9 @@ window.addEventListener("DOMContentLoaded", async () => {
       if (zoneIndex === 0) {
         isaacMusic.pause();
         roomMusic.play().catch(() => {});
+        if (result && result.outcome === "spare") {
+          zone1Spared = true;
+        }
         if (result && result.roomDecoration) {
           // FIGHT-kimenetel: a Konny-leny "marad utana" -- meg egyszer
           // visszaterunk az Isaac-szobaba (a die-sprite statikus diszkent

@@ -74,7 +74,10 @@ const Engine = (() => {
 
   function resetSoul() {
     soul.x = box.x + box.w / 2;
-    soul.y = box.y + box.h / 2;
+    // "spiral" mintazatnal a doboz also harmadaban indul a szeretet-szikra,
+    // nem a kozepen -- a spiral pontosan a kozepbol lo ki, igy kozepen
+    // indulva a jatekos rogton az emitter mellett allna.
+    soul.y = spawnConfig && spawnConfig.pattern === "spiral" ? box.y + (box.h * 5) / 6 : box.y + box.h / 2;
     soul.invuln = 0;
   }
 
@@ -82,7 +85,9 @@ const Engine = (() => {
   // pattern?: "rain" (alapertelmezett, egyenesen lefele hullo lovedekek) |
   // "bounce" (a doboz falairol visszaverodo lovedekek, lassan kifulladva a
   // `life` ms utan) | "spiral" (a doboz kozepebol korbeforgo karokban
-  // kilott lovedekek, `spiralStep`/`arms` finomhangolhato) }
+  // kilott lovedekek, `spiralStep`/`arms` finomhangolhato), tearImage?:
+  // az `images`-ben betoltott lovedek-textura neve (alapertelmezett "tear")
+  // -- pl. "tearRed" a versrol vorosre valtott konnyekhez. }
   function startDodgePhase(duration, config, completeCallback) {
     bullets = [];
     spawnTimer = 0;
@@ -251,26 +256,8 @@ const Engine = (() => {
     ctx.lineWidth = 3;
     ctx.strokeRect(box.x, box.y, box.w, box.h);
 
-    // "orias konny" -- a spiral-mintazat kozponti emitter-vizualja
-    // (placeholder: a mar meglevo konny-lovedek felnagyitva, ld. CLAUDE.md
-    // "placeholder-eloszor" konvenciojat -- sajat rajz kesobb ide kerulhet).
-    if (running && spawnConfig && spawnConfig.pattern === "spiral") {
-      const cx = box.x + box.w / 2;
-      const cy = box.y + box.h / 2;
-      const R = 26;
-      const tearImgBig = images["tear"];
-      if (tearImgBig && tearImgBig.complete && tearImgBig.naturalWidth) {
-        ctx.drawImage(tearImgBig, cx - R, cy - R, R * 2, R * 2.2);
-      } else {
-        ctx.fillStyle = "#5aaaff";
-        ctx.beginPath();
-        ctx.arc(cx, cy, R, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
     // lovedekek
-    const tearImg = images["tear"];
+    const tearImg = images[(spawnConfig && spawnConfig.tearImage) || "tear"];
     for (const b of bullets) {
       if (tearImg && tearImg.complete && tearImg.naturalWidth) {
         ctx.drawImage(tearImg, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2.2);

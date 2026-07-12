@@ -20,6 +20,7 @@ const Battle = (() => {
   let centerEnemySprite = null; // a kepernyo kozepen allando ellenfel-sprite (sprite/dying-01/02/die), fuggetlenul valtozik az enemyPortrait-tol
   let lastChoiceType = null; // az elozo fordulon valasztott opcio tipusa ("fight"|"act") -- a kovetkezo fordulo preLines-at agazhatja el, ld. runRound()
   let lastChoiceId = null; // az elozo fordulon valasztott ACT konkret id-je (pl. "roblox_tanc") -- a kovetkezo fordulo enemyLine-jat felteteshez kotheti, ld. runRound()
+  let tearsAreRed = false; // igazra valtozik, ha az 1. fordulban FIGHT-ot valasztott a jatekos ("A könnyei hirtelen vörösre váltanak.") -- ettol kezdve a tovabbi fordulok dodge-fazisai a piros konny-textura hasznaljak, ld. runRound()
   let currentRoundZone = null;
   let currentRoundIndex = 0;
 
@@ -463,6 +464,7 @@ const Battle = (() => {
     centerEnemySprite = zoneData.enemy.sprite;
     lastChoiceType = null;
     lastChoiceId = null;
+    tearsAreRed = false;
     onCompleteZone = doneCallback;
     currentRoundZone = zoneData;
     currentRoundIndex = 0;
@@ -503,8 +505,12 @@ const Battle = (() => {
 
       dom.dialogueBox.classList.add("hidden");
       dom.battleWrap.style.display = "block";
+      // Ha az 1. fordulban FIGHT-ot valasztotta a jatekos ("A könnyei
+      // hirtelen vörösre váltanak."), a tovabbi fordulok konnyei is pirosak
+      // maradnak -- ld. tearsAreRed.
+      const dodgeConfig = tearsAreRed ? { ...round.dodge, tearImage: "tearRed" } : round.dodge;
       await new Promise((resolve) => {
-        Engine.startDodgePhase(round.dodge.duration, round.dodge, () => {
+        Engine.startDodgePhase(dodgeConfig.duration, dodgeConfig, () => {
           dom.battleWrap.style.display = "none";
           // Nem allitjuk vissza a dialogue-box lathatosagat itt -- a menu
           // (ld. lejjebb) most mar magatol, dialogue-box nelkul jelenik meg,
@@ -523,6 +529,9 @@ const Battle = (() => {
         icon: opt.type === "fight" ? FIGHT_ICON : ACT_ICON,
       }));
       const chosen = await showActMenu(options);
+      if (currentRoundIndex === 0 && chosen.type === "fight") {
+        tearsAreRed = true;
+      }
       lastChoiceType = chosen.type;
       lastChoiceId = chosen.id || null;
       if (chosen.type === "fight" && chosen.enemyPortraitAfter) {

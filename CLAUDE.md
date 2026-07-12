@@ -52,8 +52,11 @@ zóna változatlanul a régi, egyszerű ACT-listás motort használja) — ld. "
 1. zóna FIGHT/ACT/SPARE harca" lejjebb. Ha a harc FIGHT-kimenetellel zárul,
 a legyőzött ellenfél sprite-ja tartós díszként ottmarad az Isaac-szobában,
 és a játék még egyszer visszatér oda (nem egyenesen a folyosóra) mielőtt a
-játékos kisétál; SPARE-kimenetel esetén nincs ilyen kitérő, egyenesen a
-folyosóra tér vissza a játék. A
+játékos kisétál; SPARE-kimenetel esetén nincs ilyen azonnali kitérő,
+egyenesen a folyosóra tér vissza a játék -- de ha a játékos utólag
+visszasétál a szobába, a Könny-lény még ott áll, és egy rövid, baráti
+"viszontlátás"-jelenetet ad (harc nélkül) -- ld. "SPARE utáni viszontlátás
+(Isaac-szoba)" lejjebb. A
 szobának saját háttérzenéje van (`isaacMusic`, ld. `js/main.js` a
 `roomMusic` deklarációja mellett) — belépéskor a `roomMusic` `pause()`-ol
 (a `currentTime`-ja megmarad), kilépéskor/a zóna1 harc győzelme után pedig
@@ -119,10 +122,16 @@ js/engine.js          - ÚJRAFELHASZNÁLHATÓ dodge-motor: SOUL mozgatás, löve
                         `"rain"` (alapértelmezett, egyenesen lefele hulló), `"bounce"`
                         (a doboz faláiról visszaverődő, `life` ms után eltűnő "gumi-
                         könnyek", ld. Isaac), `"spiral"` (a doboz közepéből korbeforgó
-                        lövedék-karok, `spiralStep`/`arms` finomhangolható -- a
-                        `draw()` egy felnagyított könny-placeholdert is rajzol a
-                        közepére, amíg ez a mintázat fut). Ezt jelenleg csak az 1. zóna
-                        fordulói használják, ld. lejjebb.
+                        lövedék-karok, `spiralStep`/`arms` finomhangolható; a SOUL ennél
+                        a mintázatnál a doboz also harmadaban spawnol, nem kozepen, ld.
+                        `resetSoul()`). A dodge-config opcionalis `tearImage` mezovel
+                        felulirhato, melyik betoltott lovedek-textura hasznalodik
+                        (alapertelmezett `"tear"`, ld. `js/main.js` `Engine.loadImage()`
+                        hivasait) -- ezt hasznalja az 1. zona a "vörösre váltanak" utan
+                        piros konnyekre valto `"tearRed"` textura bekapcsolasahoz
+                        (`js/battle.js` `tearsAreRed`). Ezt a harom mintazatot es a
+                        tearImage-et jelenleg csak az 1. zóna fordulói használják, ld.
+                        lejjebb.
 js/battle.js          - a koraltalanos harc-folyamat: gepelos parbeszed-doboz, ACT-menu
                         (eger + billentyuzet, valodi Deltarune-ikonnal), Game Over
                         felvillanas. KET utvonala van, a `Battle.start(zoneData, cb)`
@@ -232,6 +241,14 @@ js/main.js            - DOM-elemek összekötése, asset-betöltés, a fix-felbo
                         futtatja Battle.start-ot a zona hattereevel, es a
                         zona vegeztevel vagy visszater a folyosora, vagy
                         (utolso zona utan) megmutatja a veg-kepernyot).
+                        `flavorPopup(portrait, text)` egyetlen-beszelos,
+                        `showOverworldDialogue(lines, onDone)` tobb,
+                        valtakozo-beszelos (portrait-onkent kulon) sor
+                        lancolt lejatszasa `Overworld.showCornerPopup()`-on
+                        keresztul -- ez utobbit hasznalja a SPARE-utani
+                        Konny-leny "viszontlatas" (`KONNYLENY_REUNION_LINES`,
+                        `zone1Spared`), ld. "SPARE utáni viszontlátás
+                        (Isaac-szoba)" lejjebb.
 assets/sprites/*.png  - ideiglenes, generált placeholder grafika (lásd tools/gen_assets.py),
                         KIVÉVE a `bazsa_szoba.png`-t, ami egy kézzel készített, végleges
                         szoba-háttérkép (nem placeholder, nem a gen_assets.py generálja).
@@ -354,66 +371,120 @@ folyamat maga a `js/battle.js` `startRoundBattle()`/`runRound()`/
   `#corner-popup`-ja, de szándékosan önálló implementáció, nem az
   Overworld-modult használja). Ez után jön `enemy.introLines` (a szokásos
   párbeszéd-dobozos bevezető), majd az 1. forduló.
-- **`rounds`**: tömb, fordulónként `{ preLines?, enemyLine?, dodge:{...,
-  pattern}, options:[...] }`. Fordulónként a játékos EGY opciót választ egy
-  menüből -- `{ type:"fight", label, reactionLines?, enemyPortraitAfter? }`
-  vagy `{ type:"act", id, label, reactionLines?, mercy? }`. A FIGHT mindig
-  azonnal "talál" (nincs külön mini-játék, szándékos egyszerűsítés a rövid
-  játék tempójához) -- nincs látható ellenfél-HP-sáv sem, az eszkalációt a
-  KÖVETKEZŐ forduló objektíve nehezebb dodge-mintázata adja (rain → bounce →
-  spiral), nem szám szerű véd/sebzés-logika. Az `enemyPortraitAfter` a
-  KÖNNY-LÉNY-sorok alapértelmezett portréját cseréli (dying-01/02/die,
-  ld. lejjebb a `resolvePortrait()` leírását), a `mercy` pedig felülírja a
-  "Spare" barát-mérőt (`#mercy-row`, sárga sáv a HP-sáv alatt -- csak ekkor
-  látható). Fordulónként szabadon lehet váltani FIGHT és ACT között.
+- **`rounds`**: tömb, fordulónként `{ preLines?, preLinesIfPrevFight?,
+  enemyLine?, enemyLineRequiresPrevChoice?, dodge:{...,pattern},
+  options:[...] }`. Fordulónként a játékos EGY opciót választ egy menüből
+  -- `{ type:"fight", label, reactionLines?, enemyPortraitAfter?,
+  enemyFieldAfter? }` vagy `{ type:"act", id, label, reactionLines?,
+  mercy? }`. A FIGHT mindig azonnal "talál" (nincs külön mini-játék,
+  szándékos egyszerűsítés a rövid játék tempójához) -- nincs látható
+  ellenfél-HP-sáv sem, az eszkalációt a KÖVETKEZŐ forduló objektíve
+  nehezebb dodge-mintázata adja (rain → bounce → spiral), nem szám szerű
+  véd/sebzés-logika. Fordulónként szabadon lehet váltani FIGHT és ACT
+  között.
+  - **Fordulók közti tartalmi elágazás** (a felhasználó konkrét kérésére):
+    egy forduló `preLinesIfPrevFight`-ja felülírja az alapértelmezett
+    `preLines`-t, ha az ELŐZŐ fordulóban FIGHT-ot választott a játékos
+    (`js/battle.js` modul-állapot: `lastChoiceType`); egy forduló
+    `enemyLine`-ja pedig csak akkor jelenik meg, ha
+    `enemyLineRequiresPrevChoice` pontosan egyezik az előző forduló
+    választott ACT-jának `id`-jével (`lastChoiceId`) -- pl. a 3. forduló
+    "Lehet, hogy... nem vagyok egyedül a szerveren?" sora csak akkor
+    hangzik el, ha a 2. fordulóban a `roblox_tanc` ACT-ot választották.
+  - **Két FÜGGETLEN ellenfél-kép-állapot**: `enemyPortraitAfter` a
+    dialogue-boxban "beszélő" arcképet (`enemyPortrait` modul-állapot,
+    alapból `zoneData.enemy.talkSprite`) cseréli, `enemyFieldAfter` pedig a
+    képernyő közepén ÁLLANDÓAN látható, "harci mezőn álló" sprite-ot
+    (`centerEnemySprite`, ld. lejjebb `#battle-enemy-sprite`, alapból
+    `zoneData.enemy.sprite`) -- ez a két kép SZÁNDÉKOSAN két külön
+    asset-sorozat (`_talk-dying-01/02` vs sima `-dying-01/02/die`), mert a
+    dialogue-box egy közeli "beszélő" arcot mutat, a középső sprite pedig a
+    "testi" állapotot.
+  - **`mercy` ÖSSZEADÓDIK, nem felülírja** a korábbi értéket (`mercy =
+    Math.min(100, mercy + chosen.mercy)`, ld. `runRound()`) -- a felhasználó
+    kérésére: pl. a 2. forduló ROBLOX TÁNC-ja (+50) és a 3. forduló OOF
+    KÓRUS-a (+50) EGYÜTT éri el a 100-at (a "Spare" barát-mérőt, `#mercy-row`,
+    sárga sáv a HP-sáv alatt -- csak ekkor látható); ha a játékos csak az
+    egyiket választja, csak 50-nél áll meg.
+  - **`tearsAreRed`**: ha a játékos PONT az 1. fordulóban választja a
+    FIGHT-ot ("A könnyei hirtelen vörösre váltanak."), onnantól minden
+    következő forduló dodge-fázisa a piros `tearRed` lövedék-texturát
+    használja (`js/engine.js` `spawnConfig.tearImage`, ld. fent) a normál
+    kék helyett -- ez a `js/battle.js` `tearsAreRed` modul-állapot, ami a
+    harc végéig megmarad, ha egyszer igazra vált.
 - **`ending`**: a rounds után egy záró FIGHT/SPARE-választás (nincs újabb
   támadás) -- `{ spare:{ lines, failLines }, fight:{ lines, enemyPortrait,
-  roomDecoration } }`. SPARE csak akkor sikerül, ha a mercy már elérte a
+  enemyField, roomDecoration } }` (az `enemyField` az `enemyFieldAfter`
+  párja, ld. fent). SPARE csak akkor sikerül, ha a mercy már elérte a
   100-at (`resolveEnding()`); ha nem, a `failLines` után a FIGHT-
   kimenetellel zárul. A `Battle.start()`-nak átadott `doneCallback` egy
   `{ outcome: "spare"|"fight", roomDecoration }` objektumot kap -- ezt a
-  `js/main.js` `enterZone()`-ja használja: `roomDecoration:true` esetén
-  beállítja a `zone1Defeated` modul-szintű flaget és `buildIsaacRoomScene()`-
-  re fadel vissza (a legyőzött ellenfél-hotspot ekkor egy statikus `die`-
-  sprite decorationná válik), egyébként egyenesen a folyosóra tér vissza.
+  `js/main.js` `enterZone()`-ja használja: `roomDecoration:true` (FIGHT)
+  esetén beállítja a `zone1Defeated` modul-szintű flaget és
+  `buildIsaacRoomScene()`-re fadel vissza (a legyőzött ellenfél-hotspot
+  ekkor egy statikus `die`-sprite decorationná válik); `outcome==="spare"`
+  esetén a `zone1Spared` flaget állítja be és egyenesen a folyosóra tér
+  vissza -- ld. lejjebb "SPARE utáni viszontlátás".
 - **Halál/újrapróbálkozás**: a `gameOver()` fordulós módban NEM az egész
   harcot indítja újra, hanem `runRound()`-ot hívja meg -- ez a HALÁLKOR
-  AKTUÁLIS fordulót próbálja újra a dodge-fázistól (a `mercy`/HP-n kívüli
-  állapot, pl. az addig elért `enemyPortrait`, megmarad). Ezt élesben
-  letesztelve (böngészőben, `Battle.start()`-ot közvetlenül meghívva) a
-  retry helyesen működik.
+  AKTUÁLIS fordulót próbálja újra a dodge-fázistól (a `mercy`/`tearsAreRed`/
+  HP-n kívüli állapot, pl. az addig elért `enemyPortrait`/`centerEnemySprite`,
+  megmarad). Ezt élesben letesztelve (böngészőben, `Battle.start()`-ot
+  közvetlenül meghívva) a retry helyesen működik.
 - Ha egy harmadik zóna is hasonló FIGHT/ACT/SPARE rendszert kapna, ezt a
   formátumot érdemes általánosítani -- jelenleg szándékosan zóna1-specifikus
   maradt (kisebb kockázat egy menetben), ld. "Hátralévő munka".
 
-### Harc-UI: fix pozíciók és automatikus arckép-kitöltés
+### Harc-UI: fix pozíciók, automatikus arckép-kitöltés, harci mező-sprite
 
-A felhasználó a valódi Deltarune-harcképernyőt mutató screenshotok alapján
-két konkrét javítást kért (ld. `osszefoglalo-260710.md`/session-történet):
+A felhasználó több körben, konkrét (screenshotokkal alátámasztott)
+visszajelzések alapján finomította a harc-képernyő kinézetét, hogy jobban
+hasonlítson a valódi Deltarune-ra (ld. `osszefoglalo-260712.md`):
 
-- **A `#battle-corner-popup` (Queen/Tenna beugrás a harc alatt) mostantól
-  MINDIG a "room"-nézetet használja** (`Speech Bubbles_rooms.png` háttér,
-  nagyobb portré jobb-alul) -- ugyanaz, mint a Bazsa-szoba Tenna/Queen
-  beszólásai, és ugyanazokat a `Queen_room.png`/`Tenna_room.png` portrékat
-  használja (NEM a `_talk.png` változatot -- ezek külön, a "room"-doboz
-  méretéhez illő crop-ok). Ez `style.css`-ben egy saját, nem class-toggle-lt
-  szabály (`#battle-corner-popup`), a plain `#corner-popup`-tól függetlenül.
-  Mivel `#dialogue-box`/`#menu-box` is fix pozícióban van (ld. lejjebb) és
-  térben átfedi a sarok-buborékot, a `#battle-corner-popup`-nak explicit
-  `z-index:2`-t kellett adni, különben a később a DOM-ban álló dialogue-box
-  a tetejére festődött volna (ez élesben előfordult, javítva).
-- **`#dialogue-box` és `#menu-box` mostantól MINDIG fix (`position:absolute`)
-  pozícióban van** a `#battle-stage` alján (`bottom:8px` / `bottom:240px`),
-  ahelyett hogy a flex-flow-ban "ugrálna" attól függően, mi látható még
-  felette (HP/Spare-sor, dodge-canvas). A `#battle-stage > *:not(...)`
-  blanket `position:relative` szabály mindkettőt kizárja (ugyanúgy, mint
-  `#zone-bg`-t és `#battle-corner-popup`-ot). A `#menu-box` 240px-es
-  `bottom`-ja szándékosan bőkezű -- a `#dialogue-box` egy 3 sorra tördelődő
-  (a CLAUDE.md "Ismert korlátok" szerinti legrosszabb esete) szövegnél kb.
-  208px magas, ennél nagyobb hézagot hagyva a menü SOHA nem lóg bele a
-  dobozba, rövidebb szövegeknél viszont nagyobb az üres rés köztük -- ha ez
-  zavaró, a `#dialogue-box` magasságát kellene korlátozni (pl. fix
-  max-height + görgetés/lapozás), nem a menü offsetjét finomhangolni.
+- **Nincs beszélő-név sehol a `#dialogue-box`-ban**: a `#speaker-name` elem
+  a DOM-ban marad (`js/battle.js` `typeText()` továbbra is írhat bele), de
+  `style.css`-ben `display:none` -- szándékosan nem törölt funkció, csak
+  véglegesen elrejtett, mert a felhasználó ezt kérte.
+- **`#battle-corner-popup` (Queen/Tenna beugrás a harc alatt) MINDIG a
+  "room"-nézetet használja** (`Speech Bubbles_rooms.png` háttér, nagyobb
+  portré jobb-alul) -- ugyanaz, mint a Bazsa-szoba Tenna/Queen beszólásai,
+  és ugyanazokat a `Queen_room.png`/`Tenna_room.png` portrékat használja
+  (NEM a `_talk.png` változatot -- ezek külön, a "room"-doboz méretéhez
+  illő crop-ok). `style.css`-ben saját, nem class-toggle-lt szabály, a
+  plain `#corner-popup`-tól függetlenül, `z-index:2`-vel (mert a
+  `#dialogue-box`/`#menu-box` is fix pozícióban van és térben átfedheti,
+  ld. lejjebb). `showCornerBanter()` a saját fázisa alatt teljesen elrejti
+  a `#dialogue-box`-ot (`classList.add("hidden")`), hogy csak a buborék
+  látsszon, a fázis végén pedig visszaadja (`classList.remove("hidden")`).
+- **`#dialogue-box` és `#menu-box` fix (`position:absolute`) pozícióban
+  vannak a `#battle-stage` alján, DINAMIKUSAN igazodva egymáshoz**
+  (ahelyett hogy a flex-flow-ban "ugrálnának" attól függően, mi látható még
+  felettük):
+  - A `#dialogue-box` (`bottom:8px`) CSAK akkor látható, ha ténylegesen van
+    friss, ki nem olvasott szöveg -- `js/battle.js` `showSequence()` MINDEN
+    híváskor automatikusan felfedi (`classList.remove("hidden")`) a dobozt,
+    mielőtt írna bele; a dodge-fázis KEZDETEKOR viszont explicit elrejtik
+    (`enemyAttack()`/`runRound()`), és utána SZÁNDÉKOSAN nem állítják
+    vissza automatikusan -- így egy dodge-fázis/menü után nem marad ott a
+    régi, már elolvasott szöveg, amíg nincs új mondanivaló.
+  - A `#menu-box` `bottom`-ja `js/battle.js` `showActMenu()`-ben
+    DINAMIKUSAN dől el: ha a `#dialogue-box` éppen látható (van friss
+    szöveg -- pl. a záró FIGHT/SPARE-menünél, ahol az előző reakció-sor még
+    kint van), a menü a doboz teteje fölé zár (`240px`, elég hely egy 3
+    sorra tördelődő -- a CLAUDE.md "Ismert korlátok" szerinti legrosszabb
+    esetű, kb. 208px magas -- szöveg fölött is); ha a dialogue-box rejtve
+    van (pl. közvetlenül egy dodge-fázis után, mielőtt a játékos választana),
+    a menü lehúzódik a képernyő aljához közel (`16px`).
+  - Ugyanez a grid-oszlopszám is dinamikus: `showActMenu()` `acts.length`
+    alapján 1-3 opciónál egy sorba rendezi őket (`repeat(N, 1fr)`), 3-nál
+    többnél visszaáll a régi 2-oszlopos tördelésre.
+- **`#battle-enemy-sprite`**: a felhasználó kérésére új, állandó "a
+  képernyő közepén álló ellenfél" kép (`index.html`/`style.css`,
+  `top:100px`, magasság 160px, `object-fit:contain`, `pointer-events:none`)
+  -- a fordulós harc legelejétől (a cornerIntro-val egy időben) folyamatosan
+  látszik, és a fenti `centerEnemySprite`-tal együtt vált FIGHT-onként.
+  Jelenleg csak a fordulós (1. zóna) harc kapcsolja be; a legacy zónák nem
+  használják.
 - **Minden dialógus-sor, aminek nincs saját `portrait`-ja, de a `speaker`
   ismert (nevesített) karakter, automatikusan kap egy alapértelmezett
   arcképet** -- `js/battle.js` `resolvePortrait()`, amit a `showSequence()`
@@ -426,21 +497,19 @@ két konkrét javítást kért (ld. `osszefoglalo-260710.md`/session-történet)
   - `zoneData.enemy.talkSprite` (ha van) vagy `zoneData.enemy.sprite`
     (fallback) az adott zóna ellenfelére, `line.speaker === zoneData.enemy.name`
     egyezés esetén. Fordulós módban (1. zóna) a már elért `enemyPortrait`
-    állapot (dying-01/02/die, ld. fent) elsőbbséget élvez a talkSprite
-    felett.
-  - **FIGYELEM:** az `enemy_konnyleny_placeholder_talk.png` fájl LÉTEZIK, de
-    méretben (38×43 px, a többi Könny-lény-sprite 128×154-gyel szemben) és
-    stílusban (szürkeárnyalatos koponya) NEM illik a jelenlegi (kék,
-    könny-blob) art-stílushoz -- valószínűleg egy korábbi, már meghaladott
-    menetből maradt fájl. Emiatt a ZONE_1 `enemy` objektuma SZÁNDÉKOSAN NEM
-    állítja be a `talkSprite` mezőt, a sima `sprite`-ra esik vissza. Ha
-    később készül egy valódi, a jelenlegi stílushoz illő "beszélő" arc, ide
-    (`js/zones.js` `ZONE_1.enemy`) egy `talkSprite` mezőt érdemes felvenni.
+    állapot (talk-dying-01/02, ld. fent) elsőbbséget élvez a talkSprite
+    felett. **A ZONE_1 `enemy.talkSprite`-ja a felhasználó kifejezett
+    kérésére `enemy_konnyleny_placeholder_talk.png`-re van állítva** --
+    ez méretben (38×43px) és stílusban (szürkeárnyalatos koponya) eltér a
+    többi (128×154px, kék) Könny-lény-sprite-tól, de ez SZÁNDÉKOS (a
+    felhasználó jóváhagyta, és két további, ugyanilyen stílusú
+    `_talk-dying-01/02.png` variánst is adott hozzá az `enemyPortraitAfter`
+    progresszióhoz), nem hiba.
   - A ZONE_2 ellenfelének `name` mezője `"TÚLBOLDOG BOHÓC-NPC"`-ről
     `"BOHÓC-NPC"`-re lett javítva, mert nem egyezett a dialógus-sorok
-    `speaker`-ével (`"BOHÓC-NPC"`) -- emiatt a `resolvePortrait()` nem
-    ismerte fel az ellenfél saját sorait. A másik 3 zóna `enemy.name`-je
-    már eleve pontosan egyezett a `speaker`-rel.
+    `speaker`-ével -- emiatt a `resolvePortrait()` korábban nem ismerte fel
+    az ellenfél saját sorait. A másik 3 zóna `enemy.name`-je már eleve
+    pontosan egyezett a `speaker`-rel.
   - A BOHÓC-NPC/CSŐ-AUTOMATA/BLOKKFEJŰ VÉGHIBA ellenfeleknek nincs
     `talkSprite`-juk (nincs hozzájuk `_talk` asset) -- ezeknél a fallback
     egyszerűen a sima (gen_assets.py-generált placeholder) `sprite`-ra esik
@@ -452,6 +521,33 @@ két konkrét javítást kért (ld. `osszefoglalo-260710.md`/session-történet)
     mindig a `_talk` változatot mutassa (a már megírt, explicit portrékat
     is beleértve), az egy külön, nagyobb (a 4 zóna nagy részét érintő)
     átalakítás lenne.
+
+### SPARE utáni viszontlátás (Isaac-szoba)
+
+A felhasználó kérésére, ha az 1. zóna harca SPARE-kimenetellel zárul, és a
+játékos utólag visszasétál a folyosóról az Isaac-szobába, a Könny-lény NEM
+tűnik el, de már NEM indítható vele harc -- csak egy rövid, baráti
+"viszontlátás"-jelenetet ad, aztán a játékos szabadon tovább mozoghat:
+
+- `js/main.js` `zone1Spared` modul-szintű flag (a FIGHT-kimenetelű
+  `zone1Defeated` párja), az `enterZone()` callback-jében áll be, ha
+  `result.outcome === "spare"`.
+- `buildIsaacRoomScene()`-ben, ha `zone1Spared && !zone1Defeated`, az
+  `isaac-room-enemy` hotspot MEGMARAD (a sima, sértetlen `enemy.sprite`-tal),
+  de már NEM `auto` -- Enter kell hozzá (mint egy sima NPC-beszélgetéshez,
+  `prompt: "▶ Enter: odaszólsz a Könny-lénynek"`), és az `onInteract` a harc
+  helyett a `showOverworldDialogue()`-t indítja.
+- `showOverworldDialogue(lines, onDone)` (`js/main.js`, `flavorPopup()`
+  mellett) egy ÚJ, általános segédfüggvény: `Overworld.showCornerPopup()`
+  egymás utáni, láncolt hívásaival játszik le TÖBB, VÁLTAKOZÓ beszélős
+  (soronként külön `portrait`) sort -- minden `lines[i]` egy `{portrait,
+  text}` objektum, a `portrait` lehet `null` a "TE" (játékos) soroknál,
+  mint a harci dialógusban. Minden egyes `text` maga is lehet tömb (több
+  "oldal", lapozható), mint a `companionChat`-nál.
+- A konkrét szöveg (`KONNYLENY_REUNION_LINES`, `js/main.js`) a felhasználó
+  saját, kész forgatókönyve -- egyszerű, mindig ugyanaz a beszélgetés,
+  valahányszor a játékos megszólítja (nincs "csak egyszer" logika, ahogy a
+  többi ismétlődő NPC-flavor-szöveg sem egyszeri).
 
 ## Az overworld-jelenetek (szoba + folyosó) hangolása
 
@@ -646,20 +742,41 @@ végtelenítve marad.
 
 ## Hátralévő munka (a DESIGN.md fejlesztési fázisai alapján)
 
-**Következő kör:** az 1. zóna FIGHT/ACT/SPARE harca (ld. "Az 1. zóna
-FIGHT/ACT/SPARE harca") a felhasználó által adott konkrét forgatókönyv
-alapján kész és böngészőben letesztelve (mindkét kimenetel: SPARE sikeres/
-sikertelen, FIGHT, halál+retry). Nyitott pontok, ha legközelebb ide térünk
-vissza: a dodge-fázisok nehézsége (`rounds[].dodge`) még nincs a
-felhasználó által playtesztelve/hangolva; a `roblox_tanc`/`vigasztal`/
-`oof_korus` ACT-ok reakció-szövegei egy gyors első verzió, finomíthatók; a
-"giant tear" spiral-mintázat középső vizuálja jelenleg csak egy felnagyított
-placeholder (ld. `js/engine.js` `draw()`).
+**Az 1. zóna (Bazsa-szoba bevezető + Isaac-szoba/Könny-lény FIGHT/ACT/SPARE
+harc) KÉSZ, a felhasználó kifejezetten megerősítette:** "Szuper az első két
+résszel megvagyunk, Bazsa szoba és Isaac room." Minden idevágó részlet a
+fenti "Az 1. zóna FIGHT/ACT/SPARE harca" és "SPARE utáni viszontlátás
+(Isaac-szoba)" szakaszokban, a menet teljes története `osszefoglalo-260712.md`-ben.
+
+**Következő kör (a felhasználó kifejezett kérése): a zónák szétválasztása/
+egyedivé tétele.** Szó szerint: "azzal kellene haladni, hogy le kell
+választani a különböző zónákat. A 2. zónának más lesz a kinézete, máshol
+lesznek az NPC-k, maga a harcrendszer hasonló lesz de más beszélgetésekkel."
+Vagyis a 2. zóna (A Cirkusz, Bohóc-NPC) kapja meg a saját, egyedi
+vizuális/tartalmi karakterét -- jelenleg még a generált placeholder hátteret
+és a régi, generikus ACT-listás harcot használja, ugyanazzal a mintával,
+mint a 3-4. zóna.
+
+**Mielőtt nekiállnál, kérdezz vissza** (ld. a fájl tetején lévő szabályt),
+mert a pontos irány még nincs kitalálva -- pl.:
+- A "harcrendszer hasonló lesz, de más beszélgetésekkel" azt jelenti, hogy a
+  2. zóna is megkapja az 1. zóna FIGHT/ACT/SPARE fordulós rendszerét (ld.
+  "Az 1. zóna FIGHT/ACT/SPARE harca" -- ez esetben érdemes lenne
+  általánosítani a jelenleg zóna1-specifikus formátumot, ld. az ottani
+  megjegyzést), vagy marad a régi, egyszerű ACT-listás motoron, csak a
+  szövegek/vizuál változik?
+- A "máshol lesznek az NPC-k" a folyosó 2. zónás szakaszára vonatkozik (a
+  Kecske-hotspot pozíciója/megjelenő NPC-k), vagy a 2. zóna is kap egy saját
+  bevezető szobát, mint az 1. zóna Isaac-szobája (`buildIsaacRoomScene()`
+  mintájára)?
+- Van-e már kész vizuál/asset a 2. zónához (háttér, NPC-sprite-ok), vagy
+  egyelőre a placeholder marad, és csak a pozíciók/struktúra készül el?
 
 **Jelenleg folyamatban / a legutóbbi menetek óta aktuális feladat:** lásd
-`osszefoglalo-260710.md` (több menet összefoglalója egy fájlban, dátum
-szerint bővül) a részletes történetért. Rövid összegzés (ez a lista a
-legutóbbi menetek — köztük a jelen menet — végén friss):
+`osszefoglalo-260710.md`/`osszefoglalo-260711.md`/`osszefoglalo-260712.md`
+(több menet összefoglalója, dátum szerint bővül) a részletes történetért.
+Rövid összegzés (ez a lista a legutóbbi menetek — köztük a jelen menet —
+végén friss):
 
 - A nyitó jelenet (cím → szoba → gép-választás → glitch-átmenet) kész.
 - A folyosó háttere zónánkénti külön fájlokra lett bontva
@@ -688,6 +805,24 @@ legutóbbi menetek — köztük a jelen menet — végén friss):
   `spare_icon.png` UI-ikon lett kivágva (`tools/slice_ui_assets.py`), és a
   legyőzött Könny-lény FIGHT-kimenetel esetén tartós díszként marad az
   Isaac-szobában (`zone1Defeated`, `js/main.js`).
+- **Új (`osszefoglalo-260712.md`): az 1. zóna harca a felhasználó több
+  körös, konkrét (screenshotos) visszajelzései alapján véglegesítve** --
+  ld. "Az 1. zóna FIGHT/ACT/SPARE harca", "Harc-UI" és "SPARE utáni
+  viszontlátás (Isaac-szoba)" szakaszokat a teljes részletekért. Röviden:
+  fordulók közti tartalmi elágazás (`preLinesIfPrevFight`,
+  `enemyLineRequiresPrevChoice`), összeadódó Spare-mérő, két független
+  ellenfél-kép-állapot (dialogue-box "beszélő" arc vs `#battle-enemy-sprite`
+  közepső harci sprite), piros könnyek FIGHT után (`tearsAreRed`), a
+  spiral-mintázat SOUL-spawnja áthelyezve az alsó harmadba és a kísérleti
+  "óriás könny" placeholder eltávolítva, MINDIG "room"-stílusú
+  Queen/Tenna sarok-buborék a harcban, dinamikusan (a dialogue-box
+  láthatóságától függően) pozicionált ACT/FIGHT/SPARE-menü, nincs
+  beszélő-név a dialogue-boxban, és egy SPARE után elérhető, harc nélküli
+  "viszontlátás"-beszélgetés a Könny-lénnyel.
+- **A `bazsa_szoba.png` (a gyerek szobája) és az Isaac-szoba/Könny-lény
+  harca a felhasználó szerint EBBEN A FORMÁJÁBAN KÉSZ** -- a következő
+  menetek a 2-4. zóna egyedivé tételére fókuszálnak, ld. "Hátralévő munka"
+  a fájl elején.
 
 1. ~~Motor-prototípus~~ — kész (1. zóna)
 2. ~~Tartalom~~ — kész (mind a 4 zóna megírva, lásd `js/zones.js`); **az 1.
