@@ -6,43 +6,66 @@
  * mintat koveti majd, csak uj adat-objektumkent kell felvenni ide,
  * es a main.js-ben lancolni a zone1 utan.
  */
+
+// Tobb zonaban is megszolalo kiserok/karakterek alapertelmezett (mindig a
+// "_talk" valtozatu) arckepei -- ha egy dialogus-sor nem ad meg sajat
+// `portrait`-ot, de a `speaker` itt szerepel, a js/battle.js
+// resolvePortrait()-je ezt hasznalja a dialogus-doboz portrejakent (ld.
+// CLAUDE.md "Mindig legyen arckep" dontest). MAR MEGADOTT portrait-okat ez
+// nem ir felul -- csak a hianyzokat tolti ki.
+const RECURRING_SPEAKER_PORTRAITS = {
+  KECSKE: "assets/sprites/kecske_placeholder_talk.png",
+  QUEEN: "assets/sprites/queen_placeholder_talk.png",
+  TENNA: "assets/sprites/tenna_placeholder_talk.png",
+  ASGORE: "assets/sprites/asgore_placeholder_talk.png",
+};
+
 const ZONE_1 = {
   id: "zone1_siras",
   background: "assets/sprites/zone1_bg_placeholder.png",
+  speakerPortraits: RECURRING_SPEAKER_PORTRAITS,
   // Fordulos FIGHT/ACT/SPARE harc -- ld. js/battle.js startRoundBattle()
   // dokumentaciojat a teljes adatformatumhoz. Jelenleg csak ez az 1. zona
   // hasznalja ezt a formatumot, a 2-4. zona a regi (intro/acts/dodge/
   // victoryLines) "legacy" formatumon marad.
+  // A cornerIntro a Queen_room.png/Tenna_room.png portrekat hasznalja (NEM
+  // a _talk valtozatot) -- ezek ugyanazok a kepek, amiket a Bazsa-szoba
+  // Tenna/Queen beszolasai is hasznalnak (ld. js/main.js TENNA_LINE/
+  // QUEEN_LINE), a felhasznalo kifejezett kerese szerint, hogy a harci
+  // sarok-buborek pontosan ugyanugy nezzen ki, mint a szobaban.
   cornerIntro: [
     {
       speaker: "QUEEN",
-      portrait: "assets/sprites/queen_placeholder_talk.png",
+      portrait: "assets/sprites/Queen_room.png",
       text: "Úgy Látom Egy Sírós Gyerek Elállja Az Utat. Kellemetlen. Javaslom A Törlőkendő Használatát.",
     },
     {
       speaker: "TENNA",
-      portrait: "assets/sprites/tenna_placeholder.png",
-      text: "Hagyd a kendőt, Queen! Nézd azt a drámát! Ez igazi nézettség! Csináljunk belőle műsort, kölyök!",
+      portrait: "assets/sprites/Tenna_room.png",
+      text: "Hagyd a kendőt, Queen! Nézd azt a drámát! Ez igazi nézettség! Csináljunk belőle műsort kölyök!",
     },
   ],
   enemy: {
     name: "KÖNNY-LÉNY",
     sprite: "assets/sprites/enemy_konnyleny_placeholder.png",
+    // A felhasznalo kifejezett kerese szerint mindig ez latszik, amikor a
+    // Könny-lény beszel (ld. js/battle.js resolvePortrait()/enemyPortrait).
+    talkSprite: "assets/sprites/enemy_konnyleny_placeholder_talk.png",
     introLines: [
-      { speaker: "KÖNNY-LÉNY", text: "*A Könny-lény felbukkan a padlóhasadékból. Csöpög.*" },
+      { speaker: "KÖNNY-LÉNY", text: "*A Könny-lény elkezd hisztizni szinte már zokog." },
     ],
   },
   rounds: [
     {
       // 1. Fordulo
       enemyLine: { speaker: "KÖNNY-LÉNY", text: "Minden... elveszett... A kapcsolat megszakadt a szerverrel..." },
-      dodge: { duration: 4800, rate: 300, speed: 130, size: [7, 12], pattern: "rain" },
+      dodge: { duration: 6800, rate: 600, speed: 280, size: [7, 12], pattern: "rain" },
       options: [
         {
           type: "fight",
           label: "FIGHT",
           reactionLines: [
-            { speaker: "TE", text: "Nekiütközöl a Könny-lénynek." },
+            { speaker: "TE", text: "Nekimész a Könny-lénynek." },
             { speaker: "KÖNNY-LÉNY", text: "*A könnyei hirtelen vörösre váltanak.*" },
           ],
         },
@@ -58,17 +81,26 @@ const ZONE_1 = {
       ],
     },
     {
-      // 2. Fordulo
+      // 2. Fordulo -- a bevezeto (preLines) attol fugg, mit valasztott a
+      // jatekos az 1. fordulban (ld. js/battle.js runRound()
+      // "lastChoiceType"): ACT eseten az alapertelmezett preLines jon,
+      // FIGHT eseten a rovidebb preLinesIfPrevFight.
       preLines: [
         { speaker: "TENNA", portrait: "assets/sprites/tenna_placeholder.png", text: "Átverés a virtuális kisállatokkal? Ez a legősibb trükk a tévézés történetében! Imádom!" },
         { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder.png", text: "Ez Tragikus. Én Is Elcseréltem Volna A Macskát. De Csak Azért Mert A Macskák Nem Tudnak Kereket Csereként Használni." },
       ],
-      dodge: { duration: 5200, rate: 260, speed: 150, size: [6, 11], pattern: "bounce", life: 2600 },
+      preLinesIfPrevFight: [
+        { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder.png", text: "Tyíí, Ebből Baj Lesz. System_Crashed_Error: 0x00000D" },
+      ],
+      dodge: { duration: 6800, rate: 560, speed: 250, size: [6, 11], pattern: "bounce", life: 3600 },
       options: [
         {
           type: "fight",
           label: "FIGHT",
-          enemyPortraitAfter: "assets/sprites/enemy_konnyleny_placeholder-dying-01.png",
+          // enemyPortraitAfter: a dialogue-box "beszelo" arckepe (talk-dying).
+          // enemyFieldAfter: a kepernyo kozepen allando harci sprite (sima dying).
+          enemyPortraitAfter: "assets/sprites/enemy_konnyleny_placeholder_talk-dying-01.png",
+          enemyFieldAfter: "assets/sprites/enemy_konnyleny_placeholder-dying-01.png",
           reactionLines: [
             { speaker: "TE", text: "Tovább ütöd." },
             { speaker: "KÖNNY-LÉNY", text: "*Az élete gyorsan fogy. A támadásai egyre kaotikusabbak.*" },
@@ -96,14 +128,18 @@ const ZONE_1 = {
       ],
     },
     {
-      // 3. Fordulo
+      // 3. Fordulo -- az enemyLine csak akkor hangzik el, ha a jatekos a 2.
+      // fordulban PONT a ROBLOX TÁNC-ot valasztotta (ld. js/battle.js
+      // runRound() "lastChoiceId"), egyebkent kimarad.
       enemyLine: { speaker: "KÖNNY-LÉNY", text: "Lehet, hogy... nem vagyok egyedül a szerveren?" },
-      dodge: { duration: 5600, rate: 220, speed: 150, size: [6, 10], pattern: "spiral", spiralStep: 0.45, arms: 2 },
+      enemyLineRequiresPrevChoice: "roblox_tanc",
+      dodge: { duration: 6800, rate: 220, speed: 250, size: [6, 10], pattern: "spiral", spiralStep: 0.35, arms: 3 },
       options: [
         {
           type: "fight",
           label: "FIGHT",
-          enemyPortraitAfter: "assets/sprites/enemy_konnyleny_placeholder-dying-02.png",
+          enemyPortraitAfter: "assets/sprites/enemy_konnyleny_placeholder_talk-dying-02.png",
+          enemyFieldAfter: "assets/sprites/enemy_konnyleny_placeholder-dying-02.png",
           reactionLines: [
             { speaker: "TE", text: "Utoljára nekimész." },
             { speaker: "KÖNNY-LÉNY", text: "*Majdnem vereséget szenved -- de az utolsó erejével még egyszer visszatámad.*" },
@@ -113,7 +149,10 @@ const ZONE_1 = {
           type: "act",
           id: "oof_korus",
           label: "ACT: OOF KÓRUS",
-          mercy: 100,
+          // +50 (osszeadodik a korabbi mercy-vel, ld. js/battle.js
+          // runRound()) -- ha a jatekos a 2. fordulban mar valasztotta a
+          // ROBLOX TÁNC-ot (szinten +50), a ketto egyutt eleri a 100-at.
+          mercy: 50,
           reactionLines: [
             { speaker: "TE", text: "Megkéred Queent és Tennát, hogy veled együtt utánozzák a klasszikus Roblox halál-hangot." },
             { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder.png", text: "Rendben. OOF." },
@@ -142,7 +181,11 @@ const ZONE_1 = {
       ],
     },
     fight: {
+      // Nincs kulon "talk-die" arckep -- a die allapotnak nincs kulonallo
+      // "beszelo" valtozata, igy a dialogue-box portreja es a kozepso harci
+      // sprite is ugyanarra a kepre vaknak.
       enemyPortrait: "assets/sprites/enemy_konnyleny_placeholder-die.png",
+      enemyField: "assets/sprites/enemy_konnyleny_placeholder-die.png",
       roomDecoration: true,
       lines: [
         { speaker: "TE", text: "A Könny-lény elcsendesedik." },
@@ -177,6 +220,7 @@ const ZONE_1 = {
 const ZONE_2 = {
   id: "zone2_cirkusz",
   background: "assets/sprites/zone2_bg_placeholder.png",
+  speakerPortraits: RECURRING_SPEAKER_PORTRAITS,
   intro: [
     { speaker: "QUEEN", text: "RENDSZER-FRISSÍTÉS. VAGY INKÁBB: RENDSZER-ÖSSZEOMLÁS, DE CIRKUSZI FÉNYEKKEL.", portrait: "assets/sprites/queen_placeholder.png" },
     { speaker: "KECSKE", text: "Szerintem ez most tényleg egy digitális circus lett.", portrait: "assets/sprites/kecske_placeholder.png" },
@@ -185,7 +229,12 @@ const ZONE_2 = {
     { speaker: "KECSKE", text: "Várj, ott volt valaki a sarokban! ...Vagy már nincs is ott.", portrait: "assets/sprites/kecske_placeholder.png" },
   ],
   enemy: {
-    name: "TÚLBOLDOG BOHÓC-NPC",
+    // A `name` szandekosan megegyezik a dialogus-sorok `speaker`-ivel
+    // (BOHÓC-NPC), nem a teljes "TÚLBOLDOG BOHÓC-NPC" leiro nevvel -- ld.
+    // js/battle.js resolvePortrait(), ami erre a mezore pontosan illeszt,
+    // hogy a portrait nelkuli ellenfel-sorokhoz alapertelmezett arckepet
+    // tudjon rendelni (ugyanez a minta, mint a masik 3 zonanal).
+    name: "BOHÓC-NPC",
     sprite: "assets/sprites/enemy_bohoc_placeholder.png",
     introLines: [
       { speaker: "BOHÓC-NPC", text: "*Egy túl-színes bohóc-avatar pattan elő, mögötte egy Roblox-szörny statisztál mint „attrakció”.*" },
@@ -241,6 +290,7 @@ const ZONE_2 = {
 const ZONE_3 = {
   id: "zone3_csovek",
   background: "assets/sprites/zone3_bg_placeholder.png",
+  speakerPortraits: RECURRING_SPEAKER_PORTRAITS,
   intro: [
     { speaker: "QUEEN", text: "IPARI HIBAÜZENET ÉSZLELVE. SÖTÉT-PIROS. GYORS. NEM AZ ÉN STÍLUSOM, DE MENJÜNK.", portrait: "assets/sprites/queen_placeholder.png" },
     { speaker: "KECSKE", text: "Miért lett hirtelen minden ilyen... feszes? Mintha a játék is sietne.", portrait: "assets/sprites/kecske_placeholder.png" },
@@ -302,6 +352,7 @@ const ZONE_3 = {
 const ZONE_4 = {
   id: "zone4_roblox",
   background: "assets/sprites/zone4_bg_placeholder.png",
+  speakerPortraits: RECURRING_SPEAKER_PORTRAITS,
   intro: [
     { speaker: "QUEEN", text: "OKÉ. ITT LECSAPÓDOTT MINDEN, AMIT AZ ELŐZŐ HÁROM ZÓNA NEM TUDOTT FELDOLGOZNI.", portrait: "assets/sprites/queen_placeholder.png" },
     { speaker: "KECSKE", text: "Miért van itt minden... kockákból? Ez most tudatos stílus, vagy csak feladta a motor?", portrait: "assets/sprites/kecske_placeholder.png" },

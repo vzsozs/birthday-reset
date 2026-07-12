@@ -363,8 +363,8 @@ folyamat maga a `js/battle.js` `startRoundBattle()`/`runRound()`/
   KÖVETKEZŐ forduló objektíve nehezebb dodge-mintázata adja (rain → bounce →
   spiral), nem szám szerű véd/sebzés-logika. Az `enemyPortraitAfter` a
   KÖNNY-LÉNY-sorok alapértelmezett portréját cseréli (dying-01/02/die,
-  `js/battle.js` `fillEnemyPortrait()`), a `mercy` pedig felülírja a "Spare"
-  barát-mérőt (`#mercy-row`, sárga sáv a HP-sáv alatt -- csak ekkor
+  ld. lejjebb a `resolvePortrait()` leírását), a `mercy` pedig felülírja a
+  "Spare" barát-mérőt (`#mercy-row`, sárga sáv a HP-sáv alatt -- csak ekkor
   látható). Fordulónként szabadon lehet váltani FIGHT és ACT között.
 - **`ending`**: a rounds után egy záró FIGHT/SPARE-választás (nincs újabb
   támadás) -- `{ spare:{ lines, failLines }, fight:{ lines, enemyPortrait,
@@ -385,6 +385,73 @@ folyamat maga a `js/battle.js` `startRoundBattle()`/`runRound()`/
 - Ha egy harmadik zóna is hasonló FIGHT/ACT/SPARE rendszert kapna, ezt a
   formátumot érdemes általánosítani -- jelenleg szándékosan zóna1-specifikus
   maradt (kisebb kockázat egy menetben), ld. "Hátralévő munka".
+
+### Harc-UI: fix pozíciók és automatikus arckép-kitöltés
+
+A felhasználó a valódi Deltarune-harcképernyőt mutató screenshotok alapján
+két konkrét javítást kért (ld. `osszefoglalo-260710.md`/session-történet):
+
+- **A `#battle-corner-popup` (Queen/Tenna beugrás a harc alatt) mostantól
+  MINDIG a "room"-nézetet használja** (`Speech Bubbles_rooms.png` háttér,
+  nagyobb portré jobb-alul) -- ugyanaz, mint a Bazsa-szoba Tenna/Queen
+  beszólásai, és ugyanazokat a `Queen_room.png`/`Tenna_room.png` portrékat
+  használja (NEM a `_talk.png` változatot -- ezek külön, a "room"-doboz
+  méretéhez illő crop-ok). Ez `style.css`-ben egy saját, nem class-toggle-lt
+  szabály (`#battle-corner-popup`), a plain `#corner-popup`-tól függetlenül.
+  Mivel `#dialogue-box`/`#menu-box` is fix pozícióban van (ld. lejjebb) és
+  térben átfedi a sarok-buborékot, a `#battle-corner-popup`-nak explicit
+  `z-index:2`-t kellett adni, különben a később a DOM-ban álló dialogue-box
+  a tetejére festődött volna (ez élesben előfordult, javítva).
+- **`#dialogue-box` és `#menu-box` mostantól MINDIG fix (`position:absolute`)
+  pozícióban van** a `#battle-stage` alján (`bottom:8px` / `bottom:240px`),
+  ahelyett hogy a flex-flow-ban "ugrálna" attól függően, mi látható még
+  felette (HP/Spare-sor, dodge-canvas). A `#battle-stage > *:not(...)`
+  blanket `position:relative` szabály mindkettőt kizárja (ugyanúgy, mint
+  `#zone-bg`-t és `#battle-corner-popup`-ot). A `#menu-box` 240px-es
+  `bottom`-ja szándékosan bőkezű -- a `#dialogue-box` egy 3 sorra tördelődő
+  (a CLAUDE.md "Ismert korlátok" szerinti legrosszabb esete) szövegnél kb.
+  208px magas, ennél nagyobb hézagot hagyva a menü SOHA nem lóg bele a
+  dobozba, rövidebb szövegeknél viszont nagyobb az üres rés köztük -- ha ez
+  zavaró, a `#dialogue-box` magasságát kellene korlátozni (pl. fix
+  max-height + görgetés/lapozás), nem a menü offsetjét finomhangolni.
+- **Minden dialógus-sor, aminek nincs saját `portrait`-ja, de a `speaker`
+  ismert (nevesített) karakter, automatikusan kap egy alapértelmezett
+  arcképet** -- `js/battle.js` `resolvePortrait()`, amit a `showSequence()`
+  minden híváskor lefuttat. Ez NEM ír felül már megadott `portrait`-okat,
+  csak a hiányzókat tölti ki. Két forrásból dolgozik:
+  - `zoneData.speakerPortraits` -- egy zónánként megadott (de ténylegesen
+    egy közös `RECURRING_SPEAKER_PORTRAITS` konstansra mutató, ld.
+    `js/zones.js` teteje) `{KECSKE, QUEEN, TENNA, ASGORE} -> _talk.png`
+    térkép a visszatérő kísérőkhöz/ellenfelekhez.
+  - `zoneData.enemy.talkSprite` (ha van) vagy `zoneData.enemy.sprite`
+    (fallback) az adott zóna ellenfelére, `line.speaker === zoneData.enemy.name`
+    egyezés esetén. Fordulós módban (1. zóna) a már elért `enemyPortrait`
+    állapot (dying-01/02/die, ld. fent) elsőbbséget élvez a talkSprite
+    felett.
+  - **FIGYELEM:** az `enemy_konnyleny_placeholder_talk.png` fájl LÉTEZIK, de
+    méretben (38×43 px, a többi Könny-lény-sprite 128×154-gyel szemben) és
+    stílusban (szürkeárnyalatos koponya) NEM illik a jelenlegi (kék,
+    könny-blob) art-stílushoz -- valószínűleg egy korábbi, már meghaladott
+    menetből maradt fájl. Emiatt a ZONE_1 `enemy` objektuma SZÁNDÉKOSAN NEM
+    állítja be a `talkSprite` mezőt, a sima `sprite`-ra esik vissza. Ha
+    később készül egy valódi, a jelenlegi stílushoz illő "beszélő" arc, ide
+    (`js/zones.js` `ZONE_1.enemy`) egy `talkSprite` mezőt érdemes felvenni.
+  - A ZONE_2 ellenfelének `name` mezője `"TÚLBOLDOG BOHÓC-NPC"`-ről
+    `"BOHÓC-NPC"`-re lett javítva, mert nem egyezett a dialógus-sorok
+    `speaker`-ével (`"BOHÓC-NPC"`) -- emiatt a `resolvePortrait()` nem
+    ismerte fel az ellenfél saját sorait. A másik 3 zóna `enemy.name`-je
+    már eleve pontosan egyezett a `speaker`-rel.
+  - A BOHÓC-NPC/CSŐ-AUTOMATA/BLOKKFEJŰ VÉGHIBA ellenfeleknek nincs
+    `talkSprite`-juk (nincs hozzájuk `_talk` asset) -- ezeknél a fallback
+    egyszerűen a sima (gen_assets.py-generált placeholder) `sprite`-ra esik
+    vissza, ami "csak" annyit tud, hogy legyen valamilyen kép a semminél.
+  - Ez a viselkedés SZÁNDÉKOSAN korlátozott hatókörű: csak a korábban
+    portré NÉLKÜLI sorokat tölti ki, a zónákban már explicit módon (akár
+    talk, akár nem-talk) megadott portrékat nem írja felül -- ha a
+    felhasználó azt szeretné, hogy MINDEN névvel ellátott karakter-sor
+    mindig a `_talk` változatot mutassa (a már megírt, explicit portrékat
+    is beleértve), az egy külön, nagyobb (a 4 zóna nagy részét érintő)
+    átalakítás lenne.
 
 ## Az overworld-jelenetek (szoba + folyosó) hangolása
 

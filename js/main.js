@@ -63,12 +63,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     battleCornerPopup: document.getElementById("battle-corner-popup"),
     battleCornerPortrait: document.getElementById("battle-corner-popup-portrait"),
     battleCornerText: document.getElementById("battle-corner-popup-text"),
+    battleEnemySprite: document.getElementById("battle-enemy-sprite"),
   });
 
   Engine.init(canvas, boxBounds, Battle.onHit);
   await Promise.all([
     Engine.loadImage("heart", "assets/sprites/ui/soul_heart_red.png"),
-    Engine.loadImage("tear", "assets/sprites/ui/tear_bullet_real.png"),
+    Engine.loadImage("tear", "assets/sprites/tear_bullet.png"),
   ]);
   Engine.loadSound("blip", "assets/sfx/menu_blip.wav");
   Engine.loadSound("move", "assets/sfx/menu_move.wav");

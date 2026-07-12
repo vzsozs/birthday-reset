@@ -283,12 +283,7 @@ h1 {
   visibility: visible;
 }
 
-/* #battle-corner-popup a harc-kepernyon ugyanezt a kinezetet hasznalja
-   (Queen/Tenna rovid beugrasai a harc alatt) -- ld. js/battle.js
-   showCornerBanter(), ami szandekosan onallo (nem az Overworld-modult
-   hasznalja, ld. overworld.js dokumentaciojat). */
-#corner-popup,
-#battle-corner-popup {
+#corner-popup {
   position: absolute;
   right: 56px;
   bottom: 16px;
@@ -301,8 +296,7 @@ h1 {
   align-items: center;
 }
 
-#corner-popup img,
-#battle-corner-popup img {
+#corner-popup img {
   width: 40px;
   height: 40px;
   object-fit: contain;
@@ -311,8 +305,7 @@ h1 {
   flex: none;
 }
 
-#corner-popup-text,
-#battle-corner-popup-text {
+#corner-popup-text {
   font-size: 15px;
   line-height: 1.5;
 }
@@ -344,6 +337,49 @@ h1 {
 }
 
 #corner-popup.corner-popup-room #corner-popup-text {
+  text-align: left;
+  color: #000;
+}
+
+/* #battle-corner-popup a harc-kepernyon Queen/Tenna rovid beugrasaihoz --
+   ld. js/battle.js showCornerBanter(), ami szandekosan onallo (nem az
+   Overworld-modult hasznalja, ld. overworld.js dokumentaciojat). A
+   felhasznalo kerese szerint MINDIG a fenti "room" nezetet hasznalja
+   (ugyanaz, mint a Bazsa-szoba Tenna/Queen beszolasainal), nem a sima
+   #corner-popup kinezetet -- ezert allando (nem class-togglelt) sajat
+   szabalykent van felveve. */
+#battle-corner-popup {
+  position: absolute;
+  right: 56px;
+  bottom: 16px;
+  width: 380px;
+  min-height: 130px;
+  border: none;
+  background: url("assets/sprites/Speech Bubbles_rooms.png") no-repeat center / 100% 100%;
+  padding: 18px 70px 18px 26px;
+  image-rendering: pixelated;
+  /* A #dialogue-box/#menu-box terulete atfedi ezt (mindket doboz most mar
+     fix pozicioban, kozel a also szelhez, ld. lejjebb) -- kesobb all a
+     DOM-ban, tehat automatikusan folulirna z-index nelkul. A sarok-buborek
+     csak sajat aktiv fazisaban lathato (kulonben .hidden), ekkor viszont
+     mindig a dialogue-box/menu-box FOLOTT kell latszania. */
+  z-index: 2;
+}
+
+#battle-corner-popup-portrait {
+  position: absolute;
+  right: -50px;
+  bottom: 8px;
+  width: 80px;
+  height: 90px;
+  object-fit: contain;
+  object-position: bottom;
+  image-rendering: pixelated;
+}
+
+#battle-corner-popup-text {
+  font-size: 15px;
+  line-height: 1.5;
   text-align: left;
   color: #000;
 }
@@ -447,13 +483,31 @@ h1 {
   opacity: 0.55;
 }
 
-/* #battle-corner-popup kimarad ebbol -- annak sajat position:absolute-ja
-   (ld. fent, a jobb-also sarokba rogzitve) kulonben felulirodna, mert ez a
-   szabaly ID-specificitassal versenyezne vele (ugyanaz az ok, amiert
+/* #battle-corner-popup, #dialogue-box, #menu-box es #battle-enemy-sprite
+   kimaradnak ebbol -- mindegyiknek sajat position:absolute-ja van (ld.
+   lejjebb, illetve fent a sarok-buboreknel), amit kulonben felulirna ez a
+   szabaly, mert ID-specificitassal versenyezne vele (ugyanaz az ok, amiert
    #zone-bg is ki van zarva). */
-#battle-stage > *:not(#zone-bg):not(#battle-corner-popup) {
+#battle-stage > *:not(#zone-bg):not(#battle-corner-popup):not(#dialogue-box):not(#menu-box):not(#battle-enemy-sprite) {
   position: relative;
   z-index: 1;
+}
+
+/* Az ellenfel harci "terepen levo" sprite-ja -- a kepernyo kozepen,
+   folyamatosan lathato, amig a harc ugy kivanja (ld. js/battle.js
+   startRoundBattle()). Szandekosan a #dialogue-box (also, fix pozicio)
+   folott, de annak legrosszabb-eseti magassaganal (ld. #menu-box
+   megjegyzeset) feljebb, hogy ne fedjek at egymast. */
+#battle-enemy-sprite {
+  position: absolute;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 160px;
+  width: auto;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
 }
 
 #hp-row,
@@ -499,8 +553,23 @@ h1 {
   background: #000;
 }
 
+/* A menu es a parbeszed-doboz (ld. lejjebb) MINDIG fix pozicioban all a
+   harc-kepernyo aljan -- nem "ugral" attol fuggoen, hogy a HP/Spare-sor
+   vagy a dodge-canvas eppen lathato-e folottuk. Ezert absolute +
+   also-kozeppontra rogzitve, kiveve a fenti blanket position:relative
+   szabalybol. A `bottom` erteket js/battle.js showActMenu() allitja be
+   dinamikusan hivaskor: 240px, ha a #dialogue-box eppen lathato (a doboz
+   "ismert korlatok" szerinti legrosszabb, kb. 208px magas esete felett is
+   marad ures res), vagy 16px, ha a dialogue-box rejtve van (pl. kozvetlenul
+   egy dodge-fazis utan, ahol nincs uj/friss szoveg -- ld. showSequence()
+   megjegyzeset arrol, hogy csak akkor fedi fel ujra a dobozt, ha tenyleg
+   van mit kiirni). Az itteni ertek csak kezdeti/fallback. */
 #menu-box {
   display: none;
+  position: absolute;
+  left: 50%;
+  bottom: 240px;
+  transform: translateX(-50%);
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   width: 620px;
@@ -538,6 +607,10 @@ h1 {
 }
 
 #dialogue-box {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
   width: 620px;
   min-height: 160px;
   background: url("assets/sprites/ui/dialogue_box_frame.png") no-repeat center / 100% 100%;
@@ -566,10 +639,11 @@ h1 {
   flex: 1;
 }
 
+/* A felhasznalo kerese szerint a fo #dialogue-box-ban sehol nem jelenik meg
+   a beszelo neve -- az elem a DOM-ban marad (typeText() tovabbra is irhat
+   bele), de mindig el van rejtve, igy nem foglal helyet a dobozban sem. */
 #speaker-name {
-  color: #ffd400;
-  font-weight: bold;
-  font-size: 15px;
+  display: none;
 }
 
 #dialogue-text {

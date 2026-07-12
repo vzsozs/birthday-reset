@@ -16,7 +16,10 @@ const Battle = (() => {
   // ld. start() elagazasat.
   let battleMode = "legacy"; // "legacy" | "rounds"
   let mercy = 0; // 0-100, a "Spare" barat-mero -- csak a rounds-modban hasznalt
-  let enemyPortrait = null; // a KÖNNY-LÉNY sorok alapertelmezett portreja, FIGHT-tal valtozhat
+  let enemyPortrait = null; // a dialogue-boxban lathato KÖNNY-LÉNY-arckep (talk/talk-dying-01/02), FIGHT-tal valtozhat
+  let centerEnemySprite = null; // a kepernyo kozepen allando ellenfel-sprite (sprite/dying-01/02/die), fuggetlenul valtozik az enemyPortrait-tol
+  let lastChoiceType = null; // az elozo fordulon valasztott opcio tipusa ("fight"|"act") -- a kovetkezo fordulo preLines-at agazhatja el, ld. runRound()
+  let lastChoiceId = null; // az elozo fordulon valasztott ACT konkret id-je (pl. "roblox_tanc") -- a kovetkezo fordulo enemyLine-jat felteteshez kotheti, ld. runRound()
   let currentRoundZone = null;
   let currentRoundIndex = 0;
 
@@ -178,16 +181,50 @@ const Battle = (() => {
     });
   }
 
+  function activeZoneData() {
+    return battleMode === "rounds" ? currentRoundZone : currentZone;
+  }
+
+  // Ha egy sor nem ad meg sajat `portrait`-ot, de a `speaker` egy ismert
+  // (nevesitett) karakter, ez adja meg az alapertelmezett arckepet -- mindig
+  // a "_talk" valtozatot preferalva, ha van ilyen (ld. CLAUDE.md "Mindig
+  // legyen arckep" dontest). MAR MEGADOTT portrait-ot soha nem ir felul,
+  // csak a hianyzokat tolti ki -- a mar megirt zona-dialogusok tudatosan
+  // valasztott (nem-talk) portreit ez nem valtoztatja meg.
+  function resolvePortrait(line) {
+    if (line.portrait) return line.portrait;
+    if (!line.speaker) return null;
+    const zoneData = activeZoneData();
+    if (!zoneData) return null;
+    if (zoneData.enemy && line.speaker === zoneData.enemy.name) {
+      // Fordulos modban a mar elert allapot (dying-01/02/die, ld.
+      // enemyPortraitAfter) elsobbseget elvez a talk-arckep felett.
+      if (battleMode === "rounds" && enemyPortrait) return enemyPortrait;
+      return zoneData.enemy.talkSprite || zoneData.enemy.sprite;
+    }
+    if (zoneData.speakerPortraits && zoneData.speakerPortraits[line.speaker]) {
+      return zoneData.speakerPortraits[line.speaker];
+    }
+    return null;
+  }
+
   async function showSequence(lines, target) {
     target = target || defaultTarget();
+    // Ez a fuggveny mindig a fo #dialogue-box-ot hasznalja (a target-parametert
+    // jelenleg semelyik hivas nem adja meg maskepp) -- barmilyen uj szoveg
+    // kiirasa elott biztositja, hogy a doboz lathato legyen. Igy a dodge-
+    // fazis/menu utan NEM marad ott regi, mar elolvasott szoveg: a doboz
+    // csak akkor jelenik meg ujra, amikor tenylegesen van mit kiirni.
+    dom.dialogueBox.classList.remove("hidden");
     for (const line of lines) {
-      if (line.portrait) {
-        target.portrait.src = line.portrait;
+      const portrait = resolvePortrait(line);
+      if (portrait) {
+        target.portrait.src = portrait;
         target.portrait.style.display = "block";
       } else {
         target.portrait.style.display = "none";
       }
-      await typeText(line.speaker, line.text, line.portrait, line.faces, target);
+      await typeText(line.speaker, line.text, portrait, line.faces, target);
     }
   }
 
@@ -198,6 +235,10 @@ const Battle = (() => {
   // gepelos typeText()-et hasznalja a target-parameterrel.
   async function showCornerBanter(lines) {
     if (!lines || !lines.length) return;
+    // A felhasznalo kerese szerint a fo #dialogue-box (a keret-kepevel
+    // egyutt) ilyenkor teljesen eltunik -- csak a sarok-buborek latszik,
+    // nincs ures/felesleges doboz a hattereben.
+    dom.dialogueBox.classList.add("hidden");
     dom.battleCornerPopup.classList.remove("hidden");
     const target = {
       speakerName: null,
@@ -211,6 +252,7 @@ const Battle = (() => {
       await typeText(line.speaker, line.text, line.portrait, line.faces, target);
     }
     dom.battleCornerPopup.classList.add("hidden");
+    dom.dialogueBox.classList.remove("hidden");
   }
 
   function setHpDisplay() {
@@ -233,6 +275,16 @@ const Battle = (() => {
     return new Promise((resolve) => {
       dom.menuBox.innerHTML = "";
       dom.menuBox.style.display = "grid";
+      // 3 (vagy kevesebb) opcio egy sorban fer el egymas mellett; tobbnel
+      // (jelenleg nem hasznalt eset) visszaall a ket-oszlopos tordelesre.
+      menuCols = acts.length <= 3 ? acts.length : 2;
+      dom.menuBox.style.gridTemplateColumns = `repeat(${menuCols}, 1fr)`;
+      // A menu mindig alulra zar: ha a dialogue-box eppen lathato (van meg
+      // friss szoveg raita), a doboz teteje folott all meg -- ha a
+      // dialogue-box rejtve van (pl. kozvetlenul egy dodge-fazis utan, ahol
+      // nincs uj szoveg), a menu maga huzodik le a kepernyo aljahoz kozel.
+      const dialogueVisible = !dom.dialogueBox.classList.contains("hidden");
+      dom.menuBox.style.bottom = dialogueVisible ? "240px" : "16px";
       currentMenuButtons = [];
       currentMenuActs = acts;
       selectedIndex = 0;
@@ -282,10 +334,14 @@ const Battle = (() => {
 
   async function enemyAttack(zoneData) {
     await showSequence(zoneData.enemy.attackLines);
+    dom.dialogueBox.classList.add("hidden");
     dom.battleWrap.style.display = "block";
     return new Promise((resolve) => {
       Engine.startDodgePhase(zoneData.dodge.duration, zoneData.dodge, () => {
         dom.battleWrap.style.display = "none";
+        // A dialogue-box szandekosan rejtve marad -- csak a kovetkezo
+        // showSequence()-hivas fedi fel ujra (ld. annak megjegyzeset),
+        // nehogy a mar elolvasott regi szoveg latszodjon az ACT-menu mogott.
         resolve();
       });
     });
@@ -315,6 +371,9 @@ const Battle = (() => {
   async function gameOver() {
     dom.battleWrap.style.display = "none";
     await flashGameOver();
+    // A showSequence() maga gondoskodik a dialogue-box ujra-felfedeserol
+    // (ld. annak megjegyzeset), fuggetlenul attol, hogy a halal a dodge-fazis
+    // kozben tortent-e, meg mielott annak sajat befejezo-callbackje lefutna.
     await showSequence([
       { speaker: "QUEEN", text: "Ó, remek. ELVESZTETTED. Ez... technikailag is kínos volt." },
       { speaker: "KECSKE", text: "Semmi baj, újratöltjük. Ez van, ha rossz a frissítés." },
@@ -362,6 +421,7 @@ const Battle = (() => {
       return;
     }
     battleMode = "legacy";
+    currentZone = zoneData;
     hp = maxHp;
     usedActs = new Set();
     onCompleteZone = doneCallback;
@@ -371,7 +431,6 @@ const Battle = (() => {
     dom.menuBox.style.display = "none";
 
     await showSequence(zoneData.intro);
-    dom.portrait.style.display = "none";
     await showSequence(zoneData.enemy.introLines);
     startPlayerTurn(zoneData);
   }
@@ -396,16 +455,14 @@ const Battle = (() => {
   //   ha `mercy` mar elerte a 100-at, kulonben rovid failLines utan a FIGHT-
   //   kimenetellel zarul (ld. resolveEnding()).
 
-  function fillEnemyPortrait(line) {
-    if (line.portrait || !currentRoundZone || line.speaker !== currentRoundZone.enemy.name) return line;
-    return { ...line, portrait: enemyPortrait };
-  }
-
   async function startRoundBattle(zoneData, doneCallback) {
     battleMode = "rounds";
     hp = maxHp;
     mercy = 0;
-    enemyPortrait = zoneData.enemy.sprite;
+    enemyPortrait = zoneData.enemy.talkSprite || zoneData.enemy.sprite;
+    centerEnemySprite = zoneData.enemy.sprite;
+    lastChoiceType = null;
+    lastChoiceId = null;
     onCompleteZone = doneCallback;
     currentRoundZone = zoneData;
     currentRoundIndex = 0;
@@ -415,8 +472,15 @@ const Battle = (() => {
     dom.battleWrap.style.display = "none";
     dom.menuBox.style.display = "none";
 
+    // Az ellenfel harci sprite-ja a kepernyo kozepen -- folyamatosan
+    // lathato marad, amig a harc menete mashogy nem kivanja (ld.
+    // CLAUDE.md "Harc-UI" szakaszat). Fuggetlenul valtozik az enemyPortrait-
+    // tol (ami a dialogue-box "beszelo" arckepe): ez a "sima" dying-01/02/die
+    // sorozatot hasznalja, nem a "_talk-dying" valtozatot.
+    dom.battleEnemySprite.src = centerEnemySprite;
+    dom.battleEnemySprite.classList.remove("hidden");
+
     await showCornerBanter(zoneData.cornerIntro);
-    dom.portrait.style.display = "none";
     await showSequence(zoneData.enemy.introLines);
     await runRound();
   }
@@ -425,13 +489,27 @@ const Battle = (() => {
     const zoneData = currentRoundZone;
     while (currentRoundIndex < zoneData.rounds.length) {
       const round = zoneData.rounds[currentRoundIndex];
-      if (round.preLines) await showSequence(round.preLines.map(fillEnemyPortrait));
-      if (round.enemyLine) await showSequence([fillEnemyPortrait(round.enemyLine)]);
+      // Ha a forduló megad egy `preLinesIfPrevFight` valtozatot, es az elozo
+      // fordulban FIGHT-ot valasztott a jatekos, az felulirja a alapertelmezett
+      // (ACT-utas) preLines-t -- ld. js/zones.js ZONE_1.rounds[1] peldat.
+      const preLines = lastChoiceType === "fight" && round.preLinesIfPrevFight ? round.preLinesIfPrevFight : round.preLines;
+      if (preLines) await showSequence(preLines);
+      // `enemyLineRequiresPrevChoice` (ha meg van adva) csak akkor engedi
+      // megjelenni az enemyLine-t, ha az elozo fordulban PONT azt a
+      // konkret ACT-ot valasztotta a jatekos (id szerint) -- ld.
+      // js/zones.js ZONE_1.rounds[2] peldat.
+      const enemyLineAllowed = !round.enemyLineRequiresPrevChoice || round.enemyLineRequiresPrevChoice === lastChoiceId;
+      if (round.enemyLine && enemyLineAllowed) await showSequence([round.enemyLine]);
 
+      dom.dialogueBox.classList.add("hidden");
       dom.battleWrap.style.display = "block";
       await new Promise((resolve) => {
         Engine.startDodgePhase(round.dodge.duration, round.dodge, () => {
           dom.battleWrap.style.display = "none";
+          // Nem allitjuk vissza a dialogue-box lathatosagat itt -- a menu
+          // (ld. lejjebb) most mar magatol, dialogue-box nelkul jelenik meg,
+          // csak a kovetkezo showSequence() (a valasztott opcio reactionLines-a)
+          // fedi fel ujra, friss szoveggel.
           resolve();
         });
       });
@@ -445,15 +523,23 @@ const Battle = (() => {
         icon: opt.type === "fight" ? FIGHT_ICON : ACT_ICON,
       }));
       const chosen = await showActMenu(options);
+      lastChoiceType = chosen.type;
+      lastChoiceId = chosen.id || null;
       if (chosen.type === "fight" && chosen.enemyPortraitAfter) {
         enemyPortrait = chosen.enemyPortraitAfter;
       }
+      if (chosen.type === "fight" && chosen.enemyFieldAfter) {
+        centerEnemySprite = chosen.enemyFieldAfter;
+        dom.battleEnemySprite.src = centerEnemySprite;
+      }
       if (typeof chosen.mercy === "number") {
-        mercy = chosen.mercy;
+        // Osszeadodik a korabban mar megszerzett mercy-vel (nem felulirja) --
+        // pl. ROBLOX TÁNC (+50) + OOF KÓRUS (+50) egyutt adja ki a 100-at.
+        mercy = Math.min(100, mercy + chosen.mercy);
         setMercyDisplay();
       }
       if (chosen.reactionLines) {
-        await showSequence(chosen.reactionLines.map(fillEnemyPortrait));
+        await showSequence(chosen.reactionLines);
       }
 
       currentRoundIndex++;
@@ -473,7 +559,7 @@ const Battle = (() => {
       return;
     }
     if (chosen.type === "spare") {
-      await showSequence(zoneData.ending.spare.failLines.map(fillEnemyPortrait));
+      await showSequence(zoneData.ending.spare.failLines);
     }
     await finishZone("fight");
   }
@@ -482,8 +568,12 @@ const Battle = (() => {
     const zoneData = currentRoundZone;
     const branch = zoneData.ending[outcome];
     if (branch.enemyPortrait) enemyPortrait = branch.enemyPortrait;
+    if (branch.enemyField) {
+      centerEnemySprite = branch.enemyField;
+      dom.battleEnemySprite.src = centerEnemySprite;
+    }
     await showStyleTag(zoneData.styleTag || "+STYLE");
-    await showSequence(branch.lines.map(fillEnemyPortrait));
+    await showSequence(branch.lines);
     dom.mercyRow.classList.add("hidden");
     if (onCompleteZone) onCompleteZone({ outcome, roomDecoration: !!branch.roomDecoration });
   }
