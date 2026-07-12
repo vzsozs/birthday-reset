@@ -296,6 +296,20 @@ const Overworld = (() => {
     follower.src = src;
   }
 
+  // Azonnal eltunteti a kovető NPC-t (ha van) a JELENLEGI jelenetbol, ugy
+  // hogy ne varjunk meg egy kovetkezo Overworld.start()-ot -- pl. ha egy
+  // esemeny hatasara a kovető vegleg eltunik a jatekbol (ld. CLAUDE.md,
+  // Feki-vesztes a 2. zonaban). A `scene.follower` config a HIVO scene-
+  // objektumaban is torlendo/felulirando, kulonben a kovetkező
+  // Overworld.start()-nal ujra megjelenne.
+  function removeFollower() {
+    if (follower) {
+      follower.remove();
+      follower = null;
+    }
+    followerCfg = null;
+  }
+
   // scene.follower (opcionalis, ld. a fajl elejen a dokumentaciot) -- ha
   // nincs megadva, nincs kovető NPC (pl. a szobaban, ahol Feki statikus
   // dekoraciokent ul az ablakban -- ld. scene.decorations).
@@ -846,5 +860,5 @@ const Overworld = (() => {
     setTimeout(cb, 0);
   }
 
-  return { init, start, pause, resume, showCornerPopup, dismissCornerPopup };
+  return { init, start, pause, resume, showCornerPopup, dismissCornerPopup, removeFollower };
 })();

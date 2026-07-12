@@ -30,6 +30,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   const choiceStart = document.getElementById("choice-start");
   const choiceDad = document.getElementById("choice-dad");
 
+  const giftCountdownBox = document.getElementById("gift-countdown-box");
+  const giftCountdownNumber = document.getElementById("gift-countdown-number");
+  const giftCountdownButton = document.getElementById("gift-countdown-button");
+
   Overworld.init({
     stage: document.getElementById("overworld-stage"),
     world: document.getElementById("overworld-world"),
@@ -84,6 +88,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   Engine.loadSound("glitchZap", "assets/Sounds/snd_error.wav");
   Engine.loadSound("jokerLaugh", "assets/Sounds/snd_joker_laugh1.wav");
   Engine.loadSound("flavorText", "assets/Sounds/snd_text.wav?v=2");
+  // A 2. zona ajandek-visszaszamlalo minijatekahoz (ld. startGiftCountdown()).
+  Engine.loadSound("coin", "assets/Sounds/snd_coin.wav");
+  Engine.loadSound("won", "assets/Sounds/snd_won.wav");
+  Engine.loadSound("awkward", "assets/Sounds/snd_awkward.wav");
 
   // --- Szoba-jelenet -------------------------------------------------
 
@@ -295,26 +303,196 @@ window.addEventListener("DOMContentLoaded", async () => {
   // mellett all (a "attrakcio" resze), Kecske/a minecraft-beszolas tole
   // balra, a belepesi oldal fele, ugyanazon a padlo-szinten (yFrac 0.79,
   // ami ennel a rajznal jobban illik, mint a tobbi zona 0.62/0.7/0.65-e).
-  // companionSprite/companionPrompt/minecraftPrompt: a 2. zona folyoso-
-  // szakaszan NEM Kecske (Erik) all a szokasos "kecske${i}" hotspoton,
-  // hanem egy uj, egyelore csak PLACEHOLDER szereplo, "Caine" (ld.
-  // assets/sprites/caine_placeholder.png, tools/gen_assets.py) -- se
-  // vegleges nev, se vegleges parbeszed, se sajat "_talk" portre meg
-  // nincs, ezert a companionSprite-ot hasznaljuk a beszed-buborek
-  // portrejakent is (nincs kulon "beszelo" kockaja). A "minecraft${i}"
-  // nema beszolas szovege is csere (ld. minecraftPrompt), a pozicioja
-  // valtozatlan maradt.
+  // companionPrompt/minecraftPrompt: a 2. zona folyoso-szakaszan NEM
+  // Kecske (Erik) all a szokasos "kecske${i}" hotspoton, hanem Caine --
+  // NINCS kulon allo-sprite-ja (a hattergrafikan mar rajta van, ld. lejjebb
+  // a hotspot-epitesnel), csak a nevehez tartozo interakcios terulet
+  // (prompt+radius) marad meg ezen a poziciodon. Beszelgetes: CAINE_DIALOGUE_LINES.
+  // A "minecraft${i}" nema beszolas szovege is csere (ld. minecraftPrompt),
+  // a pozicioja valtozatlan maradt.
   const ZONE2_LAYOUT = {
     doorXFrac: (CORRIDOR_SEGMENT_OFFSETS[1] + 680) / CORRIDOR_TOTAL_WIDTH,
     doorYFrac: 0.79,
     companionXFrac: (CORRIDOR_SEGMENT_OFFSETS[1] + 540) / CORRIDOR_TOTAL_WIDTH,
     companionYFrac: 0.65,
-    companionSprite: "assets/sprites/caine_placeholder.png",
     companionPrompt: "▶ Enter: odaszólsz Caine-nek",
     minecraftXFrac: (CORRIDOR_SEGMENT_OFFSETS[1] + 252) / CORRIDOR_TOTAL_WIDTH,
     minecraftYFrac: 0.79,
     minecraftPrompt: "* Bubble Fight... mi más :)",
+    // A masodik Caine-hotspot (ajandek-visszaszamlalo bevezetoje) -- a
+    // felhasznalo kerese szerint pontosan 100px-szel jobbra a companion-
+    // hotspottol, ugyanazon a padlo-szinten (yFrac valtozatlan).
+    giftXFrac: (CORRIDOR_SEGMENT_OFFSETS[1] + 540 + 220) / CORRIDOR_TOTAL_WIDTH,
+    giftYFrac: 0.65,
+    giftPrompt: "▶ Enter: odaszólsz Caine-nek",
   };
+
+  // Caine (2. zona) bevezeto beszelgetese -- tobb, valtakozo beszelos sor,
+  // ld. showOverworldDialogue()/KONNYLENY_REUNION_LINES mintajat. Caine
+  // sorai a placeholder portrejat kapjak (meg mindig nincs vegleges "_talk"
+  // kepe), a jatekos ("TE") es Jax sorai portrait nelkul jelennek meg --
+  // Jax-nal, mivel nincs sajat portreja/allo-sprite-ja es nem a jatekos
+  // beszel, a szoveg elejen egy rovid attribúcio jelzi, ki szolal meg.
+  const CAINE_DIALOGUE_LINES = [
+    {
+      portrait: "assets/sprites/caine_placeholder.png",
+      text: [
+        "Hölgyeim és uraim, illetve te: ISTEN HOZOTT A DIGITÁLIS CIRKUSZBAN! Egy olyan helyen, ahol a szórakozásnak soha nem szakad vége!",
+        "És amikor azt mondom, soha, akkor úgy értem, hogy a Kernel már régen törölte a kijáratot tartalmazó kódrészletet! Hahaha!",
+      ],
+    },
+    { portrait: null, text: "Szia Caine, ugye ki tudunk jutni Fekivel ebből a világból? Nekem szeptembertől suli." },
+    {
+      portrait: "assets/sprites/caine_placeholder.png",
+      text: "Suli? Suli?! Ó, te édes! Itt a Digitális Cirkuszban a tanulásnak is megvan a maga... kreatív módja!",
+    },
+    {
+      portrait: null,
+      text: [
+        "Suli... komolyan Caine, nem akarok itt megkattani teljesen az elkövetkező tízmilliárd évben.",
+        "A matekóra gondolom itt úgy néz ki, hogy megpróbáljuk kitalálni, melyik textúra nem fog megölni, ha hozzáérsz.",
+      ],
+    },
+    {
+      portrait: "assets/sprites/caine_placeholder.png",
+      text: [
+        "Ne aggódj kölyök a suli miatt! Itt nincsenek osztályzatok, csak válságok, amikért nem jár év végi bizonyítvány, csak egy örökös glitch a szemed sarkában!",
+        "Itt minden nap egy Absztrakciós Tanévnyitó!",
+      ],
+    },
+    {
+      portrait: null,
+      text: "* Valahonnan a háttérből, Jax: Én passzolom. Inkább nézem, ahogy az új gyerek megpróbálja megoldani a másodfokú egyenletet egy Abstract Horror elől menekülve. Ez a kedvenc 'tantárgyam'!",
+    },
+    { portrait: null, text: "...Asszem inkább mégiscsak maradok a sima matekóránál, na sziasztok." },
+  ];
+
+  // A masodik Caine-hotspot (ld. ZONE2_LAYOUT giftXFrac/giftYFrac) --
+  // Caine bejelenti a szulinapi ajandekot, majd a beszelgetes vegen
+  // (onDone) inditja a startGiftCountdown() minijatekot. `zone2GiftOutcome`
+  // egyszeri esemenykent zarja le a keresest (ld. lejjebb) -- ujboli
+  // odalepeskor mar csak egy rovid, lezaro sor jon (CAINE_GIFT_WON_LINE /
+  // CAINE_GIFT_LOST_LINE), nem indul ujra a visszaszamlalas.
+  const CAINE_GIFT_DIALOGUE_LINES = [
+    {
+      portrait: "assets/sprites/caine_placeholder.png",
+      text: "Ó, hallom ez egy különleges 13-as szám! A bűvös, a misztikus, a... kódolt balszerencse! Boldog születésnapot, kis user!",
+    },
+    { portrait: null, text: "Köszi, Caine! Remélem, az ajándék nem egy újabb krízis." },
+    {
+      portrait: "assets/sprites/caine_placeholder.png",
+      text: [
+        "Ne légy már ilyen low hangulatban! Eldugtam neked egy ajándékot a szobádban, egy nagy zöld dobozban. Keresd meg!",
+        "De vigyázz: ha rossz helyre nyúlsz, a 13-as szám törvénye szerint a szobád textúrája átvált egy végtelen, hústorony-labirintusba!",
+      ],
+    },
+    {
+      portrait: null,
+      text: "* Valahonnan a háttérből, Jax: Ne is figyeld, csak próbálja beállítani a nehézséget. Ha megtalálod, talán nem omlik össze a valóság. De ne fogadj rá nagy tétben!",
+    },
+    {
+      portrait: "assets/sprites/caine_placeholder.png",
+      text: [
+        "TIK-TAK, KÖLYÖK! Visszaszámlálás elindult, és ha nem találod meg fél \"stack\" másodperc alatt, az ajándékod helyett egy absztrakciós tortát kapsz, ami... nos, te is tudod, mi történik azokkal, akik túl sokat falatoznak belőle!",
+        "JÓ VADÁSZATOT!",
+      ],
+    },
+  ];
+  const CAINE_GIFT_WON_LINE = {
+    portrait: "assets/sprites/caine_placeholder.png",
+    text: "Az ajándékod már megvan, kölyök. Mit akarsz még tőlem?",
+  };
+  const CAINE_GIFT_LOST_LINE = {
+    portrait: "assets/sprites/caine_placeholder.png",
+    text: "Feki most már az enyém. Ne is próbáld visszaszerezni!",
+  };
+  // A CAINE_DIALOGUE_LINES-t (bevezeto) adó hotspot ujboli megszolitasakor
+  // ez a rovid "lezaro" sor jon, ahelyett hogy ujra lejatszana a teljes
+  // bevezetot -- a CAINE_GIFT_WON_LINE/CAINE_GIFT_LOST_LINE parja, ld.
+  // handleCaineHotspot().
+  const CAINE_INTRO_REPEAT_LINE = {
+    portrait: "assets/sprites/caine_placeholder.png",
+    text: "Nahh mivan, meguntad a sulit?",
+  };
+  // A 2. zonaban KET Caine-hotspot van (companion + gift, ld. ZONE2_LAYOUT),
+  // de a jatekos nem tudhatja elore, melyiket eri el eloszor setalva --
+  // ezert NEM a fizikai pozicio donti el, melyik beszelgetes jon, hanem a
+  // SORREND: amelyik hotspotot a jatekos ELSOKENT szolitja meg, az adja a
+  // bevezeto beszelgetest (CAINE_DIALOGUE_LINES), a MASIK (meg nem
+  // hasznalt) hotspot pedig a szulinapi ajandek-beszelgetest + visszaszamlalot
+  // (CAINE_GIFT_DIALOGUE_LINES/startGiftCountdown). Ugyanannak a hotspotnak
+  // ujboli megszolitasa mar csak egy rovid, lezaro sort ad (ld. fent/lejjebb).
+  let caineIntroHotspotId = null;
+  function handleCaineHotspot(hotspotId) {
+    if (caineIntroHotspotId === null) {
+      caineIntroHotspotId = hotspotId;
+      showOverworldDialogue(CAINE_DIALOGUE_LINES);
+      return;
+    }
+    if (hotspotId === caineIntroHotspotId) {
+      corridorFlavor(CAINE_INTRO_REPEAT_LINE.portrait, CAINE_INTRO_REPEAT_LINE.text);
+      return;
+    }
+    if (zone2GiftOutcome === "won") {
+      corridorFlavor(CAINE_GIFT_WON_LINE.portrait, CAINE_GIFT_WON_LINE.text);
+    } else if (zone2GiftOutcome === "lost") {
+      corridorFlavor(CAINE_GIFT_LOST_LINE.portrait, CAINE_GIFT_LOST_LINE.text);
+    } else {
+      showOverworldDialogue(CAINE_GIFT_DIALOGUE_LINES, startGiftCountdown);
+    }
+  }
+  const GIFT_COUNTDOWN_START = 32;
+  // null (meg nincs eldontve) | "won" | "lost" -- ld. startGiftCountdown().
+  let zone2GiftOutcome = null;
+  // Igazra valtozik, ha a jatekos elveszti az ajandek-keresest -- Feki
+  // (a folyoso kovető NPC-je) ekkor VEGLEGESEN eltunik: azonnal a
+  // jelenlegi jelenetbol (Overworld.removeFollower()) ES minden kesobbi
+  // buildCorridorScene()-bol is (ld. a scene.follower felteteles
+  // hozzaadasat lejjebb).
+  let fekiGone = false;
+  let giftCountdownTimer = null;
+
+  // A 2. zona ajandek-visszaszamlalo minijateka -- a CAINE_GIFT_DIALOGUE_LINES
+  // vegen (onDone) indul. GIFT_COUNTDOWN_START mp-rol indul, masodpercenkent
+  // csokken es "coin" hangot jatszik. A "MEGVAN!" gombra kattintva gyozelem
+  // ("won" hang, zone2GiftOutcome="won"), ha lejar az ido, vesztes ("awkward"
+  // hang, zone2GiftOutcome="lost", Feki azonnal es vegleg eltunik).
+  function startGiftCountdown() {
+    Overworld.pause();
+    let remaining = GIFT_COUNTDOWN_START;
+    giftCountdownNumber.textContent = String(remaining);
+    giftCountdownBox.classList.remove("hidden");
+
+    function finish(outcome) {
+      clearInterval(giftCountdownTimer);
+      giftCountdownTimer = null;
+      giftCountdownBox.classList.add("hidden");
+      zone2GiftOutcome = outcome;
+      if (outcome === "won") {
+        Engine.playSound("won");
+        Overworld.resume();
+      } else {
+        Engine.playSound("awkward");
+        fekiGone = true;
+        Overworld.removeFollower();
+        Overworld.showCornerPopup("assets/sprites/caine_placeholder.png", "GAME OVER, KÖLYÖK: mostantól az én digitális háziállatom Feki.", () =>
+          Overworld.resume()
+        );
+      }
+    }
+
+    giftCountdownButton.onclick = () => {
+      if (giftCountdownTimer == null) return;
+      finish("won");
+    };
+
+    giftCountdownTimer = setInterval(() => {
+      remaining--;
+      Engine.playSound("coin");
+      giftCountdownNumber.textContent = String(remaining);
+      if (remaining <= 0) finish("lost");
+    }, 1000);
+  }
 
   // opts = { boxWidth?, portraitSize? } -- tovabbadva az Overworld.showCornerPopup()-nak,
   // ld. ott. Egy companionChat-bejegyzes (js/zones.js) sajat boxWidth/portraitSize
@@ -343,13 +521,8 @@ window.addEventListener("DOMContentLoaded", async () => {
       if (chat[0]) {
         const companionXFrac = layout ? layout.companionXFrac : doorFrac - 0.06;
         const companionYFrac = layout ? layout.companionYFrac : 0.7;
-        // A 2. zonaban Caine (placeholder) all itt Kecske helyett -- ld.
-        // ZONE2_LAYOUT megjegyzeset. Nincs kulon "_talk" portreja, a
-        // sima allo-kepet hasznaljuk a beszed-buborekban is.
-        const companionSprite = layout ? layout.companionSprite : "assets/sprites/kecske_placeholder.png";
-        const companionTalkSprite = layout ? layout.companionSprite : "assets/sprites/kecske_placeholder_talk.png";
         const companionPrompt = layout ? layout.companionPrompt : "▶ Enter: odaszólsz Eriknek";
-        hotspots.push({
+        const companionHotspot = {
           id: `kecske${i}`,
           // Ez az INTERAKCIOS terulet kozeppontja (radius, prompt-felugras)
           // -- nem feltetlenul ugyanott van, ahol Kecske ALL, ld. lejjebb.
@@ -357,8 +530,17 @@ window.addEventListener("DOMContentLoaded", async () => {
           yFrac: companionYFrac,
           radius: 45,
           prompt: companionPrompt,
-          sprite: {
-            src: companionSprite,
+        };
+        if (layout) {
+          // A 2. zonaban Caine mar ott van a hattergrafikan -- nincs kulon
+          // allo-sprite, csak ez a nevehez tartozo interakcios terulet
+          // marad meg itt. Melyik beszelgetes jon (bevezeto vagy ajandek),
+          // azt a handleCaineHotspot() donti el a megszolitas SORRENDJE
+          // alapjan, nem ez a konkret hotspot -- ld. ott.
+          companionHotspot.onInteract = () => handleCaineHotspot(companionHotspot.id);
+        } else {
+          companionHotspot.sprite = {
+            src: "assets/sprites/kecske_placeholder.png",
             // matchPlayerSize: ugyanakkora, mint a jatekos-sprite (ld.
             // overworld.js); noFloat: nem lebeg fel-le (nincs npcFloat
             // animacio) -- ld. Hotspot-dokumentacio az overworld.js elejen.
@@ -370,16 +552,17 @@ window.addEventListener("DOMContentLoaded", async () => {
             // interakcios teruletet mozgatja).
             xFrac: companionXFrac,
             yFrac: companionYFrac,
-          },
+          };
           // A chat[0].boxWidth/portraitSize (ha meg van adva a js/zones.js-ben)
           // ennel a konkret sornal szelesebb dobozt/nagyobb portrét ad --
           // ld. Overworld.showCornerPopup() opts-dokumentaciojat.
-          onInteract: () =>
-            corridorFlavor(companionTalkSprite, chat[0].text, {
+          companionHotspot.onInteract = () =>
+            corridorFlavor("assets/sprites/kecske_placeholder_talk.png", chat[0].text, {
               boxWidth: chat[0].boxWidth,
               portraitSize: chat[0].portraitSize,
-            }),
-        });
+            });
+        }
+        hotspots.push(companionHotspot);
 
         hotspots.push({
           id: `minecraft${i}`,
@@ -389,6 +572,19 @@ window.addEventListener("DOMContentLoaded", async () => {
           yFrac: layout ? layout.minecraftYFrac : 0.65,
           radius: 45,
           prompt: layout ? layout.minecraftPrompt : "* Minecraft... mi más :)",
+        });
+      }
+      if (layout) {
+        // Masodik Caine-hotspot, csak a 2. zonaban -- ld. handleCaineHotspot()
+        // a bevezeto/ajandek-beszelgetes sorrend-fuggo eldontesehez.
+        const giftHotspotId = `caine_gift${i}`;
+        hotspots.push({
+          id: giftHotspotId,
+          xFrac: layout.giftXFrac,
+          yFrac: layout.giftYFrac,
+          radius: 45,
+          prompt: layout.giftPrompt,
+          onInteract: () => handleCaineHotspot(giftHotspotId),
         });
       }
       const doorHotspot = {
@@ -429,7 +625,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       yFrac: 0.78,
     });
 
-    return {
+    const scene = {
       bgSrc: CORRIDOR_ZONE_BACKGROUNDS,
       // A szobahoz kepest kicsit kisebb jatekos-sprite a folyoson (ld.
       // overworld.js scene.playerScale) -- tavlati-erzetet ad, es jobban
@@ -444,13 +640,20 @@ window.addEventListener("DOMContentLoaded", async () => {
       { xMin: DOOR_FRACTIONS[0] - 0.002, xMax: DOOR_FRACTIONS[0] + 0.01, yMin: 0.65, yMax: 0.8 },
       { xMin: 0.258, xMax: 0.45, yMin: 0.8, yMax: 0.88 },
       { xMin: 0.344, xMax: 0.358, yMin: 0.65, yMax: 0.88 },
+      { xMin: 0.41, xMax: 0.435, yMin: 0.65, yMax: 0.88 },
       ],
       spawn: playerSpawn,
-      // Feki a folyoson kovető NPC-kent jelenik meg (a szobaban viszont
-      // csak statikusan ul az ablakban, ld. ROOM_SCENE.decorations) --
-      // ld. overworld.js scene.follower dokumentaciojat. A kezdopozicioja
-      // egy kicsit a jatekos spawn-pontja mogott van, nem pontosan azon.
-      follower: {
+      hotspots,
+    };
+    // Feki a folyoson kovető NPC-kent jelenik meg (a szobaban viszont
+    // csak statikusan ul az ablakban, ld. ROOM_SCENE.decorations) --
+    // ld. overworld.js scene.follower dokumentaciojat. A kezdopozicioja
+    // egy kicsit a jatekos spawn-pontja mogott van, nem pontosan azon.
+    // Ha `fekiGone` igaz (a jatekos elvesztette a 2. zona ajandek-
+    // keresset), a follower mezo teljesen KIMARAD -- innentol egyetlen
+    // buildCorridorScene()-hivas sem hozza vissza Fekit (ld. CLAUDE.md).
+    if (!fekiGone) {
+      scene.follower = {
         spawn: () => {
           const s = playerSpawn();
           return { xFrac: Math.max(0, s.xFrac - 0.02), yFrac: s.yFrac };
@@ -478,9 +681,9 @@ window.addEventListener("DOMContentLoaded", async () => {
           "assets/sprites/cat/feki_jump_03.png",
           "assets/sprites/cat/feki_jump_04.png",
         ],
-      },
-      hotspots,
-    };
+      };
+    }
+    return scene;
   }
 
   // Az 1. zona bevezeto kis-szobaja (isaac_room.png) -- a folyoso 1. zona

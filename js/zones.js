@@ -281,9 +281,10 @@ const ZONE_2 = {
     { speaker: "RENDSZER", text: "2. ZÓNA KÉSZ." },
   ],
   companionChat: [
-    // PLACEHOLDER: Caine (uj szereplo a 2. zonahoz) -- ld. js/main.js
-    // ZONE2_LAYOUT.companionSprite/companionPrompt. Vegleges szoveg/nev
-    // meg nincs eldontve, ez csak egy ideiglenes sor.
+    // Ez a bejegyzes csak "van companionChat" jelzokent kell a Caine-
+    // hotspot letrehozasahoz (js/main.js buildCorridorScene()) -- a
+    // tenyleges, tobbsoros Caine-beszelgetes mar NEM innen jon, hanem a
+    // js/main.js CAINE_DIALOGUE_LINES konstansabol (showOverworldDialogue()).
     { speaker: "CAINE", text: "Hölgyeim és uraim, illetve te: ISTEN HOZOTT A DIGITÁLIS CIRKUSZBAN!" },
     { speaker: "TENNA", text: "A villanykörte állítólag jól van. Állítólag." },
     { speaker: "QUEEN", text: "A TAPS-HANGERŐ IRÁNYÍTHATATLAN. ÉRDEKES.", portrait: "assets/sprites/queen_placeholder.png" },

@@ -324,6 +324,29 @@ h1 {
   image-rendering: pixelated;
 }
 
+/* 2. zona ajandek-visszaszamlalo minijatek doboza (ld. js/main.js
+   startGiftCountdown()) -- kozepre igazitva az overworld-stage-en,
+   ugyanaz a fekete/feher doboz-nyelv, mint a tobbi UI-elemnel. */
+#gift-countdown-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 3px solid #fff;
+  background: #000;
+  padding: 20px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+#gift-countdown-number {
+  font-size: 64px;
+  line-height: 1;
+  color: #ffd400;
+}
+
 #corner-popup.corner-popup-room img#corner-popup-portrait {
   position: absolute;
   right: -50px;
