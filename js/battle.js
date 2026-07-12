@@ -369,16 +369,22 @@ const Battle = (() => {
     });
   }
 
+  const DEFAULT_GAMEOVER_LINES = [
+    { speaker: "QUEEN", text: "Ó, remek. ELVESZTETTED. Ez... technikailag is kínos volt." },
+    { speaker: "KECSKE", text: "Semmi baj, újratöltjük. Ez van, ha rossz a frissítés." },
+  ];
+
   async function gameOver() {
     dom.battleWrap.style.display = "none";
     await flashGameOver();
     // A showSequence() maga gondoskodik a dialogue-box ujra-felfedeserol
     // (ld. annak megjegyzeset), fuggetlenul attol, hogy a halal a dodge-fazis
     // kozben tortent-e, meg mielott annak sajat befejezo-callbackje lefutna.
-    await showSequence([
-      { speaker: "QUEEN", text: "Ó, remek. ELVESZTETTED. Ez... technikailag is kínos volt." },
-      { speaker: "KECSKE", text: "Semmi baj, újratöltjük. Ez van, ha rossz a frissítés." },
-    ]);
+    // zoneData.gameOverLines (opcionalis) zonankent felulirhatja ezt az
+    // alapertelmezett ket-szereplos sort -- ld. js/zones.js ZONE_2 pelda
+    // (ott csak Queen beszel, mas szoveggel).
+    const zoneData = activeZoneData();
+    await showSequence((zoneData && zoneData.gameOverLines) || DEFAULT_GAMEOVER_LINES);
     hp = maxHp;
     setHpDisplay();
     if (battleMode === "rounds") {
@@ -443,18 +449,32 @@ const Battle = (() => {
   //   legelejen (ld. showCornerBanter()).
   // zoneData.enemy.introLines: a szokasos parbeszed-dobozos bevezeto sor(ok),
   //   a cornerIntro utan, meg az 1. fordulo elott.
-  // zoneData.rounds: [{ preLines?, enemyLine?, dodge:{...,pattern}, options:[
+  // zoneData.rounds: [{ preLines?, preLinesIfPrevFight?, preLinesByChoice?,
+  //   enemyLine?, dodge:{...,pattern}, options:[
   //   { type:"fight", label, reactionLines?, enemyPortraitAfter? } |
   //   { type:"act", id, label, reactionLines?, mercy? }
   // ] }, ...] -- fordulonkent a jatekos EGY opciot valaszt egy menubol; a
   //   FIGHT mindig azonnal "talal" (nincs kulon mini-jatek), a valasztott
   //   opciotol fuggetlenul a KOVETKEZO fordulo dodge-mintazata objektíve
   //   nehezebb (ez adja az eszkalaciot, nem szamszeru elonf/vedekezes-logika).
-  // zoneData.ending: { spare: { lines, failLines }, fight: { lines,
-  //   enemyPortrait, roomDecoration? } } -- az utolso (4.) "fordulo" mar nem
-  //   tamad, csak egy FIGHT/SPARE zaro-valasztas: SPARE csak akkor sikerul,
-  //   ha `mercy` mar elerte a 100-at, kulonben rovid failLines utan a FIGHT-
-  //   kimenetellel zarul (ld. resolveEnding()).
+  //   A `preLines` a bevezeto/alapertelmezett sor(ok) a fordulo dodge-fazisa
+  //   elott. Ha az ELOZO fordulban valasztott opcio alapjan mas bevezeto
+  //   kell, KET mechanizmus kozul valaszthatsz (a masodik altalanosabb):
+  //   - `preLinesIfPrevFight` -- csak azt kulonbozteti meg, hogy az elozo
+  //     valasztas FIGHT volt-e (ld. ZONE_1.rounds[1] pelda).
+  //   - `preLinesByChoice: { fight?: [...], [actId]: [...] }` -- az ELOZO
+  //     fordulo PONTOS valasztasa szerint (barmennyi ACT-id kulonboztetheto
+  //     meg, nem csak FIGHT/nem-FIGHT), ld. ZONE_2.rounds[1] pelda. Ha mindket
+  //     mezo hianyzik, vagy nincs talalat egyikben sem, az alap `preLines` jon.
+  // zoneData.ending: { preLinesByMercy?: { peaceful, aggressive, mixed },
+  //   spare: { lines, failLines }, fight: { lines, enemyPortrait,
+  //   roomDecoration? } } -- az utolso (4.) "fordulo" mar nem tamad, csak egy
+  //   FIGHT/SPARE zaro-valasztas: SPARE csak akkor sikerul, ha `mercy` mar
+  //   elerte a 100-at, kulonben rovid failLines utan a FIGHT-kimenetellel
+  //   zarul (ld. resolveEnding()). Az opcionalis `preLinesByMercy` a zaro-menu
+  //   ELOTT jelenik meg, a felgyult `mercy` alapjan valasztva: "peaceful" ha
+  //   mercy>=100, "aggressive" ha mercy<=0, kulonben "mixed" -- ld. ZONE_2.ending
+  //   pelda (a "beke/agressziv/vegyes" elozmenytol fuggo bevezeto).
 
   async function startRoundBattle(zoneData, doneCallback) {
     battleMode = "rounds";
@@ -491,10 +511,19 @@ const Battle = (() => {
     const zoneData = currentRoundZone;
     while (currentRoundIndex < zoneData.rounds.length) {
       const round = zoneData.rounds[currentRoundIndex];
-      // Ha a forduló megad egy `preLinesIfPrevFight` valtozatot, es az elozo
-      // fordulban FIGHT-ot valasztott a jatekos, az felulirja a alapertelmezett
-      // (ACT-utas) preLines-t -- ld. js/zones.js ZONE_1.rounds[1] peldat.
-      const preLines = lastChoiceType === "fight" && round.preLinesIfPrevFight ? round.preLinesIfPrevFight : round.preLines;
+      // Melyik preLines-valtozat jon: `preLinesByChoice` (altalanosabb, az
+      // elozo fordulo PONTOS valasztasa -- "fight" vagy egy ACT-id -- szerint
+      // kulonbozteti meg), majd ha az nincs (vagy nincs benne talalat) a
+      // regebbi `preLinesIfPrevFight` (csak FIGHT/nem-FIGHT), vegul az
+      // alapertelmezett `preLines` -- ld. a startRoundBattle() elotti
+      // dokumentaciot.
+      let preLines = round.preLines;
+      if (round.preLinesByChoice) {
+        const choiceKey = lastChoiceType === "fight" ? "fight" : lastChoiceId;
+        if (round.preLinesByChoice[choiceKey]) preLines = round.preLinesByChoice[choiceKey];
+      } else if (lastChoiceType === "fight" && round.preLinesIfPrevFight) {
+        preLines = round.preLinesIfPrevFight;
+      }
       if (preLines) await showSequence(preLines);
       // `enemyLineRequiresPrevChoice` (ha meg van adva) csak akkor engedi
       // megjelenni az enemyLine-t, ha az elozo fordulban PONT azt a
@@ -558,6 +587,21 @@ const Battle = (() => {
 
   async function resolveEnding() {
     const zoneData = currentRoundZone;
+    // Opcionalis, a felgyult mercy alapjan valasztott bevezeto a zaro FIGHT/
+    // SPARE-menu elott -- "peaceful" ha mercy mar elerte a 100-at, "aggressive"
+    // ha meg 0-n all, kulonben "mixed" (ld. ZONE_2.ending.preLinesByMercy pelda).
+    if (zoneData.ending.preLinesByMercy) {
+      const bucket = mercy >= 100 ? "peaceful" : mercy <= 0 ? "aggressive" : "mixed";
+      const lines = zoneData.ending.preLinesByMercy[bucket];
+      if (lines) {
+        await showSequence(lines);
+        // A jatekos mar elolvasta/eldismisselte a sort (showSequence
+        // megvarja az Entert/kattintast) -- most elrejtjuk a dialogue-boxot,
+        // kulonben a (tobbnyire tobbsoros) szoveg meg lathato maradna, es a
+        // showActMenu() dinamikus pozicionalasa emiatt eltakarhatna a menut.
+        dom.dialogueBox.classList.add("hidden");
+      }
+    }
     const options = [
       { type: "fight", label: "FIGHT", icon: FIGHT_ICON },
       { type: "spare", label: "SPARE", icon: SPARE_ICON },

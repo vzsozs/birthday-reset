@@ -130,7 +130,10 @@ const Engine = (() => {
       });
     } else if (pattern === "spiral") {
       // A doboz kozepebol korbeforgo lovedek-karok -- a jatekosnak korbe
-      // kell mozognia a szivvel a tulelshez.
+      // kell mozognia a szivvel a tulelshez. A felhasznalo kerese szerint
+      // ezek is visszapattannak a doboz falairol (bounce:true), ugyanugy
+      // mint a "bounce" mintazat, `life` ms utan eltunve (alapertelmezett
+      // 2600ms, ha a zona-config nem ad meg sajatot).
       spiralAngle += spawnConfig.spiralStep || 0.5;
       const armCount = spawnConfig.arms || 1;
       for (let a = 0; a < armCount; a++) {
@@ -141,6 +144,8 @@ const Engine = (() => {
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           r: size,
+          bounce: true,
+          life: spawnConfig.life || 2600,
         });
       }
     } else {
@@ -256,9 +261,26 @@ const Engine = (() => {
     ctx.lineWidth = 3;
     ctx.strokeRect(box.x, box.y, box.w, box.h);
 
-    // lovedekek
-    const tearImg = images[(spawnConfig && spawnConfig.tearImage) || "tear"];
+    // lovedekek. spawnConfig.tearImages (opcionalis): { small, normal, large }
+    // -- ha meg van adva, lovedekenkent a sajat sugara (b.r) es a config
+    // size-tartomanya alapjan valasztja ki, melyik betoltott kepet hasznalja
+    // (also/kozepso/felso harmad), igy tobb meretu lovedek-textura is
+    // lehetseges egy dodge-fazison belul. Ha nincs `tearImages`, a regi,
+    // egyetlen `tearImage`-es viselkedes marad (alapertelmezett "tear").
+    const defaultTearImg = images[(spawnConfig && spawnConfig.tearImage) || "tear"];
+    function tearImageFor(b) {
+      if (spawnConfig && spawnConfig.tearImages) {
+        const range = spawnConfig.size || [b.r, b.r];
+        const span = range[1] - range[0] || 1;
+        const t = (b.r - range[0]) / span;
+        const key = t < 1 / 3 ? "small" : t < 2 / 3 ? "normal" : "large";
+        const img = images[spawnConfig.tearImages[key]];
+        if (img) return img;
+      }
+      return defaultTearImg;
+    }
     for (const b of bullets) {
+      const tearImg = tearImageFor(b);
       if (tearImg && tearImg.complete && tearImg.naturalWidth) {
         ctx.drawImage(tearImg, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2.2);
       } else {

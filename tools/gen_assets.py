@@ -219,6 +219,7 @@ if __name__ == "__main__":
     blob_sprite("caine_placeholder.png", (180, 30, 50, 255), "CAINE")
     blob_sprite("enemy_konnyleny_placeholder.png", (80, 150, 220, 255), "KONNY-LENY")
     blob_sprite("enemy_bohoc_placeholder.png", (230, 60, 140, 255), "BOHOC-NPC", shape="ellipse")
+    blob_sprite("enemy_bubble_placeholder.png", (120, 200, 230, 255), "BUBBLE", shape="ellipse")
     blob_sprite("enemy_csoautomata_placeholder.png", (200, 30, 30, 255), "CSO-AUTOMATA")
     blob_sprite("enemy_blokkfeju_placeholder.png", (60, 200, 90, 255), "BLOKKFEJU")
     blob_sprite("asgore_placeholder.png", (170, 60, 50, 255), "ASGORE")

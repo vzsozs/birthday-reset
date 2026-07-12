@@ -228,7 +228,11 @@ h1 {
   border: 2px solid #ffd400;
   padding: 4px 10px;
   font-size: 12px;
-  white-space: nowrap;
+  /* pre-line: tiszteletben tartja a prompt-szovegben levo explicit \n
+     sortoreseket (ld. pl. zones.js minecraftPrompt), de a tobbi whitespace-t
+     tovabbra is osszevonja/tördeli, mint a normal -- a regi nowrap ezt a
+     \n-t is egy szokozze vonta ossze es tiltotta a tordelest. */
+  white-space: pre-line;
   cursor: pointer;
 }
 

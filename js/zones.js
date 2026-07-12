@@ -225,60 +225,190 @@ const ZONE_2 = {
     { speaker: "QUEEN", text: "RENDSZER-FRISSÍTÉS. VAGY INKÁBB: RENDSZER-ÖSSZEOMLÁS, DE CIRKUSZI FÉNYEKKEL.", portrait: "assets/sprites/queen_placeholder.png" },
     { speaker: "KECSKE", text: "Szerintem ez most tényleg egy digitális circus lett.", portrait: "assets/sprites/kecske_placeholder.png" },
     { speaker: "KECSKE", text: "Nézd meg azt a padlót, az még saját magát sem veszi komolyan.", portrait: "assets/sprites/kecske_placeholder.png" },
-    { speaker: "TENNA", text: "Csak újraindítom ezt a villanykörtét... vagy inkább a wifi-t hibáztatom megint.", portrait: "assets/sprites/tenna_placeholder.png" },
+    { speaker: "TENNA", text: "Csak újraindítom ezt a villanykörtét... na jó inkább a wifi-t hibáztatom megint.", portrait: "assets/sprites/tenna_placeholder.png" },
     { speaker: "KECSKE", text: "Várj, ott volt valaki a sarokban! ...Vagy már nincs is ott.", portrait: "assets/sprites/kecske_placeholder.png" },
   ],
+  // Fordulos FIGHT/ACT/SPARE harc (ugyanaz a rendszer, mint az 1. zonaban --
+  // ld. js/battle.js startRoundBattle() dokumentaciojat). Ez az elso zona a
+  // 2-4. kozul, ami athozza ezt a formatumot a regi (intro/acts/dodge/
+  // victoryLines) "legacy" formatumrol.
   enemy: {
-    // A `name` szandekosan megegyezik a dialogus-sorok `speaker`-ivel
-    // (BOHÓC-NPC), nem a teljes "TÚLBOLDOG BOHÓC-NPC" leiro nevvel -- ld.
-    // js/battle.js resolvePortrait(), ami erre a mezore pontosan illeszt,
-    // hogy a portrait nelkuli ellenfel-sorokhoz alapertelmezett arckepet
-    // tudjon rendelni (ugyanez a minta, mint a masik 3 zonanal).
-    name: "BOHÓC-NPC",
-    sprite: "assets/sprites/enemy_bohoc_placeholder.png",
+    // A `name` szandekosan megegyezik a dialogus-sorok `speaker`-ivel --
+    // ld. js/battle.js resolvePortrait(), ami erre a mezore pontosan
+    // illeszt. Egyelore NINCS kulon talkSprite/dying-progresszio (csak egy
+    // egyszeru placeholder van, ld. tools/gen_assets.py) -- ha kesobb
+    // tobb allapot-kep keszul, ide `talkSprite`-ot, a FIGHT opciokhoz
+    // pedig `enemyPortraitAfter`/`enemyFieldAfter`-t erdemes felvenni
+    // (ld. ZONE_1 peldajat).
+    name: "BUBBLE",
+    sprite: "assets/sprites/enemy_bubble_placeholder.png",
     introLines: [
-      { speaker: "BOHÓC-NPC", text: "*Egy túl-színes bohóc-avatar pattan elő, mögötte egy Roblox-szörny statisztál mint „attrakció”.*" },
-      { speaker: "BOHÓC-NPC", text: "ÉLMÉNYT NYÚJTOK NEKED! ÉLMÉNYT! (a keze közben kicsit átfordul saját magán)" },
-    ],
-    attackLines: [
-      { speaker: "BOHÓC-NPC", text: "*Konfetti-lövedékeket köp feléd, túl sok lelkesedéssel!*" },
+      { speaker: "BUBBLE", text: "Ó, ÜDV! MICSODA CSODÁS LÁTOGATÓK! DE HA KIPUKKANSZ..." },
+      { speaker: "BUBBLE", text: "TUDJÁTOK, HOGY A LÉGGÖMBÖK SZERETNEK SZOROSAN ÖLELNI? MERT ÉN IGEN!" },
+      { speaker: "BUBBLE", text: "AKKOR IS CSAK A KONFETTI MARAD, AMI MEG A TAKARÍTÁS! SZÓVAL, MARADJATOK EGY DARABBAN, VAGY... NEM!" },
     ],
   },
-  dodge: {
-    duration: 4400,
-    rate: 340,
-    speed: 120,
-    size: [6, 11],
-  },
-  acts: [
+  rounds: [
     {
-      id: "koszonj_vissza",
-      label: "ACT: KÖSZÖNJ VISSZA TÚL LELKESEN",
-      repeatable: false,
-      reactionLines: [
-        { speaker: "TE", text: "Túlzott lelkesedéssel visszaintesz és üvöltesz: „SZIA NEKEM IS SZUPER ÉLMÉNY!”" },
-        { speaker: "BOHÓC-NPC", text: "*A Bohóc-NPC összezavarodik, a mosolya egy pillanatra 3 kockát ugrik.*" },
+      // 1. Fordulo -- Bubble meg nem tamad kulon sorral, csak Kecske/Tenna
+      // kommentalja a dodge-fazis elott.
+      preLines: [
+        { speaker: "KECSKE", portrait: "assets/sprites/kecske_placeholder.png", text: "Ez a dolog... szó szerint egy beszélő szappanbuborék? Ez annyira logikátlan, hogy fáj!" },
+        { speaker: "TENNA", portrait: "assets/sprites/tenna_placeholder.png", text: "Hagyd, a Wi-Fi jel nem stabil, emiatt jelenik meg minden fura dolog. Üsd ki, vagy mondj neki valamit!" },
       ],
-      endsFight: false,
+      // A felhasznalo kerese szerint a pattogo buborekok NEM tunnek el
+      // (life: Infinity, ld. js/engine.js bounce-logikaja). tearImages:
+      // meret szerint valasztott lovedek-textura (ld. js/engine.js
+      // draw()/tearImageFor()) -- a size [6,11] tartomany also/kozepso/felso
+      // harmada donti el, melyik kep jon.
+      dodge: {
+        duration: 6800,
+        rate: 560,
+        speed: 250,
+        size: [6, 11],
+        pattern: "bounce",
+        life: Infinity,
+        tearImages: { small: "bubbleSmall", normal: "bubbleNormal", large: "bubbleLarge" },
+      },
+      options: [
+        {
+          type: "fight",
+          label: "FIGHT",
+          reactionLines: [{ speaker: "TE", text: "Nekimész Bubble-nek." }],
+        },
+        {
+          type: "act",
+          id: "koszonj_vissza",
+          label: "ACT: KÖSZÖNJ VISSZA TÚL LELKESEN",
+          mercy: 50,
+          reactionLines: [{ speaker: "TE", text: "„HÉ! BUBBLE! NAGYON ÖRÜLÜNK, HOGY ITT LEHETÜNK!”" }],
+        },
+        {
+          type: "act",
+          id: "szurd_meg",
+          label: "ACT: SZÚRD MEG EGY TŰVEL",
+          reactionLines: [{ speaker: "TE", text: "Elővesz egy tűt, és megpiszkálod vele Bubble-t." }],
+        },
+      ],
     },
     {
-      id: "reklam_paródia",
-      label: "ACT: PARÓDIÁZD A REKLÁMSZÖVEGÉT",
-      repeatable: false,
-      reactionLines: [
-        { speaker: "BOHÓC-NPC", text: "MOST 20%-KAL TÖBB ÉLMÉNY, HA MOST RENDELSZ—" },
-        { speaker: "KECSKE", text: "„—most 20%-kal több élmény, ha MOST rendelsz!” Kösz, nem kell.", portrait: "assets/sprites/kecske_placeholder.png" },
-        { speaker: "BOHÓC-NPC", text: "*A Bohóc-NPC leáll, mintha nem lenne előre megírva erre a válasz.*" },
+      // 2. Fordulo -- preLinesByChoice: az elozo (1.) fordulo PONTOS
+      // valasztasa szerint (fight / koszonj_vissza / szurd_meg), ld.
+      // js/battle.js runRound() dokumentaciojat.
+      preLinesByChoice: {
+        fight: [
+          { speaker: "BUBBLE", text: "AU! EZ NEM VOLT CÉLSZERŰ! A KONFETTIJEIM KÉSZEN ÁLLNAK A VISSZAVÁGÁSRA!" },
+          { speaker: "TE", text: "Ez most tényleg mérges? Futás!" },
+        ],
+        koszonj_vissza: [
+          { speaker: "BUBBLE", text: "Ó! ILYEN LELKES VAGY! MÁR MAJDNEM MEGFEJELTEM A KÉPERNYŐT AZ ÖRÖMTŐL! DE A SZABÁLYOK, AZOK SZABÁLYOK!" },
+          { speaker: "TENNA", portrait: "assets/sprites/tenna_placeholder.png", text: "Úgy tűnik, zavarban van a kedvességtől. Talán le tudod nyugtatni?" },
+        ],
+        szurd_meg: [
+          { speaker: "BUBBLE", text: "EZ... EZ NEM VOLT... FAIR PLAY! MOST MÁR CSAK AZON GONDOLKODOM, HOGY KIPUKKASZTALAK-E TITEKET!" },
+        ],
+      },
+      // A felhasznalo kerese szerint a spiral-lovedekek is visszapattannak
+      // (ld. js/engine.js spawnBullet() "spiral" aga), es ugyanazt a meret
+      // szerinti buborek-textura-keszletet hasznaljak, mint az 1. fordulo.
+      dodge: {
+        duration: 6800,
+        rate: 260,
+        speed: 250,
+        size: [6, 10],
+        pattern: "spiral",
+        spiralStep: 0.35,
+        arms: 3,
+        tearImages: { small: "bubbleSmall", normal: "bubbleNormal", large: "bubbleLarge" },
+      },
+      options: [
+        {
+          type: "fight",
+          label: "FIGHT",
+          reactionLines: [{ speaker: "TE", text: "Végezzünk ezzel." }],
+        },
+        {
+          type: "act",
+          id: "enekelj",
+          label: "ACT: ÉNEKELJ EGY CIRKUSZI DALT",
+          mercy: 50,
+          // [SZERKESZTENDŐ]: placeholder reakcio, a felhasznalo eredeti
+          // szovege csak "(Lehet békés megoldás)"-t irt ide, konkret sorok
+          // nelkul.
+          reactionLines: [
+            { speaker: "TE", text: "Elkezdesz énekelni egy vidám cirkuszi dallamot." },
+            { speaker: "BUBBLE", text: "Ó! EZ... EGÉSZEN FÜLBEMÁSZÓ! ALIG BÍROM MEGÁLLNI, HOGY NE PUKKANJAK SZÉT AZ ÖRÖMTŐL!" },
+          ],
+        },
+        {
+          type: "act",
+          id: "korai_spare",
+          label: "SPARE",
+          // Meg tul korai -- nincs mercy-hatasa, csak egy elutasito sor,
+          // utana megy tovabb a zaro fordulora (ld. js/battle.js
+          // resolveEnding() preLinesByMercy-jet). A felhasznalo kerese
+          // szerint sima ACT-cimke, nincs kulon SPARE-ikonja.
+          reactionLines: [
+            { speaker: "TE", text: "Hagyd abba, nem akarunk bántani!" },
+            // [SZERKESZTENDŐ]: placeholder Bubble-elutasitas, a felhasznalo
+            // eredeti szovege csak "(Még nem fog működni, túl korai)"-t irt.
+            { speaker: "BUBBLE", text: "MÉG NEM, KÖLYÖK! A TÖRTÉNET MÉG NEM ÉRT VÉGET!" },
+          ],
+        },
       ],
-      endsFight: true,
     },
   ],
+  // A 3. "fordulo" mar nem tamad -- csak egy FIGHT/SPARE zaro-valasztas
+  // (ld. js/battle.js resolveEnding()), a felgyult mercy alapjan valasztott
+  // bevezetovel (preLinesByMercy: "peaceful" ha mindket beke-ACT-ot
+  // valasztottad -- KÖSZÖNJ VISSZA + ÉNEKELJ -- "aggressive" ha egyiket
+  // sem, kulonben "mixed"). SPARE csak akkor sikerul, ha mercy mar elerte
+  // a 100-at.
+  ending: {
+    preLinesByMercy: {
+      peaceful: [
+        { speaker: "BUBBLE", text: "VÁRJ... TI NEM IS AKARTOK KIPUKKASZTANI? MILYEN UNALMAS! DE... TALÁN... IGAZATOK VAN. A KONFETTI TAKARÍTÁSA AMÚGY IS BORZALMAS." },
+      ],
+      aggressive: [
+        { speaker: "BUBBLE", text: "NA ELÉG VOLT! ITT AZ IDŐ A NAGY FINÁLÉRA!" },
+      ],
+      mixed: [
+        { speaker: "TENNA", portrait: "assets/sprites/tenna_placeholder.png", text: "A jel stabilizálódott! Most! Döntsd el!" },
+      ],
+    },
+    spare: {
+      lines: [
+        { speaker: "TE", text: "Na, ezt megúsztuk. Bár még mindig nem értem, miért volt itt egy beszélő buborék." },
+        { speaker: "TENNA", portrait: "assets/sprites/tenna_placeholder.png", text: "Ne kérdezz. A rendszerfrissítések mindig ilyen furák. Menjünk, mielőtt megjelenik egy kislány vagy egy bohóc is." },
+      ],
+      // [SZERKESZTENDŐ]: placeholder elutasitas arra az esetre, ha a
+      // jatekos a zaro fordulban probalna SPARE-t valasztani, mielott
+      // elerte volna a 100 mercy-t -- a felhasznalo szovege ezt az esetet
+      // nem irta le kulon.
+      failLines: [{ speaker: "BUBBLE", text: "HA, MOST MÁR TÉNYLEG KÉSŐ EHHEZ!" }],
+    },
+    fight: {
+      // A felhasznalo kerese szerint Bubble NEM tunik el nyomtalanul --
+      // kipukkanva egy tocsara (puddle.png) valt, mar a harc kozben is,
+      // pontosan amikor a stilus-felirat (+TOO MUCH FUN) megjelenik (ld.
+      // js/battle.js finishZone(), ami enemyPortrait/enemyField-et meg a
+      // showStyleTag() elott allitja be). Ugyanez a kep marad utana a
+      // folyoson is diszitesként, ld. js/main.js buildCorridorScene().
+      enemyPortrait: "assets/sprites/puddle.png",
+      enemyField: "assets/sprites/puddle.png",
+      lines: [
+        { speaker: "TE", text: "...hát, ez megtörtént. Rengeteg konfetti van a cipőmben." },
+        { speaker: "TENNA", portrait: "assets/sprites/tenna_placeholder.png", text: "Gratulálok. Most már csak azt kellene kitalálni, hogyan magyarázzuk meg ezt a supportnak." },
+      ],
+    },
+  },
   styleTag: "+TOO MUCH FUN",
-  victoryLines: [
-    { speaker: "QUEEN", text: "A CIRKUSZ-MODUL LEÁLLÍTVA. VALAMI OKBÓL MÉG MINDIG HALLOM A TAPSOT.", portrait: "assets/sprites/queen_placeholder.png" },
-    { speaker: "KECSKE", text: "Az a fickó megint eltűnt. Mindig lemaradok róla.", portrait: "assets/sprites/kecske_placeholder.png" },
-    { speaker: "TENNA", text: "A villanykörte kész. Szóljatok, ha megint sötét lesz — az is a wifi hibája.", portrait: "assets/sprites/tenna_placeholder.png" },
-    { speaker: "RENDSZER", text: "2. ZÓNA KÉSZ." },
+  // Felulirja a js/battle.js DEFAULT_GAMEOVER_LINES-jat (ami mindig Queen +
+  // Kecske ket sorbol all) -- a felhasznalo kerese szerint itt csak Queen
+  // beszel, mas szoveggel. [SZERKESZTENDŐ]: a felhasznalo csak annyit kert,
+  // hogy "legyen más a szöveg", konkret sort nem adott meg, ez helyettesito.
+  gameOverLines: [
+    { speaker: "QUEEN", text: "RENDSZERHIBA: A KIPUKKANÁS HAMARABB TÖRTÉNT, MINT KELLETT VOLNA. ÚJRATÖLTÉS." },
   ],
   companionChat: [
     // Ez a bejegyzes csak "van companionChat" jelzokent kell a Caine-

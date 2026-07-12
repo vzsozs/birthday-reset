@@ -75,6 +75,12 @@ window.addEventListener("DOMContentLoaded", async () => {
     Engine.loadImage("heart", "assets/sprites/ui/soul_heart_red.png"),
     Engine.loadImage("tear", "assets/sprites/tear_bullet.png"),
     Engine.loadImage("tearRed", "assets/sprites/tear_bullet-red.png"),
+    // A 2. zona (Cirkusz) meret szerint valasztott lovedek-texturai --
+    // ld. js/zones.js ZONE_2.rounds[*].dodge.tearImages es js/engine.js
+    // draw()/tearImageFor().
+    Engine.loadImage("bubbleSmall", "assets/sprites/bubbles-bulett-small.png"),
+    Engine.loadImage("bubbleNormal", "assets/sprites/bubbles-bulett-normal.png"),
+    Engine.loadImage("bubbleLarge", "assets/sprites/bubbles-bulett-large.png"),
   ]);
   Engine.loadSound("blip", "assets/sfx/menu_blip.wav");
   Engine.loadSound("move", "assets/sfx/menu_move.wav");
@@ -311,14 +317,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   // A "minecraft${i}" nema beszolas szovege is csere (ld. minecraftPrompt),
   // a pozicioja valtozatlan maradt.
   const ZONE2_LAYOUT = {
-    doorXFrac: (CORRIDOR_SEGMENT_OFFSETS[1] + 680) / CORRIDOR_TOTAL_WIDTH,
-    doorYFrac: 0.79,
+    doorXFrac: (CORRIDOR_SEGMENT_OFFSETS[1] + 660) / CORRIDOR_TOTAL_WIDTH,
+    doorYFrac: 0.90,
     companionXFrac: (CORRIDOR_SEGMENT_OFFSETS[1] + 540) / CORRIDOR_TOTAL_WIDTH,
     companionYFrac: 0.65,
     companionPrompt: "▶ Enter: odaszólsz Caine-nek",
     minecraftXFrac: (CORRIDOR_SEGMENT_OFFSETS[1] + 252) / CORRIDOR_TOTAL_WIDTH,
     minecraftYFrac: 0.79,
-    minecraftPrompt: "* Bubble Fight... mi más :)",
+    minecraftPrompt: "* Bubble Fight... \n ezaz buborékokat pukkasztunk! :)",
     // A masodik Caine-hotspot (ajandek-visszaszamlalo bevezetoje) -- a
     // felhasznalo kerese szerint pontosan 100px-szel jobbra a companion-
     // hotspottol, ugyanazon a padlo-szinten (yFrac valtozatlan).
@@ -504,6 +510,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   function buildCorridorScene(spawnAfterDoorIndex) {
     const hotspots = [];
+    const decorations = [];
     ZONES.forEach((zone, i) => {
       const doorFrac = DOOR_FRACTIONS[i];
       // A 2. zona (Cirkusz) uj hattere zsufoltabb/aszimmetrikus, sajat
@@ -587,6 +594,22 @@ window.addEventListener("DOMContentLoaded", async () => {
           onInteract: () => handleCaineHotspot(giftHotspotId),
         });
       }
+      // A 2. zona (Cirkusz) Bubble-je mar legyozve (kipukkant) -- nincs
+      // tobbe hotspot/harc itt, csak egy statikus tocsa-diszites
+      // (puddle.png) marad a helyen, ugyanaz a kep, mint amire a harc
+      // vegen (ZONE_2.ending.fight.enemyField) valt. A `decorations`
+      // (nem hotspot-sprite) SZANDEKOSAN nem lebeg -- ld. .overworld-decor
+      // a style.css-ben, nincs npcFloat-animacioja.
+      if (i === 1 && zone2Defeated) {
+        decorations.push({
+          xFrac: layout.doorXFrac,
+          yFrac: layout.doorYFrac,
+          w: 140,
+          h: 57,
+          src: "assets/sprites/puddle.png",
+        });
+        return;
+      }
       const doorHotspot = {
         id: `door${i}`,
         xFrac: layout ? layout.doorXFrac : doorFrac + 0.005,
@@ -610,6 +633,16 @@ window.addEventListener("DOMContentLoaded", async () => {
           isaacMusic.play().catch(() => {});
           fadeToScene(buildIsaacRoomScene());
         };
+      } else if (i === 1 && zone2Spared) {
+        // A 2. zona SPARE-utani viszontlatasa -- mar nem `auto`, kell hozza
+        // Enter (mint egy sima NPC-beszelgetesnel), es NEM inditja ujra a
+        // harcot (ld. zone1 hasonlo mintajat az isaac-szobaban).
+        doorHotspot.auto = false;
+        doorHotspot.prompt = "▶ Enter: odaszólsz Bubble-nek";
+        doorHotspot.sprite = { src: zone.enemy.sprite, w: 48 };
+        doorHotspot.onInteract = () => {
+          showOverworldDialogue(BUBBLE_REUNION_LINES);
+        };
       } else {
         doorHotspot.sprite = { src: zone.enemy.sprite, w: 48 };
         doorHotspot.onInteract = () => {
@@ -622,7 +655,11 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     const playerSpawn = () => ({
       xFrac: spawnAfterDoorIndex == null ? 0.03 : Math.min(0.7, DOOR_FRACTIONS[spawnAfterDoorIndex] + 0.005),
-      yFrac: 0.78,
+      // 0.78 -> 0.82: a 2. zona ajtaja korul (xFrac ~0.39) a walkBounds
+      // egyetlen ide vonatkozo savja (xMin 0.258-0.45) yMin-je 0.8, tehat
+      // 0.78-nal a jatekos a savon KIVUL spawnolt volna vissza a harc utan
+      // -- ld. a walkBounds tombot lejjebb.
+      yFrac: 0.82,
     });
 
     const scene = {
@@ -644,6 +681,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       ],
       spawn: playerSpawn,
       hotspots,
+      decorations,
     };
     // Feki a folyoson kovető NPC-kent jelenik meg (a szobaban viszont
     // csak statikusan ul az ablakban, ld. ROOM_SCENE.decorations) --
@@ -708,6 +746,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   // "viszontlatas" beszelgetest ad (KONNYLENY_REUNION_LINES), harc nelkul.
   let zone1Spared = false;
 
+  // A 2. zona (Cirkusz) Bubble-hotspotjahoz -- ugyanaz a mintazat, mint
+  // zone1Defeated/zone1Spared, de itt a folyoso FO ajtoja (nem egy kulon
+  // szoba) valtozik: ld. buildCorridorScene() `i === 1` aganak
+  // hotspot-epitesét. `zone2Defeated` eseten a Bubble-sprite/hotspot
+  // teljesen eltunik (kipukkant); `zone2Spared` eseten megmarad, de mar
+  // nem `auto` -- Enter-re egy rovid, harc nelkuli viszontlatast ad
+  // (BUBBLE_REUNION_LINES).
+  let zone2Defeated = false;
+  let zone2Spared = false;
+
   // A SPARE utan visszatero jatekost fogado, egyszeri "viszontlatas"-jelenet
   // -- ld. buildIsaacRoomScene() isaac-room-enemy hotspotjat. Valtakozo
   // beszelok: a Konny-leny sorai kapnak portrét, a jatekos ("TE") sorai nem,
@@ -738,6 +786,22 @@ window.addEventListener("DOMContentLoaded", async () => {
         "Megyek, a Server Console jelzi, hogy lejár a limit, restartol a map. Vigyázz magadra!",
         "Remélem, legközelebb nem PvP módban találkozunk, hanem csak simán Social közegben. Köszi még egyszer, majd találkozunk!",
       ],
+    },
+  ];
+
+  // A 2. zona SPARE-kimenetele utani, harc nelkuli viszontlatas -- ld.
+  // zone2Spared/buildCorridorScene() `i === 1` aga. [SZERKESZTENDŐ]: a
+  // felhasznalo csak annyit kert, hogy "legyen egy lezáró beszélgetés",
+  // konkret szoveget nem adott meg, ez helyettesito.
+  const BUBBLE_REUNION_LINES = [
+    {
+      portrait: "assets/sprites/enemy_bubble_placeholder.png",
+      text: "Ó, ismét ti vagytok! Nem pukkantam ki, ha esetleg aggódtatok -- csak egy kicsit lazulok itt tovább.",
+    },
+    { portrait: null, text: "Örülünk, hogy jól vagy, Bubble." },
+    {
+      portrait: "assets/sprites/enemy_bubble_placeholder.png",
+      text: "A rendszerfrissítés még mindig fut valahol a háttérben, de engem már nem zavar annyira. Jó utat a további zónákhoz!",
     },
   ];
 
@@ -936,6 +1000,15 @@ window.addEventListener("DOMContentLoaded", async () => {
           Overworld.start(buildIsaacRoomScene());
           return;
         }
+      }
+      // A 2. zona (Cirkusz) harca a fo folyosorol indul (nincs kulon
+      // bevezeto szobaja, mint az 1. zonanak) -- a kimenetel csak azt
+      // dontii el, hogy a buildCorridorScene() legkozelebbi ujraepitesekor
+      // a Bubble-hotspot eltunik-e (defeated) vagy megmarad-e, mar nem
+      // auto-harccal (spared), ld. ott.
+      if (zoneIndex === 1 && result) {
+        if (result.outcome === "spare") zone2Spared = true;
+        if (result.outcome === "fight") zone2Defeated = true;
       }
       overworldScreen.classList.remove("hidden");
       Overworld.start(buildCorridorScene(zoneIndex));
