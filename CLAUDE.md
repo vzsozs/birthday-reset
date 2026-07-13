@@ -47,9 +47,12 @@ az 1. zónát**, aminek az ajtaja egy külön kis bevezető szobába visz
 a zóna ellenfele saját (szintén automatikus) hotspotként, és csak alul, egy
 külön ajtón át lehet visszajutni a folyosóra; a macska (follower) nem követ
 be ebbe a szobába, mert a scene-configjának nincs `follower` mezője. **Az 1.
-zóna harca mostantól egy saját, fordulós FIGHT/ACT/SPARE rendszer** (a 2-4.
+zóna harca mostantól egy saját, fordulós FIGHT/ACT/SPARE rendszer** (a 3-4.
 zóna változatlanul a régi, egyszerű ACT-listás motort használja) — ld. "Az
-1. zóna FIGHT/ACT/SPARE harca" lejjebb. Ha a harc FIGHT-kimenetellel zárul,
+1. zóna FIGHT/ACT/SPARE harca" lejjebb. **A 2. zóna (Cirkusz, Bubble) is
+ugyanezt a fordulós rendszert kapta**, közvetlenül a folyosóról (nincs
+külön bevezető szobája, mint az 1. zónának) — ld. "A 2. zóna FIGHT/ACT/
+SPARE harca (Bubble)" lejjebb a teljes leírásért. Ha a harc FIGHT-kimenetellel zárul,
 a legyőzött ellenfél sprite-ja tartós díszként ottmarad az Isaac-szobában,
 és a játék még egyszer visszatér oda (nem egyenesen a folyosóra) mielőtt a
 játékos kisétál; SPARE-kimenetel esetén nincs ilyen azonnali kitérő,
@@ -61,13 +64,18 @@ szobának saját háttérzenéje van (`isaacMusic`, ld. `js/main.js` a
 `roomMusic` deklarációja mellett) — belépéskor a `roomMusic` `pause()`-ol
 (a `currentTime`-ja megmarad), kilépéskor/a zóna1 harc győzelme után pedig
 pontosan onnan folytatódik, ahol abbamaradt. A
-másik 3 zóna ajtaja változatlanul közvetlenül a harcba visz. (Tenna/
+3-4. zóna ajtaja változatlanul közvetlenül a harcba visz. A 2. zóna ajtaja
+ELSŐRE szintén közvetlenül a harcba visz, de győzelem/kegyelem UTÁN már nem
+(ld. "A 2. zóna FIGHT/ACT/SPARE harca (Bubble)" lejjebb — a hotspot vagy
+teljesen megszűnik, vagy Enter-es "viszontlátássá" alakul). (Tenna/
 Queen korábban szintén megjelentek a folyosón külön hotspotként — ez
 egyelőre ki van kapcsolva, ld. "Ismert korlátok".) 1. "A Sírás"
-(Könny-lény, +DRY EYES) → 2. "A Cirkusz" (Bohóc-NPC, +TOO MUCH FUN) → 3. "A
+(Könny-lény, +DRY EYES) → 2. "A Cirkusz" (Bubble, +TOO MUCH FUN) → 3. "A
 Csövek" (Cső-Automata, +OVERCLOCKED) → 4. "A Roblox-lerakat" (Blokkfejű
 Véghiba, +CUBED) → Tenna kapunyitása + Asgore-jelenet → vég-képernyő ("HAPPY
-13TH BIRTHDAY!"). Az 1-3. zóna után a játék visszatér a folyosóra és
+13TH BIRTHDAY!"). **Ez a sorrend/lista hamarosan változni fog, ld. "Hátralévő
+munka": a felhasználó kérésére a 3. zóna kikerül, a 4. zóna lesz a záró,
+Minecraft-témájú zóna.** Az 1-3. zóna után a játék visszatér a folyosóra és
 folytatódik a séta a következő ellenfél-hotspotig; a 4. zóna után egyenesen a
 vég-képernyő jön.
 
@@ -76,11 +84,13 @@ Undertale/Deltarune), amit a `main.js` `updateScale()`-je felskáláz az
 ablakmérethez, letterboxolva — böngésző-keret/címsor maradhat látható, de a
 játék-tartalom kitölti az ablakot.
 
-**Nyitott pont:** a 4. zóna `victoryLines`-ában (`js/zones.js`, `ZONE_4`) van egy
-`[SZERKESZTENDŐ: ...]` jelölt placeholder-sor Asgore szövegében — ez a DESIGN.md-ben
-említett privát, csak apa-fiú közötti poén/közös program helye. Ezt érdemes lecserélni
-a végleges verzió előtt, mert ez egy személyes tartalmi döntés, nem valami, amit
-automatikusan ki lehet találni.
+**Nyitott pont — MÁR MEGOLDVA, de még nincs kódba átültetve:** a 4. zóna
+`victoryLines`-ában (`js/zones.js`, `ZONE_4`) lévő `[SZERKESZTENDŐ: ...]`
+placeholder-sor helyére a felhasználó megadta a végleges, kész apa-fiú
+poént/közös programot, méghozzá egy jóval nagyobb, teljes záró-jelenet
+részeként (ami a 4. zóna Minecraft-témájúra váltásával és a 3. zóna
+kivételével jár együtt) — ld. "Hátralévő munka" a szó szerinti szövegért.
+Ez már NEM nyitott tartalmi kérdés, csak megvalósítandó munka.
 
 Irányítás már most is teljesen billentyűzettel is működik: nyilak/WASD a mozgáshoz és
 az ACT-menü navigációjához, Enter/szóköz a megerősítéshez/dialógus-továbbléptetéshez,
@@ -124,24 +134,52 @@ js/engine.js          - ÚJRAFELHASZNÁLHATÓ dodge-motor: SOUL mozgatás, löve
                         könnyek", ld. Isaac), `"spiral"` (a doboz közepéből korbeforgó
                         lövedék-karok, `spiralStep`/`arms` finomhangolható; a SOUL ennél
                         a mintázatnál a doboz also harmadaban spawnol, nem kozepen, ld.
-                        `resetSoul()`). A dodge-config opcionalis `tearImage` mezovel
-                        felulirhato, melyik betoltott lovedek-textura hasznalodik
-                        (alapertelmezett `"tear"`, ld. `js/main.js` `Engine.loadImage()`
-                        hivasait) -- ezt hasznalja az 1. zona a "vörösre váltanak" utan
-                        piros konnyekre valto `"tearRed"` textura bekapcsolasahoz
-                        (`js/battle.js` `tearsAreRed`). Ezt a harom mintazatot es a
-                        tearImage-et jelenleg csak az 1. zóna fordulói használják, ld.
-                        lejjebb.
+                        `resetSoul()`) -- a felhasznalo kerese szerint a "spiral"
+                        lovedekek IS visszapattannak a falakrol (`bounce:true`,
+                        ugyanaz a `life`-alapu eltunes, mint a "bounce"-nal), ld. a 2.
+                        zona reszet lejjebb. A dodge-config opcionalis `tearImage`
+                        mezovel felulirhato, melyik betoltott lovedek-textura
+                        hasznalodik (alapertelmezett `"tear"`, ld. `js/main.js`
+                        `Engine.loadImage()` hivasait) -- ezt hasznalja az 1. zona a
+                        "vörösre váltanak" utan piros konnyekre valto `"tearRed"`
+                        textura bekapcsolasahoz (`js/battle.js` `tearsAreRed`). Egy
+                        MASIK, altalanosabb opcionalis mezo, `tearImages: {small,
+                        normal, large}`, lovedekenkent (a `b.r` sugara es a config
+                        `size` tartomanya alapjan, also/kozepso/felso harmad szerint)
+                        valaszt kepet -- ezt hasznalja a 2. zona a harom
+                        `bubbles-bulett-*.png` meret szerinti buborek-texturahoz
+                        (ld. `draw()`/`tearImageFor()` a fajlban). Ha egy dodge-config
+                        egyszerre adna meg `tearImage`-et es `tearImages`-t, az utobbi
+                        elsobbseget elvez soronkent, ha talal ra illo kepet.
 js/battle.js          - a koraltalanos harc-folyamat: gepelos parbeszed-doboz, ACT-menu
                         (eger + billentyuzet, valodi Deltarune-ikonnal), Game Over
                         felvillanas. KET utvonala van, a `Battle.start(zoneData, cb)`
                         elagazik a `zoneData.rounds` mezo alapjan:
-                        (1) "legacy" -- a 2-4. zona hasznalja, a regi lapos ACT-listas
+                        (1) "legacy" -- a 3-4. zona hasznalja, a regi lapos ACT-listas
                         kor-logika (player turn -> ACT -> reakcio -> ellenfel tamad ->
                         dodge -> ismet, amig egy "endsFight" ACT-ot nem valasztanak
                         vagy el nem fogy a HP);
-                        (2) "rounds" -- csak az 1. zona hasznalja, ld. "Az 1. zona
-                        FIGHT/ACT/SPARE harca" lejjebb a teljes leirasert.
+                        (2) "rounds" -- az 1. ES 2. zona hasznalja, ld. "Az 1. zona
+                        FIGHT/ACT/SPARE harca" es "A 2. zona FIGHT/ACT/SPARE harca
+                        (Bubble)" lejjebb a teljes leirasert. Ket, a 2. zona miatt
+                        ALTALANOSITOTT mechanizmus (mindketto visszafele kompatibilis,
+                        az 1. zonat nem erinti):
+                        - `round.preLinesByChoice: {fight?, [actId]: [...]}` -- az
+                          egyszerubb `preLinesIfPrevFight`-nal (csak FIGHT/nem-FIGHT
+                          kulonbseget lat) altalanosabb: az ELOZO fordulo PONTOS
+                          valasztasa (barmelyik ACT-id vagy "fight") szerint valaszt
+                          bevezeto-sorokat, ld. `runRound()`.
+                        - `zoneData.ending.preLinesByMercy: {peaceful, aggressive,
+                          mixed}` -- a zaro FIGHT/SPARE-menu ELE opcionalisan beszurt
+                          bevezeto, a felgyult `mercy` alapjan valasztva (>=100 / <=0 /
+                          kozte), ld. `resolveEnding()`. Fontos technikai reszlet: e
+                          sor(ok) megjelenitese UTAN a dialogue-box explicit elrejtodik,
+                          mielott a menu megjelenne -- kulonben (hosszu, tobbsoros
+                          szoveg eseten) a dinamikus menu-pozicionalas atfedhetne.
+                        - `zoneData.gameOverLines` (opcionalis) felulirja a
+                          `DEFAULT_GAMEOVER_LINES`-t (Queen+Kecske ket sora) -- a 2.
+                          zona pl. csak Queen-t, mas szoveggel szolaltatja meg, ld.
+                          `gameOver()`.
                         A `showSequence()`/`typeText()` egy opcionalis `target` DOM-
                         keszlettel parameterezheto (alapertelmezetten a fo parbeszed-
                         doboz elemei) -- ezt hasznalja a `showCornerBanter()` is, ami
@@ -210,6 +248,12 @@ js/overworld.js       - EGYETLEN, ÚJRAFELHASZNÁLHATÓ DOM-alapú szabad-mozgas
                         `true`) -- zold keret a jarhato teruletnek, piros kor a
                         hotspotok aktivalasi sugaranak, csak kodbol kapcsolhatoak.
                         Nem nyul a battle.js/engine.js-hez.
+                        `Overworld.removeFollower()` -- uj, altalanos fuggveny: azonnal
+                        eltunteti a kovető NPC-t (ha van) a JELENLEGI jelenetbol (nem
+                        kell megvarni egy kovetkező `start()`-ot). A hivo felelossege,
+                        hogy a scene-config `follower` mezojet is torolje/felulirja a
+                        kovetkező `buildX Scene()`-hivasokban, kulonben az visszahozna --
+                        ezt hasznalja a 2. zona "Feki-vesztes" mechanikaja (ld. lejjebb).
 js/zones.js           - AZ EGYETLEN hely, ahol tényleges harc-tartalom van: szövegek,
                         ACT-ok, ellenfél-adatok, a `background` (zona-hatterkep) ES a
                         `companionChat` (a folyoson az adott zona elott felszedhetot
@@ -549,6 +593,115 @@ tűnik el, de már NEM indítható vele harc -- csak egy rövid, baráti
   valahányszor a játékos megszólítja (nincs "csak egyszer" logika, ahogy a
   többi ismétlődő NPC-flavor-szöveg sem egyszeri).
 
+## A 2. zóna FIGHT/ACT/SPARE harca (Bubble)
+
+A 2. zóna (Cirkusz) a felhasználó kifejezett kérésére szintén megkapta az 1.
+zónás fordulós FIGHT/ACT/SPARE rendszert (nem a 3-4. zóna régi, egyszerű
+ACT-listás motorját) — de a saját bevezető szoba (mint az 1. zóna Isaac-
+szobája) NÉLKÜL: a harc közvetlenül a fő folyosóról indul. A teljes adat a
+`js/zones.js` `ZONE_2` objektumában van. Ehhez a battle.js rounds-motorja két
+generikus mezővel bővült (`preLinesByChoice`, `ending.preLinesByMercy`, ld.
+fent az Architektúra `js/battle.js` bejegyzését) — ezek NEM zóna2-specifikus
+hackek, bármelyik jövőbeli rounds-zóna használhatja őket.
+
+- **Ellenfél: BUBBLE** (`enemy_bubble_placeholder.png`, `talkSprite:
+  enemy_bubble_placeholder_talk.png`). Szándékosan NINCS dying-progresszió
+  (a felhasználó választása: "csak egy egyszerű placeholder egyelőre") — a
+  FIGHT-opciók nem állítanak be `enemyPortraitAfter`/`enemyFieldAfter`-t.
+- **2 forduló, majd záró FIGHT/SPARE** (nem 3, mint az 1. zónánál):
+  - **1. forduló**: Kecske+Tenna kommentál (Bubble még nem támad), dodge
+    `pattern:"bounce"`, **`life: Infinity`** (a felhasználó kérésére a
+    pattogó buborékok SOSEM tűnnek el, nem a szokásos ~2600ms után).
+    3 opció: FIGHT, `koszonj_vissza` (ACT, **mercy: 50**), `szurd_meg` (ACT,
+    mercy nélkül).
+  - **2. forduló**: bevezetője `preLinesByChoice`-szal 3-felé ágazik az 1.
+    forduló PONTOS választása szerint (`fight`/`koszonj_vissza`/`szurd_meg`
+    kulcsok). Dodge `pattern:"spiral"` — **a felhasználó kérésére a spiral-
+    lövedékek is visszapattannak** (ld. az Architektúra `js/engine.js`
+    bejegyzését), ugyanazzal a `tearImages`-sel. 3 opció: FIGHT, `enekelj`
+    (ACT, **mercy: 50**), és egy korai `korai_spare` ACT ("SPARE" címkével,
+    de a felhasználó döntése szerint NINCS külön SPARE-ikonja — sima
+    ACT-cimke) — ennek nincs hatása, csak egy elutasító reakció-sor, a harc
+    NEM ér véget tőle.
+  - **Záró FIGHT/SPARE**: `ending.preLinesByMercy` — "peaceful" (mercy
+    100, azaz mindkét béke-ACT-ot választották), "aggressive" (mercy 0) vagy
+    "mixed" (mercy 50) bevezetővel. SPARE csak `mercy>=100`-nál sikerül
+    (ugyanaz a szabály, mint az 1. zónánál).
+- **Meret szerinti lövedék-textúra**: mindkét forduló dodge-configja
+  `tearImages: {small:"bubbleSmall", normal:"bubbleNormal",
+  large:"bubbleLarge"}`-t ad meg — a három betöltött kép
+  (`bubbles-bulett-small/normal/large.png`, ld. `js/main.js`
+  `Engine.loadImage()`) lövedékenként, a saját sugaruk alapján.
+- **Kipukkanás → tócsa, NEM eltűnés**: a felhasználó eredetileg úgy kérte,
+  hogy FIGHT-győzelemnél a Bubble egyszerűen tűnjön el, majd korrigálta:
+  **legyen belőle `puddle.png` (egy tócsa)**, ami MÁR a harc közben,
+  pontosan a `+TOO MUCH FUN` stílus-felirat megjelenésekor becserélődik
+  (`ZONE_2.ending.fight.enemyPortrait`/`enemyField`, ld. `finishZone()`
+  sorrendjét — ezek a mezők a `showStyleTag()` ELŐTT állítódnak be). A
+  folyosón visszatérve ugyanez a kép marad, most már `decorations`-ként
+  (NEM hotspot-sprite-ként — ez fontos, mert a `.overworld-decor` CSS-
+  osztálynak, ellentétben a hotspot-sprite-okkal, nincs `npcFloat`
+  lebegő-animációja, így a tócsa nem mozog fel-le, ld. `js/main.js`
+  `buildCorridorScene()` `zone2Defeated` ága).
+- **SPARE utáni viszontlátás**, ugyanaz a minta, mint az 1. zónánál: ha
+  `zone2Spared`, a Bubble-hotspot megmarad, de már nem `auto` — Enterrel egy
+  rövid, harc nélküli búcsú-beszélgetést ad (`BUBBLE_REUNION_LINES`,
+  `js/main.js`, `[SZERKESZTENDŐ]`-vel jelölve, mert a felhasználó nem adott
+  meg konkrét szöveget, csak hogy legyen ilyen).
+- **Egyéni Game Over-szöveg**: `ZONE_2.gameOverLines` csak Queen-t
+  szólaltatja meg, más szöveggel, mint az alapértelmezett (Queen+Kecske) —
+  a felhasználó szintén nem adott konkrét szöveget, ez is
+  `[SZERKESZTENDŐ]`.
+- **Player spawn-pozíció javítva**: a folyosó `playerSpawn()`-ja `yFrac:
+  0.78`-ról `0.82`-re változott, mert a 2. zóna ajtaja körüli (kézzel írt,
+  4-5 téglalapos) `walkBounds`-sávban a releváns téglalap `yMin`-je 0.8 —
+  0.78-nál a harc utáni visszatérés a járható területen KÍVÜLRE spawnolt
+  volna vissza.
+
+### Caine és a szülinapi ajándék-keresés (folyosó, nem harc)
+
+A 2. zóna folyosó-szakaszán Caine (placeholder, `caine_placeholder.png`,
+`talkSprite`-ja `enemy_bohoc_placeholder_talk.png` — a régi Bohóc-NPC
+`_talk` assetjének újrahasznosítása, amíg nincs saját Caine-arckép) KÉT
+külön hotspotot kap (`ZONE2_LAYOUT.companionXFrac`/`giftXFrac`, 100px-re
+egymástól) — DE a felhasználó kérésére **nincs saját álló-sprite-ja**
+(a háttérgrafikán már rajta van), csak a hozzá tartozó interakciós terület.
+
+- **Sorrend-független tartalom, NEM pozíció-függő**: mivel a játékos
+  bármelyik hotspothoz érhet elsőként, `js/main.js` `handleCaineHotspot(id)`
+  dönt: amelyik hotspotot ELŐSZÖR szólítja meg a játékos, az adja a
+  bevezető beszélgetést (`CAINE_DIALOGUE_LINES` — "Hölgyeim és uraim...");
+  a MÁSIK (még nem használt) hotspot adja a szülinapi ajándék-beszélgetést
+  (`CAINE_GIFT_DIALOGUE_LINES` — "Ó, hallom ez egy különleges 13-as
+  szám!...") és utána a visszaszámlálót. Mindkét beszélgetésben egy Jax
+  nevű, saját sprite/portré NÉLKÜLI szereplő is megszólal ("Valahonnan a
+  háttérből, Jax: ...") — mivel portré nélkül nem lenne megkülönböztethető
+  a játékos ("TE") soraitól, a szöveg elején egy rövid attribúció jelzi, ki
+  beszél; portréja `enemy_jax_placeholder_talk.png`.
+- **Egyszeri esemény mindkét irányban** (a felhasználó kifejezett döntése):
+  ha egy hotspotot már "felhasznált" (megadta a bevezetőt VAGY lezajlott
+  az ajándék-keresés), újbóli megszólításkor már csak egy rövid, lezáró sor
+  jön (`CAINE_INTRO_REPEAT_LINE` / `CAINE_GIFT_WON_LINE` /
+  `CAINE_GIFT_LOST_LINE`), nem ismétlődik a teljes beszélgetés.
+- **Ajándék-visszaszámláló minijáték** (`startGiftCountdown()`,
+  `js/main.js`): a `CAINE_GIFT_DIALOGUE_LINES` végén (onDone) indul, egy új
+  UI-doboz jelenik meg középen (`#gift-countdown-box`, `index.html`/
+  `style.css`) `GIFT_COUNTDOWN_START` (32) másodperccel, másodpercenként
+  csökken és `"coin"` hangot játszik. A "MEGVAN!" gombra kattintva (VAGY
+  Enter/szóközzel — a visszaszámlálás alatt egy ideiglenes
+  `window.keydown`-listener a gombra kattint, `finish()`-ben leválasztva)
+  győzelem (`"won"` hang, `zone2GiftOutcome="won"`); ha lejár az idő,
+  vesztés (`"awkward"` hang, `zone2GiftOutcome="lost"`, ÉS **Feki, a
+  folyosó követő macskája VÉGLEG eltűnik**: `Overworld.removeFollower()`
+  azonnal a jelenlegi jelenetből, `fekiGone` flag pedig minden KÉSŐBBI
+  `buildCorridorScene()`-hívásból is kihagyja a `follower` mezőt).
+- Mind a Caine-beszélgetések, mind a Feki-vesztés/ajándék-siker szövege a
+  felhasználó saját, kész szövege (nem placeholder) — kivéve a `[SZERKESZTENDŐ]`-vel
+  jelölt üres reakció-helyeket (2. forduló "ÉNEKELJ EGY CIRKUSZI DALT"
+  ACT-jának reakciója, a korai SPARE-próbálkozás Bubble-elutasítása, és a
+  záró forduló SPARE-sikertelenség-sora), amiket a felhasználó nem adott
+  meg konkrétan.
+
 ## Az overworld-jelenetek (szoba + folyosó) hangolása
 
 Mindkét jelenet ugyanazt a `js/overworld.js`-t használja, a `js/main.js`-ben
@@ -711,6 +864,12 @@ javítani.
 Legalább egy `endsFight: true` ACT-nak kell lennie minden zónában, különben a harc
 végtelenítve marad.
 
+Ha egy zóna fordulós FIGHT/ACT/SPARE rendszert kap (mint az 1. és 2. zóna),
+nézd meg mindkettőt mintaként — a `ZONE_1` az "egyszerűbb" eset (3 forduló,
+`preLinesIfPrevFight`/`enemyLineRequiresPrevChoice` a bináris elágazásokhoz),
+a `ZONE_2` pedig a többszörös elágazást igénylő eset (`preLinesByChoice`,
+`ending.preLinesByMercy` — ld. "A 2. zóna FIGHT/ACT/SPARE harca (Bubble)").
+
 ## Ismert korlátok / amire figyelni kell (még nem tesztelt / hiányos)
 
 - A teljes játék fix 800×640 belső felbontásra épül, amit a `main.js` felskáláz
@@ -742,35 +901,104 @@ végtelenítve marad.
 
 ## Hátralévő munka (a DESIGN.md fejlesztési fázisai alapján)
 
-**Az 1. zóna (Bazsa-szoba bevezető + Isaac-szoba/Könny-lény FIGHT/ACT/SPARE
-harc) KÉSZ, a felhasználó kifejezetten megerősítette:** "Szuper az első két
-résszel megvagyunk, Bazsa szoba és Isaac room." Minden idevágó részlet a
-fenti "Az 1. zóna FIGHT/ACT/SPARE harca" és "SPARE utáni viszontlátás
-(Isaac-szoba)" szakaszokban, a menet teljes története `osszefoglalo-260712.md`-ben.
+**Az 1. ÉS 2. zóna KÉSZ, a felhasználó mindkettőt kifejezetten megerősítette**
+("Szuper az első két résszel megvagyunk, Bazsa szoba és Isaac room." — majd
+a 2. zóna teljes, több lépésben finomított kidolgozása után: "Szuper, készen
+van a 2. zóna is köszi szépen."). Minden idevágó részlet a fenti "Az 1. zóna
+FIGHT/ACT/SPARE harca", "SPARE utáni viszontlátás (Isaac-szoba)", "A 2. zóna
+FIGHT/ACT/SPARE harca (Bubble)" és "Caine és a szülinapi ajándék-keresés"
+szakaszokban, a menetek teljes története `osszefoglalo-260712.md`-ben.
 
-**Következő kör (a felhasználó kifejezett kérése): a zónák szétválasztása/
-egyedivé tétele.** Szó szerint: "azzal kellene haladni, hogy le kell
-választani a különböző zónákat. A 2. zónának más lesz a kinézete, máshol
-lesznek az NPC-k, maga a harcrendszer hasonló lesz de más beszélgetésekkel."
-Vagyis a 2. zóna (A Cirkusz, Bohóc-NPC) kapja meg a saját, egyedi
-vizuális/tartalmi karakterét -- jelenleg még a generált placeholder hátteret
-és a régi, generikus ACT-listás harcot használja, ugyanazzal a mintával,
-mint a 3-4. zóna.
+**Következő kör (a felhasználó kifejezett kérése): a 3. zóna kivétele, a 4.
+zóna lesz a záró, Minecraft-témájú zóna.** Szó szerint: *"A harmadik zónát ki
+kell venni, a 4 zóna legyen a záró minecraftos zóna. Ahol a végével
+lezárjuk."* Ez két nagy változást jelent:
 
-**Mielőtt nekiállnál, kérdezz vissza** (ld. a fájl tetején lévő szabályt),
-mert a pontos irány még nincs kitalálva -- pl.:
-- A "harcrendszer hasonló lesz, de más beszélgetésekkel" azt jelenti, hogy a
-  2. zóna is megkapja az 1. zóna FIGHT/ACT/SPARE fordulós rendszerét (ld.
-  "Az 1. zóna FIGHT/ACT/SPARE harca" -- ez esetben érdemes lenne
-  általánosítani a jelenleg zóna1-specifikus formátumot, ld. az ottani
-  megjegyzést), vagy marad a régi, egyszerű ACT-listás motoron, csak a
-  szövegek/vizuál változik?
-- A "máshol lesznek az NPC-k" a folyosó 2. zónás szakaszára vonatkozik (a
-  Kecske-hotspot pozíciója/megjelenő NPC-k), vagy a 2. zóna is kap egy saját
-  bevezető szobát, mint az 1. zóna Isaac-szobája (`buildIsaacRoomScene()`
-  mintájára)?
-- Van-e már kész vizuál/asset a 2. zónához (háttér, NPC-sprite-ok), vagy
-  egyelőre a placeholder marad, és csak a pozíciók/struktúra készül el?
+1. **A 3. zóna ("A Csövek", Cső-Automata, +OVERCLOCKED) teljesen kikerül** a
+   játékból — a jelenlegi 4 zónás lánc (1. Sírás → 2. Cirkusz → 3. Csövek →
+   4. Roblox-lerakat) 3 zónássá rövidül (1. Sírás → 2. Cirkusz → 4.
+   [most Minecraft-témájú zóna, ami a lánc UTOLSÓ tagja marad]).
+2. **A 4. zóna Minecraft-témájúra vált** (a jelenlegi Roblox/"BLOKKFEJŰ
+   VÉGHIBA" tartalom helyett), és ITT kapja meg a játék a teljes zárójelenetet
+   — a felhasználó ehhez már kész, végleges szöveget adott (nem
+   placeholder), ami a `ZONE_4.victoryLines`-ban lévő `[SZERKESZTENDŐ]`
+   placeholdert is felváltja/kibővíti. **A felhasználó SZÓ SZERINTI
+   forgatókönyve** (ezt pontosan így vidd át, ne parafrazáld):
+
+   ```
+   KECSKE: „Minecraft? Komolyan? Már csak egy zombi hiányzik, aki megpróbál
+   megenni, miközben próbálom megérteni a 'kocka-logikát'.”
+   TENNA: „Ez már nem a Wi-Fi. Ez a rendszer alaprétege. Valaki nagyon
+   szereti a retro voxel-stílust... várj, figyelj!”
+
+   APA: (snd_heavydamage.wav) „BUMM. Drámai belépő, a sors elkerülhetetlen
+   végzete... még mindig működik, vagy már túl öreg vagyok ehhez a digitális
+   bohóckodáshoz?”
+   TE: „Apa? Miért vagy... kocka alakú?”
+   TE: "Nahh jó, ezt nem hagyom..."
+   Megjelenik egy Kép a képernyő közepén kint van 2mp-ig (4finger_placeholder.png).
+   Utána: Stílus-felirat győzelemnél: +APPPAAAAAAA (Ha lehet ezt több ideig kitartva)
+   APA: Ha HA HAAAA - pukk eltűnik és megjelenik helyette APA2
+   APA2: „Tudom, tudom. A világok, a harcok, a szép grafikák. De figyelj...”
+   Kivilágosodik a kép (snd_won.wav) és középen feketével megjelenik:
+   System Reset: Happy 13th Birthday! + (snd_splat.wav)
+   Egy kis hatásszünet aztán alatta:
+   APA2: „A szülinapi ajándékot nem a szerverekben kell keresni, Tökös.
+   Reseteljük ezt a borzalmat, és menjünk inkább medencézni. A valódi víznek
+   legalább nincsenek textúrahibái.”
+
+   (A képernyő elsötétül. Egy utolsó, kattanó hang hallatszik (snd_step2.wav),
+   majd a játék az elejére ugrik.)
+   ```
+
+   Fontos: az "APA" itt ugyanaz a szereplő, mint amit a `js/zones.js`/
+   `DESIGN.md` eddig "ASGORE"-ként nevesített (Asgore = a szülő, ld.
+   DESIGN.md "Szereplők" szakasza) — feltehetően csak a megszólítás/`speaker`
+   változik "ASGORE"-ról "APA"-ra, de ezt **kérdezz vissza**, mielőtt
+   átnevezed (lásd lejjebb).
+
+**Mielőtt nekiállnál, kérdezz vissza** (ld. a fájl tetején lévő szabályt) —
+ez egy jelentős szerkezeti változás, több nyitott technikai kérdéssel:
+
+- **`speaker` átnevezés**: az "ASGORE" nevet mindenhol (kód, `RECURRING_SPEAKER_PORTRAITS`,
+  `asgore_placeholder*.png` fájlnevek) "APA"-ra kell cserélni, vagy csak a
+  MEGJELENÍTETT szöveg változik, a belső kulcs/fájlnevek maradnak "ASGORE"?
+- **Zóna-kivétel mechanikája**: a `ZONES` tömbből egyszerűen törlődik a
+  `ZONE_3`, vagy megmarad a kódban (kikommentelve/kikapcsolva), csak nincs
+  bekötve? A `js/main.js` `DOOR_FRACTIONS`/`CORRIDOR_ZONE_BACKGROUNDS`
+  tömbjei 4-ről 3 elemre csökkennek — ez újra kiszámolt ajtó-pozíciókat
+  jelent (ld. "A 2. zóna FIGHT/ACT/SPARE harca" szakasz hasonló
+  CORRIDOR_SEGMENT_WIDTHS-számítását), és a `corridor_zone3_bg_placeholder.png`
+  fájl innentől nem használt.
+- **APA1→APA2 arckép-váltás**: a szövegben "pukk eltűnik és megjelenik
+  helyette APA2" egy portré-váltás EGY dialógus-soron belül (vagy két sor
+  között) — ez a meglévő `faces`/`{{kulcs}}` mechanizmussal (ld. "Harci
+  dialógus: arcváltás időzítése" szakasz) MÁR megoldható lenne, ha a váltás
+  egy string-en belül történik; ha viszont a "pukk" hanggal/effekttel
+  egybekötött, külön vizuális esemény, az új, egyedi kódot igényel.
+- **`4finger_placeholder.png` még nem létezik** — le kell generálni
+  (`tools/gen_assets.py` mintájára) vagy a felhasználónak kell pótolnia.
+  Ugyanígy nincs még "APA2" külön portré-fájl.
+- **`+APPPAAAAAAA` stílus-felirat "több ideig kitartva"**: a jelenlegi
+  `showStyleTag()` (`js/battle.js`) fix ~1100ms-ig tartja a feliratot — ez a
+  konkrét sor kérése szerint HOSSZABB kitartást igényelne, tehát vagy egy
+  `showStyleTag()`-paraméterezés (időtartam felülírható), vagy egy
+  zóna/eset-specifikus külön hívás kell.
+- **Fényesedő képernyő + fekete szöveg + hatásszünet + elsötétülés**: ez a
+  jelenlegi vég-képernyő (`#end-screen`, statikus "HAPPY 13TH BIRTHDAY!"
+  szöveg) helyett/előtt egy ÚJ, több lépéses animált átvezetést igényel —
+  hasonló szellemben, mint a meglévő `#scene-fade` (ld. "Képernyő-átmenetek"
+  szakasz), de saját, egyedi lépésekkel (kivilágosodás, majd elsötétülés,
+  köztes szöveg-becsúszás, hangok időzítve). Érdemes megnézni, mennyi
+  újrahasznosítható a `#scene-fade` CSS-osztályaiból, mielőtt új elemet
+  hoznál létre.
+- **"a játék az elejére ugrik"**: ez a `restartBtn`-nel megegyező viselkedés
+  (vissza a címképernyőre), vagy szó szerint automatikus, felhasználói
+  interakció (gombnyomás) nélküli újraindítás?
+
+**Ne felejtsd el**: a fenti forgatókönyv KÉSZ, végleges szöveg — ne írj hozzá
+sem rövidítést, sem saját poént, csak a technikai megvalósítást kérdezd
+vissza, a TARTALMAT vidd át pontosan.
 
 **Jelenleg folyamatban / a legutóbbi menetek óta aktuális feladat:** lásd
 `osszefoglalo-260710.md`/`osszefoglalo-260711.md`/`osszefoglalo-260712.md`
@@ -819,38 +1047,62 @@ végén friss):
   láthatóságától függően) pozicionált ACT/FIGHT/SPARE-menü, nincs
   beszélő-név a dialogue-boxban, és egy SPARE után elérhető, harc nélküli
   "viszontlátás"-beszélgetés a Könny-lénnyel.
-- **A `bazsa_szoba.png` (a gyerek szobája) és az Isaac-szoba/Könny-lény
-  harca a felhasználó szerint EBBEN A FORMÁJÁBAN KÉSZ** -- a következő
-  menetek a 2-4. zóna egyedivé tételére fókuszálnak, ld. "Hátralévő munka"
-  a fájl elején.
+- **Új: a 2. zóna (Cirkusz, Bubble) teljesen egyedivé/kész lett** — a
+  felhasználó több lépésben, konkrét visszajelzésekkel finomította, végül
+  megerősítette ("Szuper, készen van a 2. zóna is köszi szépen"). Ld. "A 2.
+  zóna FIGHT/ACT/SPARE harca (Bubble)" és "Caine és a szülinapi
+  ajándék-keresés" szakaszokat a teljes részletekért. Röviden: saját
+  rounds/ending-tartalom (`preLinesByChoice`/`preLinesByMercy`, két új,
+  ÁLTALÁNOS battle.js-mezo), meret szerinti buborek-lövedék-textúrák
+  (`tearImages`), visszapattanó spiral-lövedékek, kipukkanás után `puddle.png`
+  (nem eltűnés), egyéni Game Over-szöveg (`gameOverLines`), Caine két
+  sorrend-független hotspotja (`handleCaineHotspot()`) egy beépített
+  szülinapi ajándék-visszaszámláló minijátékkal (Enter/szóköz-
+  billentyűzet-támogatással), és egy Feki-vesztés mechanika
+  (`Overworld.removeFollower()`, `fekiGone`).
+- **A `bazsa_szoba.png` (a gyerek szobája), az Isaac-szoba/Könny-lény harc ÉS
+  a 2. zóna (Cirkusz/Bubble) a felhasználó szerint EBBEN A FORMÁJÁBAN KÉSZ**
+  -- a következő menet a 3. zóna kivétele és a 4. zóna Minecraft-témájú
+  záró-jelenetté alakítása, ld. "Hátralévő munka" a fájl elején (a
+  felhasználó kész, végleges záró-szövegével).
 
 1. ~~Motor-prototípus~~ — kész (1. zóna)
-2. ~~Tartalom~~ — kész (mind a 4 zóna megírva, lásd `js/zones.js`); **az 1.
-   zóna harca a felhasználó konkrét forgatókönyve alapján kibővült egy
-   FIGHT/ACT/SPARE rendszerré** (ld. "Az 1. zóna FIGHT/ACT/SPARE harca") —
-   a 2-4. zóna egyelőre a régi, egyszerűbb formátumon marad.
+2. ~~Tartalom~~ — kész (mind a 4 zóna megírva, lásd `js/zones.js`, bár a 3.
+   zóna hamarosan kikerül és a 4. Minecraft-témájúra vált, ld. "Hátralévő
+   munka" a fájl elején); **az 1. ÉS 2. zóna harca a felhasználó konkrét
+   forgatókönyve alapján kibővült egy-egy FIGHT/ACT/SPARE rendszerré** (ld.
+   "Az 1. zóna..." és "A 2. zóna FIGHT/ACT/SPARE harca (Bubble)") — a 3-4.
+   zóna egyelőre a régi, egyszerűbb formátumon marad (a 4. zóna úgyis
+   újraíródik a következő menetben).
 3. **Vizuál** (folyamatban): a placeholder zóna-hátterek/folyosó-háttér/
    ellenfél-sprite-ok lecserélése saját rajzokra (ugyanazokkal a
    fájlnevekkel az `assets/sprites/` mappában, akkor semmit nem kell
    kódban módosítani — legfeljebb a `ROOM_SCENE`/`buildCorridorScene()`
-   hotspot-pozíciókat a `main.js`-ben). A folyosó 1. zónás szakasza
-   (`corridor_zone1_bg_placeholder.png`) már kész, végleges rajz — a 2-4.
-   zónáé még hátravan. A harc-képernyő UI-ja (HP-csík, ACT-doboz, párbeszéd-keret, SOUL, Game
+   hotspot-pozíciókat a `main.js`-ben). A folyosó 1. ÉS 2. zónás szakasza
+   (`corridor_zone1_bg_placeholder.png`, `corridor_zone2_bg_placeholder.png`)
+   már kész, végleges rajz — a 3-4. zónáé még hátravan (de a 3. úgyis
+   kikerül, a 4. újraíródik). A harc-képernyő UI-ja (HP-csík, ACT-doboz, párbeszéd-keret, SOUL, Game
    Over) már valódi, kibányászott Deltarune-assetekkel megy (lásd
    `tools/slice_ui_assets.py`) — ide tartozó, még kihasznált stretch goal: a
    `Battle Box`/`Battleback` animáció-sorozatok (jelenleg csak statikus
    kockaként/nem használva) pop-in/animált háttérré alakítása.
 4. **Hang**: a szoba/folyosó és az Isaac-szoba háttérzenéje már be van kötve
    (`roomMusic`/`isaacMusic`, ld. "Jelenlegi állapot"), néhány effekt is
-   (gépelés, zóna-indítás, glitch, joker-nevetés, flavor-szöveg — ld.
-   `js/main.js` `Engine.loadSound()` hívásait) — de a legtöbb generált beep
-   (`assets/sfx/*.wav`) még cserére vár a beszerzett valódi
-   `assets/Sounds/`-beli hangokra, és a 2-4. zónának nincs saját
-   háttérzenéje.
+   (gépelés, zóna-indítás, glitch, joker-nevetés, flavor-szöveg, a 2. zóna
+   ajándék-visszaszámlálója — ld. `js/main.js` `Engine.loadSound()`
+   hívásait) — de a legtöbb generált beep (`assets/sfx/*.wav`) még cserére
+   vár a beszerzett valódi `assets/Sounds/`-beli hangokra, és a 2-4.
+   zónának nincs saját háttérzenéje. A tervezett 4. zónás zárójelenet
+   (ld. "Hátralévő munka") több konkrét hangot is megnevez
+   (`snd_heavydamage.wav`, `snd_won.wav`, `snd_splat.wav`, `snd_step2.wav`
+   — ezek már megvannak az `assets/Sounds/`-ban), amiket még be kell kötni.
 5. ~~Összefűzés~~ — kész (cím → szoba → gép-választás → folyosó → mind a 4 zóna
    → Asgore-zárás → vég-képernyő, egyben, teljesképernyős skálázással)
-6. **Polish**: átmenetek zónák között, finomítás, a `ZONE_4` `[SZERKESZTENDŐ]`
-   placeholder-sorának lecserélése a saját apa-fiú poénra/közös programra
+6. **Polish**: átmenetek zónák között, finomítás. A `ZONE_4` `[SZERKESZTENDŐ]`
+   placeholder-sora **innentől MEGVAN** — a felhasználó megadta a végleges
+   apa-fiú poént/közös programot a teljes záró-jelenettel együtt, ld.
+   "Hátralévő munka" a fájl elején a szó szerinti szövegért és a hozzá
+   tartozó (még megvalósítandó) technikai kérdésekért.
 7. **Teszt**: teljes végigjátszás, ideális esetben tényleges böngészőben, más gépen is
 
 ## Futtatás / tesztelés

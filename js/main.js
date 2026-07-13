@@ -286,7 +286,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     "assets/sprites/corridor_zone3_bg_placeholder.png",
     "assets/sprites/corridor_zone4_bg_placeholder.png",
   ];
-  const CORRIDOR_SEGMENT_WIDTHS = [1100, 1260, 1100, 1100];
+  const CORRIDOR_SEGMENT_WIDTHS = [1100, 1302, 1100, 1024];
   const CORRIDOR_TOTAL_WIDTH = CORRIDOR_SEGMENT_WIDTHS.reduce((a, b) => a + b, 0);
   const CORRIDOR_SEGMENT_OFFSETS = CORRIDOR_SEGMENT_WIDTHS.reduce((offsets, w, i) => {
     offsets.push(i === 0 ? 0 : offsets[i - 1] + CORRIDOR_SEGMENT_WIDTHS[i - 1]);
@@ -341,15 +341,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   // beszel, a szoveg elejen egy rovid attribúcio jelzi, ki szolal meg.
   const CAINE_DIALOGUE_LINES = [
     {
-      portrait: "assets/sprites/caine_placeholder.png",
+      portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
       text: [
-        "Hölgyeim és uraim, illetve te: ISTEN HOZOTT A DIGITÁLIS CIRKUSZBAN! Egy olyan helyen, ahol a szórakozásnak soha nem szakad vége!",
-        "És amikor azt mondom, soha, akkor úgy értem, hogy a Kernel már régen törölte a kijáratot tartalmazó kódrészletet! Hahaha!",
+        "Hölgyeim és uraim, illetve te: ISTEN HOZOTT A DIGITÁLIS CIRKUSZBAN!",
+        "Egy olyan helyen, ahol a szórakozásnak soha nem szakad vége!",
+        "És amikor azt mondom, soha, akkor úgy értem, hogy a Kernel már régen törölte a kijáratot! Hahaha!",
       ],
     },
     { portrait: null, text: "Szia Caine, ugye ki tudunk jutni Fekivel ebből a világból? Nekem szeptembertől suli." },
     {
-      portrait: "assets/sprites/caine_placeholder.png",
+      portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
       text: "Suli? Suli?! Ó, te édes! Itt a Digitális Cirkuszban a tanulásnak is megvan a maga... kreatív módja!",
     },
     {
@@ -360,15 +361,20 @@ window.addEventListener("DOMContentLoaded", async () => {
       ],
     },
     {
-      portrait: "assets/sprites/caine_placeholder.png",
+      portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
       text: [
-        "Ne aggódj kölyök a suli miatt! Itt nincsenek osztályzatok, csak válságok, amikért nem jár év végi bizonyítvány, csak egy örökös glitch a szemed sarkában!",
+        "Ne aggódj kölyök a suli miatt!",
+        "Itt nincsenek osztályzatok, csak válságok, amikért nem jár év végi bizonyítvány.",
+        "Viszont lesz egy örökös glitch a szemed sarkában!",
         "Itt minden nap egy Absztrakciós Tanévnyitó!",
       ],
     },
     {
-      portrait: null,
-      text: "* Valahonnan a háttérből, Jax: Én passzolom. Inkább nézem, ahogy az új gyerek megpróbálja megoldani a másodfokú egyenletet egy Abstract Horror elől menekülve. Ez a kedvenc 'tantárgyam'!",
+      portrait: "assets/sprites/enemy_jax_placeholder_talk.png",
+      text: [
+        "* Valahonnan a háttérből: Én passzolom. Inkább nézem, ahogy az új gyerek megpróbálja...",
+        "...megoldani a másodfokú egyenletet egy Abstract Horror elől menekülve. Ez a kedvenc 'tantárgyam'!",
+      ],
     },
     { portrait: null, text: "...Asszem inkább mégiscsak maradok a sima matekóránál, na sziasztok." },
   ];
@@ -381,35 +387,46 @@ window.addEventListener("DOMContentLoaded", async () => {
   // CAINE_GIFT_LOST_LINE), nem indul ujra a visszaszamlalas.
   const CAINE_GIFT_DIALOGUE_LINES = [
     {
-      portrait: "assets/sprites/caine_placeholder.png",
-      text: "Ó, hallom ez egy különleges 13-as szám! A bűvös, a misztikus, a... kódolt balszerencse! Boldog születésnapot, kis user!",
+      portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
+      text: [
+        "Ó, hallom ez egy különleges 13-as szám!",
+        "A bűvös, a misztikus, a... kódolt balszerencse!",
+        "Boldog születésnapot, kis user!",
+      ],
     },
     { portrait: null, text: "Köszi, Caine! Remélem, az ajándék nem egy újabb krízis." },
     {
-      portrait: "assets/sprites/caine_placeholder.png",
+      portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
       text: [
-        "Ne légy már ilyen low hangulatban! Eldugtam neked egy ajándékot a szobádban, egy nagy zöld dobozban. Keresd meg!",
-        "De vigyázz: ha rossz helyre nyúlsz, a 13-as szám törvénye szerint a szobád textúrája átvált egy végtelen, hústorony-labirintusba!",
+        "Ne légy már ilyen low hangulatban!",
+        "Eldugtam neked egy ajándékot a szobádban, egy nagy zöld dobozban. Keresd meg!",
+        "De vigyázz: ha rossz helyre nyúlsz, a 13-as szám törvénye szerint...", 
+        "...a szobád textúrája átvált egy végtelen, hústorony-labirintusba!",
       ],
     },
     {
-      portrait: null,
-      text: "* Valahonnan a háttérből, Jax: Ne is figyeld, csak próbálja beállítani a nehézséget. Ha megtalálod, talán nem omlik össze a valóság. De ne fogadj rá nagy tétben!",
+      portrait: "assets/sprites/enemy_jax_placeholder_talk.png",
+      text: [
+        "*Jax: Ne is figyeld, csak próbálja beállítani a nehézséget.",
+        "Ha megtalálod, talán nem omlik össze a valóság. De ne fogadj rá nagy tétben!",
+      ],
     },
     {
-      portrait: "assets/sprites/caine_placeholder.png",
+      portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
       text: [
-        "TIK-TAK, KÖLYÖK! Visszaszámlálás elindult, és ha nem találod meg fél \"stack\" másodperc alatt, az ajándékod helyett egy absztrakciós tortát kapsz, ami... nos, te is tudod, mi történik azokkal, akik túl sokat falatoznak belőle!",
+        "TIK-TAK, KÖLYÖK! Visszaszámlálás elindult, és ha nem találod meg fél \"stack\" másodperc alatt...",
+        "..az ajándékod helyett egy absztrakciós tortát kapsz, ami... nos, te is tudod...",
+        "...mi történik azokkal, akik túl sokat falatoznak belőle!",
         "JÓ VADÁSZATOT!",
       ],
     },
   ];
   const CAINE_GIFT_WON_LINE = {
-    portrait: "assets/sprites/caine_placeholder.png",
+    portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
     text: "Az ajándékod már megvan, kölyök. Mit akarsz még tőlem?",
   };
   const CAINE_GIFT_LOST_LINE = {
-    portrait: "assets/sprites/caine_placeholder.png",
+    portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
     text: "Feki most már az enyém. Ne is próbáld visszaszerezni!",
   };
   // A CAINE_DIALOGUE_LINES-t (bevezeto) adó hotspot ujboli megszolitasakor
@@ -417,7 +434,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   // bevezetot -- a CAINE_GIFT_WON_LINE/CAINE_GIFT_LOST_LINE parja, ld.
   // handleCaineHotspot().
   const CAINE_INTRO_REPEAT_LINE = {
-    portrait: "assets/sprites/caine_placeholder.png",
+    portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
     text: "Nahh mivan, meguntad a sulit?",
   };
   // A 2. zonaban KET Caine-hotspot van (companion + gift, ld. ZONE2_LAYOUT),
@@ -469,7 +486,20 @@ window.addEventListener("DOMContentLoaded", async () => {
     giftCountdownNumber.textContent = String(remaining);
     giftCountdownBox.classList.remove("hidden");
 
+    // Enter/szokoz is megnyomja a "MEGVAN!" gombot, nem csak kattintas --
+    // csak a visszaszamlalas aktiv ideje alatt figyelunk erre a billentyure,
+    // finish()-ben levesszuk, nehogy kesobb (mas kepernyon) is elsuljon.
+    function handleKey(e) {
+      const k = e.key.toLowerCase();
+      if (k === "enter" || k === " ") {
+        e.preventDefault();
+        giftCountdownButton.click();
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+
     function finish(outcome) {
+      window.removeEventListener("keydown", handleKey);
       clearInterval(giftCountdownTimer);
       giftCountdownTimer = null;
       giftCountdownBox.classList.add("hidden");
@@ -481,7 +511,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         Engine.playSound("awkward");
         fekiGone = true;
         Overworld.removeFollower();
-        Overworld.showCornerPopup("assets/sprites/caine_placeholder.png", "GAME OVER, KÖLYÖK: mostantól az én digitális háziállatom Feki.", () =>
+        Overworld.showCornerPopup("assets/sprites/enemy_bohoc_placeholder_talk.png", "GAME OVER, KÖLYÖK: mostantól az én digitális háziállatom Feki.", () =>
           Overworld.resume()
         );
       }
@@ -678,6 +708,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       { xMin: 0.258, xMax: 0.45, yMin: 0.8, yMax: 0.88 },
       { xMin: 0.344, xMax: 0.358, yMin: 0.65, yMax: 0.88 },
       { xMin: 0.41, xMax: 0.435, yMin: 0.65, yMax: 0.88 },
+      { xMin: 0.44, xMax: 0.95, yMin: 0.8, yMax: 0.88 },
       ],
       spawn: playerSpawn,
       hotspots,
@@ -795,12 +826,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   // konkret szoveget nem adott meg, ez helyettesito.
   const BUBBLE_REUNION_LINES = [
     {
-      portrait: "assets/sprites/enemy_bubble_placeholder.png",
+      portrait: "assets/sprites/enemy_bubble_placeholder_talk.png",
       text: "Ó, ismét ti vagytok! Nem pukkantam ki, ha esetleg aggódtatok -- csak egy kicsit lazulok itt tovább.",
     },
     { portrait: null, text: "Örülünk, hogy jól vagy, Bubble." },
     {
-      portrait: "assets/sprites/enemy_bubble_placeholder.png",
+      portrait: "assets/sprites/enemy_bubble_placeholder_talk.png",
       text: "A rendszerfrissítés még mindig fut valahol a háttérben, de engem már nem zavar annyira. Jó utat a további zónákhoz!",
     },
   ];

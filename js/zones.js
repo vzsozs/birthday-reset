@@ -223,10 +223,10 @@ const ZONE_2 = {
   speakerPortraits: RECURRING_SPEAKER_PORTRAITS,
   intro: [
     { speaker: "QUEEN", text: "RENDSZER-FRISSÍTÉS. VAGY INKÁBB: RENDSZER-ÖSSZEOMLÁS, DE CIRKUSZI FÉNYEKKEL.", portrait: "assets/sprites/queen_placeholder.png" },
-    { speaker: "KECSKE", text: "Szerintem ez most tényleg egy digitális circus lett.", portrait: "assets/sprites/kecske_placeholder.png" },
-    { speaker: "KECSKE", text: "Nézd meg azt a padlót, az még saját magát sem veszi komolyan.", portrait: "assets/sprites/kecske_placeholder.png" },
+    { speaker: "KECSKE", text: "Szerintem ez most tényleg egy digitális circus lett.", portrait: "assets/sprites/kecske_placeholder_talk.png" },
+    { speaker: "KECSKE", text: "Nézd meg azt a padlót, az még saját magát sem veszi komolyan.", portrait: "assets/sprites/kecske_placeholder_talk.png" },
     { speaker: "TENNA", text: "Csak újraindítom ezt a villanykörtét... na jó inkább a wifi-t hibáztatom megint.", portrait: "assets/sprites/tenna_placeholder.png" },
-    { speaker: "KECSKE", text: "Várj, ott volt valaki a sarokban! ...Vagy már nincs is ott.", portrait: "assets/sprites/kecske_placeholder.png" },
+    { speaker: "KECSKE", text: "Várj, ott volt valaki a sarokban! ...Vagy már nincs is ott.", portrait: "assets/sprites/kecske_placeholder_talk.png" },
   ],
   // Fordulos FIGHT/ACT/SPARE harc (ugyanaz a rendszer, mint az 1. zonaban --
   // ld. js/battle.js startRoundBattle() dokumentaciojat). Ez az elso zona a
@@ -235,13 +235,15 @@ const ZONE_2 = {
   enemy: {
     // A `name` szandekosan megegyezik a dialogus-sorok `speaker`-ivel --
     // ld. js/battle.js resolvePortrait(), ami erre a mezore pontosan
-    // illeszt. Egyelore NINCS kulon talkSprite/dying-progresszio (csak egy
-    // egyszeru placeholder van, ld. tools/gen_assets.py) -- ha kesobb
-    // tobb allapot-kep keszul, ide `talkSprite`-ot, a FIGHT opciokhoz
-    // pedig `enemyPortraitAfter`/`enemyFieldAfter`-t erdemes felvenni
+    // illeszt. `talkSprite`: ez jelenik meg a dialogue-boxban, amikor
+    // Bubble beszel (ld. resolvePortrait()/startRoundBattle()) -- a `sprite`
+    // (allo/harci-mezo kep) valtozatlanul kulon marad. Meg NINCS kulon
+    // dying-progresszio -- ha kesobb tobb allapot-kep keszul, a FIGHT
+    // opciokhoz `enemyPortraitAfter`/`enemyFieldAfter`-t erdemes felvenni
     // (ld. ZONE_1 peldajat).
     name: "BUBBLE",
     sprite: "assets/sprites/enemy_bubble_placeholder.png",
+    talkSprite: "assets/sprites/enemy_bubble_placeholder_talk.png",
     introLines: [
       { speaker: "BUBBLE", text: "Ó, ÜDV! MICSODA CSODÁS LÁTOGATÓK! DE HA KIPUKKANSZ..." },
       { speaker: "BUBBLE", text: "TUDJÁTOK, HOGY A LÉGGÖMBÖK SZERETNEK SZOROSAN ÖLELNI? MERT ÉN IGEN!" },
@@ -253,7 +255,7 @@ const ZONE_2 = {
       // 1. Fordulo -- Bubble meg nem tamad kulon sorral, csak Kecske/Tenna
       // kommentalja a dodge-fazis elott.
       preLines: [
-        { speaker: "KECSKE", portrait: "assets/sprites/kecske_placeholder.png", text: "Ez a dolog... szó szerint egy beszélő szappanbuborék? Ez annyira logikátlan, hogy fáj!" },
+        { speaker: "KECSKE", portrait: "assets/sprites/kecske_placeholder_talk.png", text: "Ez a dolog... szó szerint egy beszélő szappanbuborék? Ez annyira logikátlan, hogy fáj!" },
         { speaker: "TENNA", portrait: "assets/sprites/tenna_placeholder.png", text: "Hagyd, a Wi-Fi jel nem stabil, emiatt jelenik meg minden fura dolog. Üsd ki, vagy mondj neki valamit!" },
       ],
       // A felhasznalo kerese szerint a pattogo buborekok NEM tunnek el
