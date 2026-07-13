@@ -36,7 +36,21 @@ const Battle = (() => {
     dom = elements;
     dom.dialogueBox.addEventListener("click", advanceOrSkip);
     dom.battleCornerPopup.addEventListener("click", advanceOrSkip);
+    // Az overworld-kepernyo sajat, dialogue_box_frame.png-s doboza (a zaro,
+    // Minecraft-temaju zona hasznalja, ld. js/main.js playZone4Finale()) --
+    // ugyanazt az advanceOrSkip()-et hasznalja, mint a harc-kepernyo dobozai,
+    // mert a typing/advanceCallback allapot a Battle-modulon belul kozos,
+    // fuggetlenul attol, melyik dobozba irt eppen a typeText().
+    dom.overworldDialogueBox.addEventListener("click", advanceOrSkip);
+    // A zaro-animacio (playFinalCinematic()) vegso sora is kattintassal/
+    // Enterrel lepteto -- ld. ott.
+    dom.endingOverlay.addEventListener("click", advanceOrSkip);
+    dom.overworldEndingOverlay.addEventListener("click", advanceOrSkip);
     window.addEventListener("keydown", handleKeydown);
+  }
+
+  function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   function handleKeydown(e) {
@@ -209,15 +223,89 @@ const Battle = (() => {
     return null;
   }
 
-  async function showSequence(lines, target) {
+  // Egy kepet villant fel `imgEl`-ben `ms` ideig, ahelyett hogy szoveget
+  // gepelne -- ld. showSequence() `line.image` tamogatasat. `imgEl`
+  // explicit parameter (nem mindig dom.imageFlash), mert a zaro
+  // (Minecraft-temaju) zona MOST MAR az overworld-kepernyon fut le, sajat
+  // (#overworld-image-flash) elemmel -- ld. js/main.js playZone4Finale().
+  // `sound` (opcionalis): egy Engine-hangnevet jatszik le, amint a kep
+  // felvillan -- a `showSequence()`-en keresztuli `line.image`-hez ez NEM
+  // kell (ott a `line.sound` mar korabban, generikusan lejatszodik, ld.
+  // showSequence()), csak a kozvetlen, allo-alapu hivasoknal (pl.
+  // zone.fightImage, ld. js/zones.js ZONE_4).
+  function showCenterImage(imgEl, src, ms, sound) {
+    return new Promise((resolve) => {
+      imgEl.src = src;
+      imgEl.classList.remove("hidden");
+      if (sound) Engine.playSound(sound);
+      setTimeout(() => {
+        imgEl.classList.add("hidden");
+        resolve();
+      }, ms || 2000);
+    });
+  }
+
+  // Egy N-kockas atmenet-animaciot jatszik le a PORTRE-ELEM HELYEN, mielott
+  // egy sor tenyleges portreja megjelenne -- pl. hogy eltakarjon egy
+  // hirtelen karakter-valtast (ld. showSequence() `line.transitionAnim`
+  // tamogatasat es js/zones.js ZONE_4 "APA->APA2" atvaltasat). `anim =
+  // {frames: [...], frameMs?}` (alapertelmezett frameMs: 150). Az utolso
+  // kocka az utolso `frameMs`-ig kitart, mielott a hivo folytatna (igy nem
+  // "ugrik at" azonnal a valodi portrera) -- altalanos/ujrafelhasznalhato,
+  // barmelyik dialogus-sor hasznalhatja, nem zona-specifikus. `onFrame(i)`
+  // (opcionalis): minden kockavaltaskor lefut a kocka-indexszel -- ezt
+  // hasznalja a ZONE_4 zaro-jelenete arra, hogy UGYANEZZEL az utemezessel,
+  // de SAJAT (kulon fajlokbol allo) kockakkal a folyoson allo Apa-sprite-ot
+  // is animalja (ld. js/main.js `overworldDialogueTarget.onTransitionFrame`)
+  // -- a battle.js szandekosan nem nyul kozvetlenul az Overworld-modulhoz,
+  // ezert ez a hivo felelossege a callback-en keresztul.
+  function playTransitionAnim(imgEl, anim, onFrame) {
+    return new Promise((resolve) => {
+      const frames = anim.frames;
+      const frameMs = anim.frameMs || 150;
+      imgEl.style.display = "block";
+      let i = 0;
+      function step() {
+        imgEl.src = frames[i];
+        if (onFrame) onFrame(i);
+        i++;
+        setTimeout(i < frames.length ? step : resolve, frameMs);
+      }
+      step();
+    });
+  }
+
+  // `box` (opcionalis, alapertelmezett dom.dialogueBox): melyik doboz-elemet
+  // fedje fel/hasznalja -- a zaro (Minecraft-temaju) zona az overworld-
+  // kepernyo sajat dobozat adja at (`overworldDialogueBox`, ld. js/main.js
+  // playZone4Finale()), ugyanazzal a gepelos logikaval. Barmilyen uj szoveg
+  // kiirasa elott biztositja, hogy a doboz lathato legyen -- igy a dodge-
+  // fazis/menu utan NEM marad ott regi, mar elolvasott szoveg: a doboz
+  // csak akkor jelenik meg ujra, amikor tenylegesen van mit kiirni.
+  async function showSequence(lines, target, box) {
     target = target || defaultTarget();
-    // Ez a fuggveny mindig a fo #dialogue-box-ot hasznalja (a target-parametert
-    // jelenleg semelyik hivas nem adja meg maskepp) -- barmilyen uj szoveg
-    // kiirasa elott biztositja, hogy a doboz lathato legyen. Igy a dodge-
-    // fazis/menu utan NEM marad ott regi, mar elolvasott szoveg: a doboz
-    // csak akkor jelenik meg ujra, amikor tenylegesen van mit kiirni.
-    dom.dialogueBox.classList.remove("hidden");
+    box = box || dom.dialogueBox;
+    box.classList.remove("hidden");
     for (const line of lines) {
+      // line.sound: opcionalis hangeffekt, ami a sor elott/kozben szol (pl.
+      // a script "(snd_heavydamage.wav)"-szeru jelolesei) -- generikus,
+      // barmelyik dialogus-sorra rakhato, nem csak a ZONE_4-re.
+      if (line.sound) Engine.playSound(line.sound);
+      // line.image: sima szoveg helyett egy kepet villant fel `line.duration`
+      // ms-ig (alapertelmezett 2000), aztan folytatja a sorozatot -- ld.
+      // showCenterImage().
+      if (line.image) {
+        await showCenterImage(dom.imageFlash, line.image, line.duration);
+        continue;
+      }
+      // line.transitionAnim: ld. playTransitionAnim() -- a sor SAJAT
+      // portreja/szovege csak EZUTAN jelenik meg. target.onTransitionFrame
+      // (opcionalis, ld. playTransitionAnim()) engedi a hivonak, hogy egy
+      // MASIK elemet (pl. az Overworld-vilag Apa-sprite-jat) is
+      // szinkronban animaljon ugyanezzel az utemezessel.
+      if (line.transitionAnim) {
+        await playTransitionAnim(target.portrait, line.transitionAnim, target.onTransitionFrame);
+      }
       const portrait = resolvePortrait(line);
       if (portrait) {
         target.portrait.src = portrait;
@@ -322,14 +410,22 @@ const Battle = (() => {
     });
   }
 
-  function showStyleTag(text) {
+  // tagEl: explicit parameter (nem mindig dom.styleTag), ugyanazon okbol,
+  // mint showCenterImage()-nel -- a zaro zona sajat (#overworld-style-tag)
+  // elemet hasznalja, ld. js/main.js playZone4Finale(). holdMs (opcionalis):
+  // a CSS .style-pop animacio alapertelmezett hossza 1.1s -- ha egy zona
+  // kepe (pl. ZONE_4 styleTagDuration) tovabb akarja kitartani a feliratot,
+  // ide adhato at ms-ben. Inline animation-duration-t allitunk be, ami
+  // felulirja a .style-pop shorthandjenek idotartam-reszet (ld. style.css).
+  function showStyleTag(tagEl, text, holdMs) {
     return new Promise((resolve) => {
-      dom.styleTag.textContent = text;
-      dom.styleTag.classList.remove("style-pop");
-      void dom.styleTag.offsetWidth; // reflow, hogy ujra tudjon animalni
-      dom.styleTag.classList.add("style-pop");
+      tagEl.textContent = text;
+      tagEl.classList.remove("style-pop");
+      tagEl.style.animationDuration = holdMs ? holdMs + "ms" : "";
+      void tagEl.offsetWidth; // reflow, hogy ujra tudjon animalni
+      tagEl.classList.add("style-pop");
       Engine.playSound("style");
-      setTimeout(resolve, 1100);
+      setTimeout(resolve, holdMs || 1100);
     });
   }
 
@@ -415,9 +511,62 @@ const Battle = (() => {
   }
 
   async function victory(zoneData, act) {
-    await showStyleTag(zoneData.styleTag || "+STYLE");
+    await showStyleTag(dom.styleTag, zoneData.styleTag || "+STYLE", zoneData.styleTagDuration);
     await showSequence(zoneData.victoryLines);
+    // Tartalek-ag egy jovobeli, tenylegesen harc-kepernyos zaro-jelenethez
+    // -- a jelenlegi zaro (Minecraft-temaju) zona MAR NEM megy at a
+    // Battle.start()-on (ld. js/main.js playZone4Finale()), ezert ez az ag
+    // jelenleg nem fut le semelyik zonanal.
+    if (zoneData.finalCinematic) {
+      const endingDom = {
+        overlay: dom.endingOverlay,
+        heading: dom.endingHeading,
+        finalLine: dom.endingFinalLine,
+        continueHint: dom.endingContinueHint,
+      };
+      await playFinalCinematic(endingDom, zoneData.finalCinematic, () => onCompleteZone({ finalReset: true }));
+      return;
+    }
     if (onCompleteZone) onCompleteZone();
+  }
+
+  // A jatek teljesen egyedi zaro-animacioja (jelenleg a zaro,
+  // Minecraft-temaju zona hasznalja, az overworld-kepernyon, ld.
+  // js/main.js playZone4Finale() es js/zones.js ZONE_4.finalCinematic) --
+  // a script szerint: kivilagosodik a kep (snd_won), kozepen feketevel
+  // megjelenik egy felirat (snd_splat), hatasszunet, alatta egy utolso sor
+  // (tipeText()-tel gepelve, majd a felhasznalo kerese szerint Enterrel/
+  // kattintassal tovabblepteve -- NEM automatikusan), majd a kep elsotetul
+  // (snd_step2) es `onDone()` fut le. `domTarget = {overlay, heading,
+  // finalLine, continueHint}` -- explicit parameter (nem mindig a
+  // battle-kepernyo dom.ending*-je), ugyanazon okbol, mint
+  // showCenterImage()-nel. Onallo fedot hasznal (NEM a megosztott
+  // #scene-fade-et) -- az utobbi csak fekete fedesre kepes, ez a jelenet
+  // viszont elobb KIVILAGOSODIK (feher), csak a legvegen valt feketere.
+  // `onHeadingShown` (opcionalis): pontosan akkor fut le, amikor a `cfg.heading`
+  // felirat megjelenik -- a felhasznalo kerese szerint ekkor kell elkezdeni
+  // elhalkitani a hatterzenet (ld. js/main.js playZone4Finale()
+  // fadeOutMusic()-hivasat), de ez a zene-kezeles maga a Battle-modulon
+  // KIVUL, main.js-ben tortenik (a Battle nem ismeri a roomMusic-ot).
+  async function playFinalCinematic(domTarget, cfg, onDone, onHeadingShown) {
+    domTarget.overlay.classList.remove("ending-blackout");
+    domTarget.heading.textContent = "";
+    domTarget.finalLine.textContent = "";
+    domTarget.overlay.classList.add("ending-visible");
+    Engine.playSound("won");
+    await wait(1400); // a CSS opacity-atmenet hossza, ld. style.css
+    domTarget.heading.textContent = cfg.heading;
+    Engine.playSound("splat");
+    if (onHeadingShown) onHeadingShown();
+    await wait(1200); // "hatasszunet"
+    await typeText(null, cfg.finalLine, null, null, {
+      dialogueText: domTarget.finalLine,
+      continueHint: domTarget.continueHint,
+    });
+    domTarget.overlay.classList.add("ending-blackout");
+    Engine.playSound("step2");
+    await wait(1200);
+    if (onDone) onDone();
   }
 
   let usedActs = new Set();
@@ -631,5 +780,8 @@ const Battle = (() => {
     if (onCompleteZone) onCompleteZone({ outcome, roomDecoration: !!branch.roomDecoration });
   }
 
-  return { initDom, start, onHit };
+  // showSequence/showCenterImage/showStyleTag/playFinalCinematic exportalva
+  // -- ezeket a zaro (Minecraft-temaju) zona az overworld-kepernyon hasznalja
+  // ujra, sajat dom-elemekkel, ld. js/main.js playZone4Finale().
+  return { initDom, start, onHit, showSequence, showCenterImage, showStyleTag, playFinalCinematic };
 })();

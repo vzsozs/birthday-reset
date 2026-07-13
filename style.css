@@ -515,7 +515,7 @@ h1 {
    lejjebb, illetve fent a sarok-buboreknel), amit kulonben felulirna ez a
    szabaly, mert ID-specificitassal versenyezne vele (ugyanaz az ok, amiert
    #zone-bg is ki van zarva). */
-#battle-stage > *:not(#zone-bg):not(#battle-corner-popup):not(#dialogue-box):not(#menu-box):not(#battle-enemy-sprite) {
+#battle-stage > *:not(#zone-bg):not(#battle-corner-popup):not(#dialogue-box):not(#menu-box):not(#battle-enemy-sprite):not(#battle-image-flash):not(#ending-overlay) {
   position: relative;
   z-index: 1;
 }
@@ -535,6 +535,89 @@ h1 {
   object-fit: contain;
   image-rendering: pixelated;
   pointer-events: none;
+}
+
+/* Egy kepet villant fel a kepernyo kozepen N ms-ig, ahelyett hogy szoveget
+   gepelne -- ld. js/battle.js showCenterImage()/showSequence() `line.image`
+   tamogatasat. `#battle-image-flash` a harc-kepernyon (`#battle-stage`),
+   `#overworld-image-flash` az overworld-kepernyon (`#overworld-stage`)
+   hasznalatos -- KET KULON DOM-elem (ugyanaz a mintazat, mint a
+   #corner-popup/#battle-corner-popup parosnal), mert a ket stage kulon
+   flex-kontextusban kozeppontosul, de UGYANAZT a CSS-t hasznaljak.
+   Jelenleg csak a zaro (Minecraft-temaju) zona hasznalja
+   (4finger_placeholder.png), de altalanos/ujrafelhasznalhato. Magasabb
+   z-index, mint a dialogue-box/menu-box/corner-popup, hogy mindig azok
+   folott jelenjen meg, fuggetlenul a DOM-sorrendtol. */
+#battle-image-flash,
+#overworld-image-flash {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-height: 320px;
+  max-width: 80%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* A jatek teljesen egyedi zaro-animacioja (ld. js/battle.js
+   playFinalCinematic()) -- onallo fedo, NEM a megosztott #scene-fade
+   (az csak feketere valt, ez viszont elobb KIVILAGOSODIK/feherre valt,
+   csak a legvegen fekete). `#ending-overlay`/`#overworld-ending-overlay`:
+   ugyanaz a ket-DOM-elemes mintazat, mint a #battle-image-flash-nal --
+   a zaro (Minecraft-temaju) zona teljes jelenete MOST MAR az overworld-
+   kepernyon (folyoson) jatszodik le, nem a harc-kepernyon (ld. CLAUDE.md
+   "A záró (Minecraft) zóna"), ezert kellett az overworld-valtozat; a
+   battle-valtozat megmaradt altalanos/ujrafelhasznalhato infrastrukturakent
+   egy jovobeli, tenylegesen harc-kepernyos zaro-jelenethez. Alapertelmezetten
+   lathatatlan es at-nem-kattinthato (opacity:0, pointer-events:none) -- a
+   `.hidden` utility (display:none) itt NEM hasznalhato, mert az
+   megakadalyozna az opacity-atmenet animalasat. */
+#ending-overlay,
+#overworld-ending-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 40px;
+  text-align: center;
+  background: #fff;
+  color: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.4s ease, background-color 1s ease;
+}
+
+#ending-overlay.ending-visible,
+#overworld-ending-overlay.ending-visible {
+  opacity: 1;
+}
+
+/* A szoveg szine szandekosan marad fekete -- a hatter feketebe valtasaval
+   egyutt igy szepen "elnyeli" magat, nem egy hirtelen szinvaltas. */
+#ending-overlay.ending-blackout,
+#overworld-ending-overlay.ending-blackout {
+  background: #000;
+}
+
+#ending-heading,
+#overworld-ending-heading {
+  font-size: 26px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+#ending-final-line,
+#overworld-ending-final-line {
+  font-size: 18px;
+  line-height: 1.6;
+  max-width: 540px;
 }
 
 #hp-row,
@@ -633,7 +716,22 @@ h1 {
   image-rendering: pixelated;
 }
 
-#dialogue-box {
+/* `#overworld-dialogue-box` es a hozza tartozo gyermek-elemek: UGYANAZ a
+   dialogue_box_frame.png-s doboz-stilus, mint a harc-kepernyon, de az
+   overworld-stage-en hasznalva -- a felhasznalo kifejezett kerese szerint
+   a zaro (Minecraft-temaju) zona folyoson lejatszodo beszelgetesei EBBEN a
+   (nem a kisebb corner-popup buborek-) stilusban jelenjenek meg, mert
+   jobban olvashato. Ket kulon DOM-elem-keszlet, kombinalt CSS-szelektorral
+   (ugyanaz a minta, mint a #battle-image-flash/#overworld-image-flash
+   parosnal) -- js/battle.js showSequence()-e explicit `box`/`target`
+   parametert kap, igy ugyanaz a gepelos logika (typeText()) barmelyik
+   dobozba irhat, ld. js/main.js playZone4Finale(). Kezdetben `class="hidden"`
+   (a harc-kepernyos valtozattal ellentetben, aminek nincs kezdeti hidden-je),
+   mert az overworld-screen tobb MAS jelenetben (szoba, tobbi zona folyoso-
+   szakasza) is aktiv, ahol erre a dobozra nincs szukseg.
+*/
+#dialogue-box,
+#overworld-dialogue-box {
   position: absolute;
   left: 50%;
   bottom: 8px;
@@ -649,7 +747,17 @@ h1 {
   image-rendering: pixelated;
 }
 
-#portrait {
+/* A felhasznalo kerese szerint a zaro (Minecraft-temaju) zona folyoson a
+   doboz FELÜLRE kerül (nem alulra, mint a harci valtozat es mint a fenti
+   alapertelmezes), hogy Kecske/Tenna/Apa sprite-jai (a jelenet also-kozepso
+   reszen) lathatok maradjanak a doboz mogott/alatt, ne takarja ki oket. */
+#overworld-dialogue-box {
+  top: 8px;
+  bottom: auto;
+}
+
+#portrait,
+#overworld-portrait {
   width: 110px;
   height: 110px;
   object-fit: contain;
@@ -659,7 +767,8 @@ h1 {
   flex: none;
 }
 
-#dialogue-text-wrap {
+#dialogue-text-wrap,
+#overworld-dialogue-text-wrap {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -669,24 +778,44 @@ h1 {
 /* A felhasznalo kerese szerint a fo #dialogue-box-ban sehol nem jelenik meg
    a beszelo neve -- az elem a DOM-ban marad (typeText() tovabbra is irhat
    bele), de mindig el van rejtve, igy nem foglal helyet a dobozban sem. */
-#speaker-name {
+#speaker-name,
+#overworld-speaker-name {
   display: none;
 }
 
-#dialogue-text {
+#dialogue-text,
+#overworld-dialogue-text {
   font-size: 20px;
   line-height: 1.6;
   min-height: 66px;
 }
 
-#continue-hint {
+#continue-hint,
+#overworld-continue-hint {
   align-self: flex-end;
   font-size: 11px;
   opacity: 0.6;
   visibility: hidden;
 }
 
-#style-tag {
+/* A zaro-animacio (playFinalCinematic()) sajat "tovabb"-jelzese -- ugyanaz
+   a stilus, mint a dialogus-dobozok #continue-hint-je, csak kozepre
+   igazitva (az #ending-overlay/#overworld-ending-overlay szoveg-tartalma
+   is kozepre van igazitva, ld. text-align:center ott). Kezdetben rejtve --
+   js/battle.js typeText() fedi fel/rejti el, ld. playFinalCinematic(). */
+#ending-continue-hint,
+#overworld-ending-continue-hint {
+  font-size: 11px;
+  opacity: 0.6;
+  visibility: hidden;
+}
+
+/* `#overworld-style-tag`: ugyanaz a ket-DOM-elemes mintazat, mint a
+   #battle-image-flash-nal -- ld. az ottani megjegyzest. A `.style-pop`
+   osztaly (lejjebb) barmelyikre alkalmazhato, mert osztaly-alapu, nem
+   ID-specifikus. */
+#style-tag,
+#overworld-style-tag {
   position: absolute;
   top: 40%;
   left: 50%;

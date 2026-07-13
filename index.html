@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <title>Project: Birthday Reset</title>
-<link rel="stylesheet" href="style.css?v=69" />
+<link rel="stylesheet" href="style.css?v=73" />
 </head>
 <body>
 
@@ -50,6 +50,23 @@
           <div id="gift-countdown-number">32</div>
           <button id="gift-countdown-button" class="pixel-btn">MEGVAN!</button>
         </div>
+
+        <img id="overworld-image-flash" src="" alt="" class="hidden" />
+        <div id="overworld-style-tag"></div>
+        <div id="overworld-ending-overlay">
+          <div id="overworld-ending-heading"></div>
+          <div id="overworld-ending-final-line"></div>
+          <div id="overworld-ending-continue-hint">▶ kattints / szóköz</div>
+        </div>
+
+        <div id="overworld-dialogue-box" class="hidden">
+          <img id="overworld-portrait" src="" alt="" />
+          <div id="overworld-dialogue-text-wrap">
+            <div id="overworld-speaker-name"></div>
+            <div id="overworld-dialogue-text"></div>
+            <div id="overworld-continue-hint">▶ kattints / szóköz</div>
+          </div>
+        </div>
       </div>
       <p class="hint-small">Mozgás: nyilak / WASD · Interakció: Enter / szóköz / kattintás</p>
     </div>
@@ -61,6 +78,8 @@
         <img id="zone-bg" src="" alt="" />
 
         <img id="battle-enemy-sprite" src="" alt="" class="hidden" />
+
+        <img id="battle-image-flash" src="" alt="" class="hidden" />
 
         <div id="hp-row">
           <span id="hp-text">HP 5 / 5</span>
@@ -97,6 +116,12 @@
         <div id="gameover-overlay" class="hidden">
           <img src="assets/UI/Game Over.png" alt="" />
         </div>
+
+        <div id="ending-overlay">
+          <div id="ending-heading"></div>
+          <div id="ending-final-line"></div>
+          <div id="ending-continue-hint">▶ kattints / szóköz</div>
+        </div>
       </div>
     </div>
 
@@ -109,11 +134,11 @@
   </div>
 </div>
 
-<script src="js/engine.js?v=69"></script>
-<script src="js/battle.js?v=69"></script>
-<script src="js/overworld.js?v=69"></script>
-<script src="js/zones.js?v=69"></script>
-<script src="js/main.js?v=69"></script>
+<script src="js/engine.js?v=73"></script>
+<script src="js/battle.js?v=73"></script>
+<script src="js/overworld.js?v=73"></script>
+<script src="js/zones.js?v=73"></script>
+<script src="js/main.js?v=73"></script>
 
 </body>
 </html>

@@ -423,133 +423,107 @@ const ZONE_2 = {
   ],
 };
 
-const ZONE_3 = {
-  id: "zone3_csovek",
-  background: "assets/sprites/zone3_bg_placeholder.png",
-  speakerPortraits: RECURRING_SPEAKER_PORTRAITS,
-  intro: [
-    { speaker: "QUEEN", text: "IPARI HIBAÜZENET ÉSZLELVE. SÖTÉT-PIROS. GYORS. NEM AZ ÉN STÍLUSOM, DE MENJÜNK.", portrait: "assets/sprites/queen_placeholder.png" },
-    { speaker: "KECSKE", text: "Miért lett hirtelen minden ilyen... feszes? Mintha a játék is sietne.", portrait: "assets/sprites/kecske_placeholder.png" },
-    { speaker: "TENNA", text: "Csak összekötök pár kábelt. A sávszélesség megint szánalmas.", portrait: "assets/sprites/tenna_placeholder.png" },
-    { speaker: "KECSKE", text: "Oké, ez gyors lesz. Kapkodjunk.", portrait: "assets/sprites/kecske_placeholder.png" },
-  ],
-  enemy: {
-    name: "CSŐ-AUTOMATA",
-    sprite: "assets/sprites/enemy_csoautomata_placeholder.png",
-    introLines: [
-      { speaker: "CSŐ-AUTOMATA", text: "*Egy fémcsövekből összerakott automata csattan ki a padlóból, túl gyorsan mozogva.*" },
-    ],
-    attackLines: [
-      { speaker: "CSŐ-AUTOMATA", text: "*Fémszilánk-lövedékeket lő, alig van idő reagálni!*" },
-    ],
-  },
-  dodge: {
-    duration: 3600,
-    rate: 260,
-    speed: 155,
-    size: [5, 9],
-  },
-  acts: [
-    {
-      id: "sebesseg_troll",
-      label: "ACT: SEBESSÉG-TROLL",
-      repeatable: false,
-      reactionLines: [
-        { speaker: "TE", text: "Olyan gyorsan vágsz oda egy beszólást, hogy az Automata le sem tudja fordítani." },
-        { speaker: "CSŐ-AUTOMATA", text: "*ÉRTELMEZÉSI... HIBA... újratöltés...*" },
-      ],
-      endsFight: false,
-    },
-    {
-      id: "vészfék",
-      label: "ACT: HÚZD MEG A VÉSZFÉKET",
-      repeatable: false,
-      reactionLines: [
-        { speaker: "TE", text: "Megtalálsz egy vészféket a csövek közt, és jó erősen meghúzod." },
-        { speaker: "CSŐ-AUTOMATA", text: "*Az Automata lelassul, majd udvariasan leáll, mint akit tényleg meg kellett állítani.*" },
-      ],
-      endsFight: true,
-    },
-  ],
-  styleTag: "+OVERCLOCKED",
-  victoryLines: [
-    { speaker: "QUEEN", text: "SEBESSÉG-REKORD. NEM MINDEN HIBÁM ILYEN EGYÜTTMŰKÖDŐ.", portrait: "assets/sprites/queen_placeholder.png" },
-    { speaker: "KECSKE", text: "Na, ez pörgős volt. Kicsit ki is fulladtam.", portrait: "assets/sprites/kecske_placeholder.png" },
-    { speaker: "TENNA", text: "A kábelek rendben. Most már csak a sávszélesség a hibás. Mint mindig.", portrait: "assets/sprites/tenna_placeholder.png" },
-    { speaker: "RENDSZER", text: "3. ZÓNA KÉSZ." },
-  ],
-  companionChat: [
-    { speaker: "KECSKE", text: "Miért kell itt mindig futni?" },
-    { speaker: "TENNA", text: "A sávszélesség tényleg szánalmas. Mondtam." },
-    { speaker: "QUEEN", text: "SEBESSÉG NÖVEKSZIK. STÍLUSOM CSÖKKEN.", portrait: "assets/sprites/queen_placeholder.png" },
-  ],
-};
+// ZONE_3 ("A Csövek", Ultrakill-es) a felhasznalo kifejezett kerese szerint
+// KIKERULT a jatekbol -- a ZONE_4 lett a zaro zona, Minecraft-temaval, ld.
+// CLAUDE.md "Hatralevo munka" / DESIGN.md. A regi ZONE_3-tartalom (Cso-
+// Automata, +OVERCLOCKED) a git-elozmenyekben megmaradt, ha valaha vissza
+// kellene hozni.
 
+// A zaro (immar 3. es egyben utolso) zona -- Apa (korabban "Asgore")
+// drámai belepovel jelenik meg Minecraft-kockava valva, majd egy rovid
+// "beszolas" utan egy teljesen egyedi zaro-animacio kovetkezik (ld.
+// js/battle.js playFinalCinematic()). A felhasznalo kifejezett kerese
+// szerint EZ A TELJES JELENET MAR NEM A HARC-KEPERNYON, hanem a folyoson
+// ("az alaphelyen") jatszodik le -- ld. js/main.js playZone4Finale(), amit
+// a folyoso zaro-hotspotja indit el (buildCorridorScene()). Emiatt ez a
+// zona NEM megy at a Battle.start()-on/battle.js ACT-menu-motorjan, igy
+// nincs `acts`/`dodge`/`background` mezoje -- helyettuk egy `fightImage`
+// mezo (a korabbi, egyetlen ACT reactionLines-abol kiemelve) es explicit
+// `portrait` minden soron (a resolvePortrait()-fele automatikus arckep-
+// kitoltes csak battle.js-en keresztul mukodik, ezt a zonat viszont
+// showOverworldDialogue()/Overworld.showCornerPopup() jeleniti meg). A
+// `speaker` mezokben "APA"/"APA2" szerepel (nem "ASGORE") -- a folyoson
+// sincs lathato beszelo-nev, ez csak a kod olvashatosagat szolgalja.
 const ZONE_4 = {
-  id: "zone4_roblox",
-  background: "assets/sprites/zone4_bg_placeholder.png",
+  id: "zone4_minecraft",
   speakerPortraits: RECURRING_SPEAKER_PORTRAITS,
   intro: [
-    { speaker: "QUEEN", text: "OKÉ. ITT LECSAPÓDOTT MINDEN, AMIT AZ ELŐZŐ HÁROM ZÓNA NEM TUDOTT FELDOLGOZNI.", portrait: "assets/sprites/queen_placeholder.png" },
-    { speaker: "KECSKE", text: "Miért van itt minden... kockákból? Ez most tudatos stílus, vagy csak feladta a motor?", portrait: "assets/sprites/kecske_placeholder.png" },
-    { speaker: "TENNA", text: "Utoljára szólok bele: ez SEM router-hiba. Ez már a rendszer alja.", portrait: "assets/sprites/tenna_placeholder.png" },
-    { speaker: "TENNA", text: "De van ám jó hírem: innen van rendszergazda-jogom a kapuhoz. Csak intézzétek el ezt itt.", portrait: "assets/sprites/tenna_placeholder.png" },
-    { speaker: "IDEGEN NPC", text: "friend request?" },
-    { speaker: "KECSKE", text: "Senki nem válaszol neki. Soha.", portrait: "assets/sprites/kecske_placeholder.png" },
+    { speaker: "KECSKE", text: "Minecraft? Komolyan? Már csak egy zombi hiányzik, aki megpróbál megenni, miközben próbálom megérteni a 'kocka-logikát'.", portrait: "assets/sprites/kecske_placeholder_talk.png" },
+    { speaker: "TENNA", text: "Ez már nem a Wi-Fi. Ez a rendszer alaprétege. Valaki nagyon szereti a retro voxel-stílust... várj, figyelj!", portrait: "assets/sprites/tenna_placeholder.png" },
   ],
   enemy: {
-    name: "BLOKKFEJŰ VÉGHIBA",
-    sprite: "assets/sprites/enemy_blokkfeju_placeholder.png",
+    name: "APA",
+    // A folyoson dinamikusan felbukkano "dramai belepo" sprite kepe --
+    // ld. js/main.js playZone4Finale() Overworld.addSprite() hivasat.
+    sprite: "assets/sprites/asgore_placeholder.png",
+    talkSprite: "assets/sprites/asgore_placeholder_talk.png",
     introLines: [
-      { speaker: "BLOKKFEJŰ VÉGHIBA", text: "*Egy túl nagy fejű, szögletes avatar tornyosul fel a szemétdomb tetején.*" },
-    ],
-    attackLines: [
-      { speaker: "BLOKKFEJŰ VÉGHIBA", text: "*Kockás loot-ládákat pörget feléd — mindegyik más színű, de üresek.*" },
+      // sound: a script "(snd_heavydamage.wav)" jelolese Apa drámai
+      // belepojenel -- ld. js/main.js showOverworldDialogue() line.sound
+      // tamogatasat. Explicit portrait, mert nincs resolvePortrait()
+      // automatika ezen a delivery-utvonalon.
+      {
+        speaker: "APA",
+        text: "BUMM. Drámai belépő, a sors elkerülhetetlen végzete... még mindig működik, vagy már túl öreg vagyok ehhez a digitális bohóckodáshoz?",
+        portrait: "assets/sprites/asgore_placeholder_talk.png",
+        sound: "heavydamage",
+      },
+      { speaker: "TE", text: "Apa? Miért vagy... kocka alakú?", portrait: null },
+      { speaker: "TE", text: "Nahh jó, ezt nem hagyom...", portrait: null },
     ],
   },
-  dodge: {
-    duration: 4500,
-    rate: 320,
-    speed: 140,
-    size: [6, 13],
-  },
-  acts: [
-    {
-      id: "tulkomplikalas",
-      label: "ACT: MUTASS EGY 3×3-AS CRAFT-RECEPTET",
-      repeatable: false,
-      reactionLines: [
-        { speaker: "TE", text: "Előhúzol egy teljesen fölösleges, 3×3-as craftolási receptet." },
-        { speaker: "BLOKKFEJŰ VÉGHIBA", text: "*A Blokkfejű Véghiba lefagy a komplexitástól. Egy pillanatra betűkockákra esik szét.*" },
-      ],
-      endsFight: false,
-    },
-    {
-      id: "kikapcsolo",
-      label: "ACT: NYOMD MEG A KIKAPCSOLÓT",
-      repeatable: false,
-      reactionLines: [
-        { speaker: "TE", text: "Megtalálod a nagy, piros KI gombot, és minden habozás nélkül megnyomod." },
-        { speaker: "BLOKKFEJŰ VÉGHIBA", text: "*A Blokkfejű Véghiba udvariasan összecsuklik, mint egy rosszul mentett fájl.*" },
-      ],
-      endsFight: true,
-    },
-  ],
-  styleTag: "+CUBED",
+  // A script "Megjelenik egy Kép a képernyő közepén... 2mp-ig" sora -- a
+  // "Nahh jó, ezt nem hagyom..." TE-sor utan KOZVETLENUL, automatikusan
+  // (nincs kulon "FIGHT" menu-valasztas, a felhasznalo kifejezett kerese
+  // szerint), ld. js/main.js playZone4Finale() Battle.showCenterImage()
+  // hivasat. sound: a felhasznalo kerese szerint ekkor szol.
+  fightImage: { src: "assets/sprites/4finger_placeholder.png", duration: 2000, sound: "ultraswing" },
+  styleTag: "+APPPAAAAAAA",
+  // A script kerese szerint ("Ha lehet ezt több ideig kitartva") a
+  // szokasos 1100ms-nel jval tovabb kitart -- ld. showStyleTag(text, holdMs).
+  styleTagDuration: 2800,
   victoryLines: [
-    { speaker: "QUEEN", text: "UTOLSÓ HIBA ELHÁRÍTVA. RENDSZER-ÁLLAPOTOM... ŐSZINTÉN? SE JÓ, SE ROSSZ.", portrait: "assets/sprites/queen_placeholder.png" },
-    { speaker: "KECSKE", text: "Szóval ennyi volt? Ez most tényleg vége?", portrait: "assets/sprites/kecske_placeholder.png" },
-    { speaker: "TENNA", text: "Kapu nyitva. Mondtam, hogy van hozzá jogom. Most az egyszer nem a wifi volt.", portrait: "assets/sprites/tenna_placeholder.png" },
-    { speaker: "ASGORE", text: "Nahát. Kiderült, hogy tényleg nem a Roblox volt a hiba.", portrait: "assets/sprites/asgore_placeholder.png" },
-    { speaker: "ASGORE", text: "Rendben. Elég a szerver-hibákból mára. Itt a System Admin kulcs — ez most már a tiéd.", portrait: "assets/sprites/asgore_placeholder.png" },
-    { speaker: "ASGORE", text: "[SZERKESZTENDŐ: ide jön a köztetek lévő privát poén / közös program.]", portrait: "assets/sprites/asgore_placeholder.png" },
-    { speaker: "RENDSZER", text: "SYSTEM RESET — HAPPY 13TH BIRTHDAY!" },
+    { speaker: "APA", text: "Ha HA HAAAA", portrait: "assets/sprites/asgore_placeholder_talk.png" },
+    // "pukk eltűnik és megjelenik helyette APA2" -- kulon sor, kulon
+    // (meg kesz kepre varo, egyelore gen_assets.py-stilusu placeholder)
+    // portrettal, ld. tools/gen_assets.py "apa2_placeholder" bejegyzeset.
+    // sound: a felhasznalo kerese szerint pontosan az atvaltas
+    // pillanataban (a portre APA2-re cserelodesekor) szol. transitionAnim:
+    // egy 4-kockas placeholder-animacio (ld. tools/gen_assets.py
+    // "apa_transition_0N" bejegyzeseit), ami eltakarja a hirtelen
+    // karakter-valtast, mielott a valodi APA2-portre megjelenne -- a
+    // felhasznalo sajat rajzra fogja cserelni kesobb, ld.
+    // js/battle.js playTransitionAnim().
+    {
+      speaker: "APA2",
+      text: "Tudom, tudom. A világok, a harcok, a szép grafikák. De figyelj...",
+      portrait: "assets/sprites/apa2_placeholder.png",
+      sound: "vaporized",
+      transitionAnim: {
+        frames: [
+          "assets/sprites/apa_transition_01.png",
+          "assets/sprites/apa_transition_02.png",
+          "assets/sprites/apa_transition_03.png",
+          "assets/sprites/apa_transition_04.png",
+        ],
+        frameMs: 150,
+      },
+    },
   ],
-  companionChat: [
-    { speaker: "KECSKE", text: "Ez a hely mintha kockákból lenne összerakva." },
-    { speaker: "TENNA", text: "Innen már látom a kaput. Majdnem ott vagyunk." },
-    { speaker: "QUEEN", text: "RENDSZERÁLLAPOT: FÁRADT, DE FUNKCIONÁLIS.", portrait: "assets/sprites/queen_placeholder.png" },
-  ],
+  // A jelenet utani, teljesen egyedi zaro-animacio (kivilagosodas -> "System
+  // Reset" felirat -> hatasszunet -> Apa2 zaro sora -> elsotetules ->
+  // automatikus visszaters a cimkepernyore) -- ld. js/battle.js
+  // playFinalCinematic(), meghivva js/main.js playZone4Finale()-bol.
+  finalCinematic: {
+    heading: "System Reset: Happy 13th Birthday!",
+    finalLine:
+      "Reseteljük ezt az egészet. A legjobb dolgok úgysem a kódokban vannak, menjünk inkább medencézni. A valódi víznek legalább nincsenek textúrahibái.",
+  },
+  // Szandekosan NINCS companionChat -- a felhasznalo kerese szerint a
+  // folyoson nincs kulon "Enter: odaszolsz Eriknek"/"Minecraft... mi mas"
+  // hotspot ennel a zonanal (ld. js/main.js buildCorridorScene(), ami
+  // `zone.companionChat || []`-t hasznal, tehat ures marad a kecske/
+  // minecraft hotspot-par letrehozasa).
 };
 
-const ZONES = [ZONE_1, ZONE_2, ZONE_3, ZONE_4];
+const ZONES = [ZONE_1, ZONE_2, ZONE_4];

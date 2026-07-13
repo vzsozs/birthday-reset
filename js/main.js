@@ -34,6 +34,42 @@ window.addEventListener("DOMContentLoaded", async () => {
   const giftCountdownNumber = document.getElementById("gift-countdown-number");
   const giftCountdownButton = document.getElementById("gift-countdown-button");
 
+  // A zaro (Minecraft-temaju) zona folyoson lejatszodo jelenetehez -- ld.
+  // playZone4Finale(). A js/battle.js showSequence()/showCenterImage()/
+  // showStyleTag()/playFinalCinematic()-jat hasznaljuk ujra, de ezekkel a
+  // sajat (nem a harc-kepernyos) dom-elemekkel, ld. index.html/style.css.
+  // A felhasznalo kifejezett kerese szerint a beszelgetesek a MEGSZOKOTT,
+  // dialogue_box_frame.png-s dobozban jelenjenek meg, ne a kisebb
+  // corner-popup buborekban -- ld. overworldDialogueBox/overworldDialogueTarget.
+  const overworldImageFlash = document.getElementById("overworld-image-flash");
+  const overworldStyleTag = document.getElementById("overworld-style-tag");
+  const overworldEndingDom = {
+    overlay: document.getElementById("overworld-ending-overlay"),
+    heading: document.getElementById("overworld-ending-heading"),
+    finalLine: document.getElementById("overworld-ending-final-line"),
+    continueHint: document.getElementById("overworld-ending-continue-hint"),
+  };
+  const overworldDialogueBox = document.getElementById("overworld-dialogue-box");
+  // Az APA->APA2 atvaltast a folyoson allo Apa-sprite-on (nem csak a
+  // dialogus-doboz portrejan) is eltakarja egy 4-kockas placeholder-animacio
+  // -- KULON fajlkeszlet, a felhasznalo kifejezett kerese szerint, hogy a
+  // ket animacio (doboz vs vilag-sprite) fuggetlenul cserelheto legyen kesz
+  // rajzra. `onTransitionFrame` a js/battle.js showSequence()/
+  // playTransitionAnim() altal minden kockavaltaskor meghivott hook (ld.
+  // ott) -- igy a ket animacio pontosan szinkronban fut.
+  const APA_WORLD_TRANSITION_FRAMES = [
+    "assets/sprites/apa_world_transition_01.png",
+    "assets/sprites/apa_world_transition_02.png",
+    "assets/sprites/apa_world_transition_03.png",
+    "assets/sprites/apa_world_transition_04.png",
+  ];
+  const overworldDialogueTarget = {
+    dialogueText: document.getElementById("overworld-dialogue-text"),
+    portrait: document.getElementById("overworld-portrait"),
+    continueHint: document.getElementById("overworld-continue-hint"),
+    onTransitionFrame: (i) => Overworld.updateSprite("zone4-apa", APA_WORLD_TRANSITION_FRAMES[i]),
+  };
+
   Overworld.init({
     stage: document.getElementById("overworld-stage"),
     world: document.getElementById("overworld-world"),
@@ -68,6 +104,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     battleCornerPortrait: document.getElementById("battle-corner-popup-portrait"),
     battleCornerText: document.getElementById("battle-corner-popup-text"),
     battleEnemySprite: document.getElementById("battle-enemy-sprite"),
+    imageFlash: document.getElementById("battle-image-flash"),
+    endingOverlay: document.getElementById("ending-overlay"),
+    endingHeading: document.getElementById("ending-heading"),
+    endingFinalLine: document.getElementById("ending-final-line"),
+    endingContinueHint: document.getElementById("ending-continue-hint"),
+    overworldDialogueBox: document.getElementById("overworld-dialogue-box"),
+    overworldEndingOverlay: document.getElementById("overworld-ending-overlay"),
   });
 
   Engine.init(canvas, boxBounds, Battle.onHit);
@@ -98,6 +141,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   Engine.loadSound("coin", "assets/Sounds/snd_coin.wav");
   Engine.loadSound("won", "assets/Sounds/snd_won.wav");
   Engine.loadSound("awkward", "assets/Sounds/snd_awkward.wav");
+  // A zaro (Minecraft-) zona forgatokonyvehez -- Apa dramai belepoje, majd
+  // a playFinalCinematic() harom hangja (ld. js/battle.js es js/zones.js
+  // ZONE_4.finalCinematic). A "won" mar be van toltve (fent).
+  Engine.loadSound("heavydamage", "assets/Sounds/snd_heavydamage.wav");
+  Engine.loadSound("splat", "assets/Sounds/snd_splat.wav");
+  Engine.loadSound("step2", "assets/Sounds/snd_step2.wav");
+  // Az APA->APA2 arcvaltashoz (ZONE_4.victoryLines) es a 4finger_placeholder
+  // felvillanasahoz (ZONE_4.fightImage) -- ld. js/zones.js.
+  Engine.loadSound("vaporized", "assets/Sounds/snd_vaporized.wav");
+  Engine.loadSound("ultraswing", "assets/Sounds/snd_ultraswing.wav");
 
   // --- Szoba-jelenet -------------------------------------------------
 
@@ -116,9 +169,12 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   // Tobb, valtakozo beszelos (portrait-onkent kulon) sor egymas utan, egy
   // Overworld.showCornerPopup()-lancolassal -- ld. flavorPopup() az egyetlen-
-  // beszelos valtozatert. Minden `lines[i]` egy { portrait, text } objektum
-  // (a `portrait` lehet null, ha "TE" beszelsz -- akkor nincs kep, mint a
-  // harci dialogus TE-sorainal). `onDone` a teljes sorozat vegen fut le.
+  // beszelos valtozatert. Minden `lines[i]` egy { portrait, text, sound? }
+  // objektum (a `portrait` lehet null, ha "TE" beszelsz -- akkor nincs kep,
+  // mint a harci dialogus TE-sorainal). `line.sound` (opcionalis) egy
+  // Engine-hangnevet jatszik le a sor felugrasa elott -- ld. js/battle.js
+  // showSequence() `line.sound`-jat, ugyanaz a mintazat, csak itt az
+  // overworld-dialogushoz. `onDone` a teljes sorozat vegen fut le.
   function showOverworldDialogue(lines, onDone) {
     Overworld.pause();
     Engine.playSound("flavorText");
@@ -131,6 +187,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       }
       const line = lines[i];
       i++;
+      if (line.sound) Engine.playSound(line.sound);
       Overworld.showCornerPopup(line.portrait, line.text, next);
     }
     next();
@@ -273,20 +330,21 @@ window.addEventListener("DOMContentLoaded", async () => {
   // mella illeszti oket, a stage magassagara (480px) skalazva, sajat
   // oldalaranyat megtartva -- igy a vilag-szelesseg kepenkent elter, ha a
   // kepek nem egyenlo szelesseguek. A 2. zona hattere (corridor_zone2_bg_placeholder.png)
-  // mar a vegleges, kezzel/AI-jal keszult "Cirkusz"-rajz (1260px szeles),
-  // NEM ugyanolyan szelessegu, mint a masik harom (1100px) meg placeholder
-  // kep -- ezert a DOOR_FRACTIONS ertekei alant a TENYLEGES (osszeadott)
-  // szelessegekbol vannak ujraszamolva, nem egyszeru negyedelessel. Ha egy
+  // mar a vegleges, kezzel/AI-jal keszult "Cirkusz"-rajz (1302px szeles),
+  // a 3. zona (Csovek) kikerult a jatekbol (ld. CLAUDE.md "Hatralevo munka"),
+  // a 4. (immar utolso) zona hattere pedig mar szinten a vegleges, kezzel
+  // elhelyezett Minecraft-rajz (1024px szeles) -- egyik sem egyenlo
+  // szelessegu, ezert a DOOR_FRACTIONS ertekei alant a TENYLEGES (osszeadott)
+  // szelessegekbol vannak ujraszamolva, nem egyszeru harmadolassal. Ha egy
   // tovabbi zona hattere is lecserelodik maskkora szelessegure, ezt a
   // tombot (es a ZONE2_LAYOUT-hoz hasonlo, uj zona-specifikus felulirast,
   // ha kell) ujra kell hangolni.
   const CORRIDOR_ZONE_BACKGROUNDS = [
     "assets/sprites/corridor_zone1_bg_placeholder.png",
     "assets/sprites/corridor_zone2_bg_placeholder.png",
-    "assets/sprites/corridor_zone3_bg_placeholder.png",
     "assets/sprites/corridor_zone4_bg_placeholder.png",
   ];
-  const CORRIDOR_SEGMENT_WIDTHS = [1100, 1302, 1100, 1024];
+  const CORRIDOR_SEGMENT_WIDTHS = [1100, 1302, 1024];
   const CORRIDOR_TOTAL_WIDTH = CORRIDOR_SEGMENT_WIDTHS.reduce((a, b) => a + b, 0);
   const CORRIDOR_SEGMENT_OFFSETS = CORRIDOR_SEGMENT_WIDTHS.reduce((offsets, w, i) => {
     offsets.push(i === 0 ? 0 : offsets[i - 1] + CORRIDOR_SEGMENT_WIDTHS[i - 1]);
@@ -538,6 +596,77 @@ window.addEventListener("DOMContentLoaded", async () => {
     Overworld.showCornerPopup(portraitSrc, text, () => Overworld.resume(), undefined, opts);
   }
 
+  // A `roomMusic` hangerejet fokozatosan 0-ra viszi `ms` alatt, majd
+  // szuneteltet -- ld. playZone4Finale() (a felhasznalo kerese szerint a
+  // "System Reset..." felirat megjelenesekor kell elkezdenie halkulni).
+  function fadeOutMusic(audio, ms) {
+    const startVolume = audio.volume;
+    const startTime = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - startTime) / ms);
+      audio.volume = startVolume * (1 - t);
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        audio.pause();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  // A zaro (Minecraft-temaju) zona teljes jelenete -- a felhasznalo kerese
+  // szerint a folyoson ("az alaphelyen") jatszodik le, NEM a harc-
+  // kepernyon: Kecske+Tenna beszol, aztan Apa dramai belepovel felbukkan a
+  // folyoson (Overworld.addSprite()), a tobbi parbeszed utana jon (nincs
+  // kulon "FIGHT" menu-valasztas, a "Nahh jó, ezt nem hagyom..." TE-sor
+  // utan kozvetlenul jon a kepfelvillanas -- a dobozt elotte explicit
+  // elrejtjuk, hogy a szereplok/kep lathatok maradjanak). A beszelgetesek a
+  // MEGSZOKOTT, dialogue_box_frame.png-s dobozban jelennek meg
+  // (`overworldDialogueBox`/`overworldDialogueTarget`, ld. fent, FELUL
+  // pozicionalva -- ld. style.css #overworld-dialogue-box -- hogy ne
+  // takarja ki a szereplo-sprite-okat), NEM a kisebb corner-popup
+  // buborekban -- a felhasznalo kifejezett kerese szerint, jobb
+  // olvashatosag miatt. Ehhez a js/battle.js showSequence()-et hivjuk
+  // ujra (exportalva a Battle publikus API-jan), a sajat dobozunkkal --
+  // ugyanaz a gepelos logika/kattintasos-tovabblepes, mint a harci
+  // dialogusban (ld. js/battle.js initDom() `overworldDialogueBox`
+  // click-listenerjet). A jatekos mozgasa a teljes jelenet alatt
+  // Overworld.pause()-zal zarolva marad (nem kell ujra meghivni szakaszok
+  // kozott, mert showSequence() -- ellentetben a korabban hasznalt
+  // showOverworldDialogue()-vel -- nem resume()-ol soha). A vegen a
+  // js/battle.js showCenterImage()/showStyleTag()/playFinalCinematic()-jat
+  // is ujrahasznaljuk, a sajat overworld-dom-elemekkel. A `playFinalCinematic()`
+  // zaro sora utan (a felhasznalo kerese szerint) Enterrel/kattintassal kell
+  // tovabblepni, majd a teljes oldal ujratoltodik (window.location.reload())
+  // -- ez NEM csak a cimkepernyot mutatja meg ujra, hanem a bongeszo-oldalt
+  // is teljesen ujrainditja, igy minden JS-allapot (zone1Defeated,
+  // zone2Spared, stb.) es a lejatszott zene is friss/nullazott lesz,
+  // ugyanugy, mintha a jatekos manualisan frissitette volna az oldalt.
+  async function playZone4Finale(zone, apaXFrac, apaYFrac) {
+    Overworld.pause();
+
+    await Battle.showSequence(zone.intro, overworldDialogueTarget, overworldDialogueBox);
+
+    Overworld.addSprite("zone4-apa", { src: zone.enemy.sprite, xFrac: apaXFrac, yFrac: apaYFrac, w: 60 });
+    await Battle.showSequence(zone.enemy.introLines, overworldDialogueTarget, overworldDialogueBox);
+
+    overworldDialogueBox.classList.add("hidden");
+    await Battle.showCenterImage(overworldImageFlash, zone.fightImage.src, zone.fightImage.duration, zone.fightImage.sound);
+    await Battle.showStyleTag(overworldStyleTag, zone.styleTag, zone.styleTagDuration);
+
+    await Battle.showSequence(zone.victoryLines, overworldDialogueTarget, overworldDialogueBox);
+    overworldDialogueBox.classList.add("hidden");
+    Overworld.removeSprite("zone4-apa");
+
+    // A felhasznalo kerese szerint a "System Reset..." felirat
+    // megjelenesevel egy idoben (kb. 2mp alatt) elhalkul a hatterzene.
+    await new Promise((resolve) =>
+      Battle.playFinalCinematic(overworldEndingDom, zone.finalCinematic, resolve, () => fadeOutMusic(roomMusic, 2000))
+    );
+
+    window.location.reload();
+  }
+
   function buildCorridorScene(spawnAfterDoorIndex) {
     const hotspots = [];
     const decorations = [];
@@ -673,6 +802,27 @@ window.addEventListener("DOMContentLoaded", async () => {
         doorHotspot.onInteract = () => {
           showOverworldDialogue(BUBBLE_REUNION_LINES);
         };
+      } else if (i === ZONES.length - 1) {
+        // A zaro (Minecraft-temaju) zona MAR NEM a harc-kepernyore visz --
+        // a felhasznalo kerese szerint az egesz zaro-jelenet a folyoson
+        // ("az alaphelyen") jatszodik le, ld. playZone4Finale(). Nincs allo
+        // ellenfel-sprite a hotspoton (Apa "dramai belepoje" dinamikusan
+        // bukkan fel a jelenet kozepen, nem all mar ott a jatekos
+        // belepese elott). Az id szandekosan "final" (nem a generikus
+        // `door${i}`), hogy a felhasznalo kerese szerint egyedi es
+        // konnyen visszakereshetó legyen a kodban. Az xFrac/yFrac/radius
+        // is szandekosan sajat (KULON a fenti alapertelmezett
+        // doorFrac+0.005/0.62/35-tol, amit kulonben az 1. zona ajtaja is
+        // hasznalna) -- igy szabadon hangolhato anelkul, hogy barmelyik
+        // masik zona ajtajat erintene.
+        doorHotspot.xFrac = doorFrac - 0.03;
+        doorHotspot.yFrac = 0.82;
+        doorHotspot.radius = 55;
+        doorHotspot.id = "final";
+        doorHotspot.onInteract = () => {
+          Overworld.pause();
+          playZone4Finale(zone, doorHotspot.xFrac, doorHotspot.yFrac);
+        };
       } else {
         doorHotspot.sprite = { src: zone.enemy.sprite, w: 48 };
         doorHotspot.onInteract = () => {
@@ -699,16 +849,29 @@ window.addEventListener("DOMContentLoaded", async () => {
       // illeszkedik a folyoso tagasabb, "kifele vezeto" hangulatahoz.
       playerScale: 0.75,
       walkBounds: [
-      { xMin: 0.001, xMax: 0.259, yMin: 0.7, yMax: 0.88 },
+      // A lenti fraction-ertekek a regi, 4-zonas (3. zona meg benne volt)
+      // vilaghoz voltak szemre hangolva, ABSZOLUT pixel-pozicioként ertve
+      // (fraction * regi 4526px-es osszszelesseg). A 3. zona kivetelekor a
+      // vilag 1100px-szel rovidult, ES a teljes-szelesseg (a nevezo) is
+      // megvaltozott -- ezert nem lehetett egyszeruen megtartani a regi
+      // tortszamokat: mindegyiket ujraszamoltuk (regi_fraction*4526px,
+      // majd -- ha a 3. zona utani, azaz a regi 4. zona teruleten volt --
+      // -1100px a kiesett szegmensert, vegul /3426px, az uj osszszelesseg)
+      // ugy, hogy az 1-2. zonan beluli falak/oszlopok UGYANOTT maradjanak
+      // (azok nem valtoztak), a 4. (immar utolso) zona pedig kozvetlenul a
+      // 2. zona utan kovetkezzen. Ha a zona-hatterek szelessege megint
+      // valtozik, ezt ujra kell hangolni.
+      { xMin: 0.001, xMax: 0.342, yMin: 0.7, yMax: 0.88 },
       // Keskeny "felvezeto sav" az 1. zona ajtajahoz (yFrac 0.62), ami a
       // fenti fo sav (yMin 0.7) felett van -- DOOR_FRACTIONS[0]-hoz kepest
       // relativ eltolassal szamolva, hogy a zona1 ajtaja korul maradjon,
       // barhogy is alakul a tobbi zona hattereinek szelessege (ld. fent).
       { xMin: DOOR_FRACTIONS[0] - 0.002, xMax: DOOR_FRACTIONS[0] + 0.01, yMin: 0.65, yMax: 0.8 },
-      { xMin: 0.258, xMax: 0.45, yMin: 0.8, yMax: 0.88 },
-      { xMin: 0.344, xMax: 0.358, yMin: 0.65, yMax: 0.88 },
-      { xMin: 0.41, xMax: 0.435, yMin: 0.65, yMax: 0.88 },
-      { xMin: 0.44, xMax: 0.95, yMin: 0.8, yMax: 0.88 },
+      { xMin: 0.341, xMax: 0.594, yMin: 0.8, yMax: 0.88 },
+      { xMin: 0.454, xMax: 0.473, yMin: 0.65, yMax: 0.88 },
+      { xMin: 0.542, xMax: 0.575, yMin: 0.65, yMax: 0.88 },
+      { xMin: 0.581, xMax: 0.95, yMin: 0.8, yMax: 0.88 },
+      { xMin: 0.65, xMax: 0.95, yMin: 0.6, yMax: 0.85 },
       ],
       spawn: playerSpawn,
       hotspots,
@@ -1002,13 +1165,14 @@ window.addEventListener("DOMContentLoaded", async () => {
     overworldScreen.classList.add("hidden");
     gameScreen.classList.remove("hidden");
     zoneBg.src = ZONES[zoneIndex].background || "";
+    // Az enterZone()-t immar csak zone0 (1. zona, Isaac-szoba) es zone1 (2.
+    // zona, Cirkusz) hivja -- a zaro (Minecraft-temaju, immar utolso) zona
+    // mar nem megy at a Battle.start()-on/harc-kepernyon, ld. playZone4Finale()
+    // a buildCorridorScene() dontesenel. Emiatt itt nincs tobbe "utolso zona
+    // -> vég-képernyő" elagazas sem -- ha valaha egy jovobeli, tenylegesen
+    // Battle.start()-tal zaro utolso zona kellene, ezt az agat vissza kell
+    // tenni (ld. git-elozmeny).
     Battle.start(ZONES[zoneIndex], (result) => {
-      if (zoneIndex + 1 >= ZONES.length) {
-        Engine.playSound("victory");
-        gameScreen.classList.add("hidden");
-        endScreen.classList.remove("hidden");
-        return;
-      }
       gameScreen.classList.add("hidden");
       // A zona0 (1. zona) harca az Isaac-szobabol indult, sajat zeneevel --
       // gyozelem utan altalaban a folyosora terunk vissza, nem oda, ugyhogy

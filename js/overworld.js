@@ -80,6 +80,20 @@
  *     spawnFollower()/updateFollower(). Csak egyszerre egy follower tamogatott jelenetenkent;
  *     ha a scene-nek nincs `follower` mezoje, nincs kovető (pl. a folyoso).
  *
+ * Overworld.addSprite(id, {src, xFrac, yFrac, w, h?, noFloat?}) /
+ * Overworld.updateSprite(id, src) / Overworld.removeSprite(id) -- altalanos,
+ * DINAMIKUS (a scene-config-tol fuggetlen, JELENET KOZBEN barmikor hivhato)
+ * sprite-kezeles egy egyszeru id-kulcsu terkeppel. Erre akkor van szukseg,
+ * ha egy NPC/szereplo nem a jelenet BETOLTESEKOR mar ott all (mint a
+ * hotspot.sprite/decorations), hanem egy esemeny/dialogus kozepén "bukkan
+ * fel" -- pl. Apa dramai belepoje a zaro (Minecraft-temaju) zona
+ * folyoso-jelenetében. Ugyanazt a `.overworld-npc` CSS-osztalyt hasznalja
+ * (lebego `npcFloat`-animacio, `object-fit:contain`), mint a hotspot-
+ * sprite-ok, hacsak `noFloat` nincs true-ra allitva. `updateSprite()` csak a
+ * kepet cserelji (poziciot nem), `removeSprite()` eltunteti. Mindegyik
+ * NO-OP-kent viselkedik, ha a jelenet kozben scene-valtas (start()) tortent
+ * -- a `dynamicSprites` terkep minden start()-nal kiurul.
+ *
  * Nem nyul a battle.js/engine.js-hez.
  */
 // Fejlesztoi debug-kapcsolok: allitsd true-ra barmelyiket, hogy a
@@ -108,6 +122,10 @@ const Overworld = (() => {
   let debugHotspotEls = [];
   let activeHotspot = null;
   let triggeredAutoIds = new Set();
+  // Dinamikusan (jelenet kozben) hozzaadott sprite-ok id -> <img> terkepe --
+  // ld. addSprite()/updateSprite()/removeSprite() a fajl elejen levo
+  // dokumentacioban.
+  let dynamicSprites = {};
 
   // Kovető NPC (pl. Feki) allapota -- ld. a fajl elejen a "scene.follower"
   // dokumentaciot es a spawnFollower()/updateFollower() fuggvenyeket.
@@ -259,6 +277,36 @@ const Overworld = (() => {
       dom.npcLayer.appendChild(img);
       npcEls.push(img);
     });
+  }
+
+  // Ld. a fajl elejen levo dokumentaciot. `opts.w` kotelezo, `opts.h`
+  // hianyaban negyzetes (mint a hotspot-sprite-oknal/dekoracioknal).
+  function addSprite(id, opts) {
+    removeSprite(id);
+    const w = opts.w;
+    const h = opts.h || opts.w;
+    const img = document.createElement("img");
+    img.className = "overworld-npc";
+    img.style.width = w + "px";
+    img.style.height = h + "px";
+    img.style.left = opts.xFrac * worldW - w / 2 + "px";
+    img.style.top = opts.yFrac * stageH - h + "px";
+    img.src = opts.src;
+    if (opts.noFloat) img.style.animation = "none";
+    dom.npcLayer.appendChild(img);
+    dynamicSprites[id] = img;
+    return img;
+  }
+
+  function updateSprite(id, src) {
+    if (dynamicSprites[id]) dynamicSprites[id].src = src;
+  }
+
+  function removeSprite(id) {
+    if (dynamicSprites[id]) {
+      dynamicSprites[id].remove();
+      delete dynamicSprites[id];
+    }
   }
 
   function spawnDecorations() {
@@ -607,6 +655,11 @@ const Overworld = (() => {
     paused = false;
     activeHotspot = null;
     triggeredAutoIds = new Set();
+    // Az elozo jelenetbol dinamikusan hozzaadott sprite-ok (ld. addSprite())
+    // nem oroklodhetnek at egy uj scene-be -- eltavolitjuk a DOM-elemeiket,
+    // majd kiuritjuk a terkepet.
+    Object.keys(dynamicSprites).forEach((id) => dynamicSprites[id].remove());
+    dynamicSprites = {};
     facing = "down";
     walkFrame = 0;
     walkTimer = 0;
@@ -653,11 +706,21 @@ const Overworld = (() => {
     );
   }
 
+  // A `paused` MAR NEM allitja meg magat az update()-et (ld. korabban:
+  // `if (!paused) update(dt);`) -- az csak azt akadalyozta meg, hogy a
+  // jatekos mozogjon (amit a `keys` ures allapota amugy is garantal, ld.
+  // pause()/handleKeydown()), de emiatt a lepes-animacio (walkFrame) is
+  // fagyva maradt, barmelyik kockan allt eppen a pause() pillanataban --
+  // felhasznaloi visszajelzes szerint ez furan nezett ki (a karakter
+  // "lepes kozben" allt meg). Update() mostantol MINDIG lefut, igy a
+  // mozgas-animacio szepen visszaall az allo kockara (ld. update() `moving`
+  // agat) -- csak a checkHotspots() marad `!paused`-hoz kotve (ld. ott),
+  // hogy cutscene alatt ne ugorjon fel prompt/ne induljon ujra auto-hotspot.
   function loop(t) {
     if (!active) return;
     const dt = Math.min(0.05, (t - lastTime) / 1000);
     lastTime = t;
-    if (!paused) update(dt);
+    update(dt);
     requestAnimationFrame(loop);
   }
 
@@ -705,7 +768,12 @@ const Overworld = (() => {
     if (isInsideWalkBounds(pos.x, newY)) pos.y = newY;
 
     updatePositions();
-    checkHotspots();
+    // A hotspot-figyeles (prompt-felugras, auto-hotspot-inditas) tovabbra is
+    // csak akkor fut, ha nincs szuneteltetve -- kulonben egy cutscene alatt
+    // (pl. Overworld.pause() a playZone4Finale() elejen) veletlenul ujra
+    // felugorhatna egy prompt, vagy (ha a jatekos eppen egy meg nem
+    // aktivalt auto-hotspot korul all) ujra lefuthatna annak onInteract()-je.
+    if (!paused) checkHotspots();
     // A kovető "jatekos-idle" eszleleset a TENYLEGES pozicio-valtozasra
     // alapozzuk, nem a nyers billentyu-bemenetre (`moving`) -- kulonben ha
     // a jatekos egy falnak/hataroknak tartva nyomva tartja az iranygombot,
@@ -860,5 +928,5 @@ const Overworld = (() => {
     setTimeout(cb, 0);
   }
 
-  return { init, start, pause, resume, showCornerPopup, dismissCornerPopup, removeFollower };
+  return { init, start, pause, resume, showCornerPopup, dismissCornerPopup, removeFollower, addSprite, updateSprite, removeSprite };
 })();
