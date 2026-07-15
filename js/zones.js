@@ -103,7 +103,7 @@ const ZONE_1 = {
           enemyFieldAfter: "assets/sprites/enemy_konnyleny_placeholder-dying-01.png",
           reactionLines: [
             { speaker: "TE", text: "Tovább ütöd." },
-            { speaker: "KÖNNY-LÉNY", text: "*Az élete gyorsan fogy. A támadásai egyre kaotikusabbak.*" },
+            { speaker: "KÖNNY-LÉNY", text: "*Az élete gyorsan fogy. A támadásai egyre kaotikusabbak." },
           ],
         },
         {
@@ -142,7 +142,7 @@ const ZONE_1 = {
           enemyFieldAfter: "assets/sprites/enemy_konnyleny_placeholder-dying-02.png",
           reactionLines: [
             { speaker: "TE", text: "Utoljára nekimész." },
-            { speaker: "KÖNNY-LÉNY", text: "*Majdnem vereséget szenved -- de az utolsó erejével még egyszer visszatámad.*" },
+            { speaker: "KÖNNY-LÉNY", text: "*Majdnem vereséget szenved, de az utolsó erejével még egyszer visszatámad.*" },
           ],
         },
         {
@@ -177,7 +177,7 @@ const ZONE_1 = {
         { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder.png", text: "EGY VIRTUÁLIS KIEGÉSZÍTŐ. FELSZERELHETED VÉDEKEZÉS GYANÁNT. HA MÁR MINDENKI EZT CSINÁLJA." },
       ],
       failLines: [
-        { speaker: "KÖNNY-LÉNY", text: "*Még nem áll készen erre.*" },
+        { speaker: "KÖNNY-LÉNY", text: "*Még nem áll készen erre." },
       ],
     },
     fight: {
@@ -246,8 +246,8 @@ const ZONE_2 = {
     talkSprite: "assets/sprites/enemy_bubble_placeholder_talk.png",
     introLines: [
       { speaker: "BUBBLE", text: "Ó, ÜDV! MICSODA CSODÁS LÁTOGATÓK! DE HA KIPUKKANSZ..." },
-      { speaker: "BUBBLE", text: "TUDJÁTOK, HOGY A LÉGGÖMBÖK SZERETNEK SZOROSAN ÖLELNI? MERT ÉN IGEN!" },
-      { speaker: "BUBBLE", text: "AKKOR IS CSAK A KONFETTI MARAD, AMI MEG A TAKARÍTÁS! SZÓVAL, MARADJATOK EGY DARABBAN, VAGY... NEM!" },
+      { speaker: "BUBBLE", text: "TUDJÁTOK, HOGY A BUBORÉKOK SZERETNEK SZOROSAN ÖLELNI? MERT ÉN IGEN!" },
+      { speaker: "BUBBLE", text: "AKKOR IS CSAK A KONFETTI MARAD, AMI MEG A TAKARÍTÁS! SZÓVAL, MARADJATOK EGY DARABBAN, VAGY... NE!" },
     ],
   },
   rounds: [
@@ -283,7 +283,7 @@ const ZONE_2 = {
           id: "koszonj_vissza",
           label: "ACT: KÖSZÖNJ VISSZA TÚL LELKESEN",
           mercy: 50,
-          reactionLines: [{ speaker: "TE", text: "„HÉ! BUBBLE! NAGYON ÖRÜLÜNK, HOGY ITT LEHETÜNK!”" }],
+          reactionLines: [{ speaker: "TE", text: "HÉ! BUBBLE! NAGYON ÖRÜLÜNK, HOGY ITT LEHETÜNK!" }],
         },
         {
           type: "act",

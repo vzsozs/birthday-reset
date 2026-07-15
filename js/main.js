@@ -293,7 +293,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         yFrac: 0.75,
         radius: 55,
         prompt: "▶ Enter: megnézed a polcot",
-        onInteract: () => flavorPopup(null, "A polcon még ott lapul a régi Lego-doboz."),
+        onInteract: () => flavorPopup(null, "A polcon még ott lapulnak a régi társasjátékok."),
       },
       {
         id: "tv",
@@ -301,7 +301,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         yFrac: 0.5,
         radius: 50,
         prompt: "▶ Enter: megnézed a tévét",
-        onInteract: () => flavorPopup(null, "A tévé már vagy tíz éve ugyanazt a port gyűjti."),
+        onInteract: () => flavorPopup(null, "A tévé már vagy 3 éve ugyanazt a port gyűjti."),
       },
     ],
     decorations: [
@@ -734,7 +734,7 @@ window.addEventListener("DOMContentLoaded", async () => {
           id: `minecraft${i}`,
           // Ez az INTERAKCIOS terulet kozeppontja (radius, prompt-felugras)
           // -- nem feltetlenul ugyanott van, ahol Kecske ALL, ld. lejjebb.
-          xFrac: layout ? layout.minecraftXFrac : doorFrac - 0.095,
+          xFrac: layout ? layout.minecraftXFrac : doorFrac - 0.13,
           yFrac: layout ? layout.minecraftYFrac : 0.65,
           radius: 45,
           prompt: layout ? layout.minecraftPrompt : "* Minecraft... mi más :)",
