@@ -869,13 +869,18 @@ const Overworld = (() => {
   let cornerTypeTimer = null;
   let cornerPages = [];
   let cornerPageIndex = 0;
+  // Az aktualis sarok-buborek beszeloje (ld. showCornerPopup() opts.speaker)
+  // -- csak a gepeles-hang kivalasztasahoz kell, ld. typeCornerText().
+  let cornerSpeaker = null;
 
   // Gepelos szoveg a sarok-buborekban -- Space/Enter/kattintas eloszor
   // kiirja a teljes (aktualis oldalnyi) szoveget (ha meg gepel), majd
   // (ujabb Space/Enter/kattintasra) tovabblapoz a kovetkezo oldalra, ha
   // van, vagy -- az utolso oldalon -- bezarja a buborekot. Nincs
   // automatikus, idozitett bezaras. Minden ki nem hagyott karakternel
-  // lejatssza a gepeles-hangot (ld. Engine.loadSound("type", ...)).
+  // lejatssza a gepeles-hangot -- a felhasznalo kerese szerint
+  // karakterenkent kulon hangot, ld. `RECURRING_SPEAKER_TYPE_SOUNDS`
+  // (js/zones.js) es `cornerSpeaker` (showCornerPopup() opts.speaker-je).
   function typeCornerText() {
     const text = cornerPages[cornerPageIndex];
     dom.cornerText.textContent = "";
@@ -884,6 +889,8 @@ const Overworld = (() => {
     cornerReadyToClose = false;
     let i = 0;
     const speed = 24;
+    const sound =
+      (typeof RECURRING_SPEAKER_TYPE_SOUNDS !== "undefined" && RECURRING_SPEAKER_TYPE_SOUNDS[cornerSpeaker]) || "type";
     function finishPage() {
       cornerTyping = false;
       cornerReadyToClose = true;
@@ -896,7 +903,7 @@ const Overworld = (() => {
       }
       if (i < text.length) {
         dom.cornerText.textContent += text[i];
-        if (text[i] !== " ") Engine.playSound("type");
+        if (text[i] !== " ") Engine.playSound(sound);
         i++;
         cornerTypeTimer = setTimeout(step, speed);
       } else {
@@ -910,10 +917,12 @@ const Overworld = (() => {
   // szovegeknel igy Enter/szokoz/kattintassal lapozhato a buborek egyben-
   // kiirasa helyett (ld. tovabbi hasznalatot a js/zones.js companionChat
   // bejegyzeseiben es a js/main.js corridorFlavor()/flavorPopup()-jaban).
-  // opts = { boxWidth?, portraitSize? } (mindketto px) -- pontonkent/
-  // szovegenkent felulirja a doboz/portré CSS-alapertelmezett meretet
-  // (300px / 40px), pl. egy szokasosnal hosszabb sornal. Hianyukban (vagy
-  // ha nincs opts) a CSS-alapertelmezett ervenyesul.
+  // opts = { boxWidth?, portraitSize?, speaker? } -- boxWidth/portraitSize
+  // (mindketto px) pontonkent/szovegenkent felulirja a doboz/portré
+  // CSS-alapertelmezett meretet (300px / 40px), pl. egy szokasosnal
+  // hosszabb sornal. `speaker` (opcionalis) a gepeles-hangot valasztja ki
+  // (ld. typeCornerText()) -- hianyukban (vagy ha nincs opts) a
+  // CSS-alapertelmezett meret / az alapertelmezett "type" hang ervenyesul.
   function showCornerPopup(portraitSrc, text, onDone, variant, opts) {
     if (cornerTypeTimer) clearTimeout(cornerTypeTimer);
     if (portraitSrc) {
@@ -928,6 +937,7 @@ const Overworld = (() => {
     const portraitSize = opts && opts.portraitSize;
     dom.cornerPortrait.style.width = portraitSize ? portraitSize + "px" : "";
     dom.cornerPortrait.style.height = portraitSize ? portraitSize + "px" : "";
+    cornerSpeaker = (opts && opts.speaker) || null;
     cornerDismiss = onDone;
     cornerPages = Array.isArray(text) ? text : [text];
     cornerPageIndex = 0;

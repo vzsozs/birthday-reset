@@ -20,6 +20,25 @@ const RECURRING_SPEAKER_PORTRAITS = {
   ASGORE: "assets/sprites/asgore_placeholder_talk.png",
 };
 
+// A felhasznalo kerese szerint karakterenkent kulon gepeles-hang szol --
+// a `js/battle.js` `typeText()` ES a `js/overworld.js` `typeCornerText()`
+// (a sarok-buborek sajat, fuggetlen gepelos logikaja) is ezt a KOZOS
+// (zones.js-ben elhelyezett, mindket modul szamara elerheto) terkepet
+// hasznalja, `speaker`-kulcs szerint. Ha egy `speaker` nincs itt felsorolva
+// (pl. "TE", "APA", "APA2"), az Engine-alapertelmezett "type" hangja szol
+// (`assets/Sounds/snd_txtasg.wav`, ld. js/main.js) -- ez szandekos, a
+// felhasznalo kerese szerint ("Karakter: marad a mostani", "Apa1-2:
+// snd_txtasg.wav") ezek a "mostani" hangot kapjak, nem ujat.
+const RECURRING_SPEAKER_TYPE_SOUNDS = {
+  KECSKE: "type_kecske",
+  QUEEN: "type_queen",
+  TENNA: "type_tenna",
+  "KÖNNY-LÉNY": "type_konnyleny",
+  BUBBLE: "type_bubble",
+  CAINE: "type_caine",
+  JAX: "type_jax",
+};
+
 const ZONE_1 = {
   id: "zone1_siras",
   background: "assets/sprites/zone1_bg_placeholder.png",
@@ -294,7 +313,7 @@ const ZONE_2 = {
           type: "act",
           id: "szurd_meg",
           label: "ACT: SZÚRD MEG EGY TŰVEL",
-          reactionLines: [{ speaker: "TE", text: "Elővesz egy tűt, és megpiszkálod vele Bubble-t." }],
+          reactionLines: [{ speaker: "TE", text: "Előveszel egy tűt, és megpiszkálod vele Bubble-t." }],
         },
       ],
     },

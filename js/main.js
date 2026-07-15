@@ -147,7 +147,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   Engine.loadSound("victory", "assets/sfx/victory.wav");
   // Gepeles-hang -- egyelore mindenkinel ugyanaz, kesobb karakterenkent
   // valtoztathato (pl. line.typingSound tamogatasaval, ha szukseg lesz ra).
-  Engine.loadSound("type", "assets/Sounds/snd_txtasg.wav");
+  Engine.loadSound("type", "assets/Sounds/snd_txtsans.wav");
   Engine.loadSound("zoneStart", "assets/Sounds/snd_item.wav");
   Engine.loadSound("glitchZap", "assets/Sounds/snd_error.wav");
   Engine.loadSound("jokerLaugh", "assets/Sounds/snd_joker_laugh1.wav");
@@ -166,6 +166,18 @@ window.addEventListener("DOMContentLoaded", async () => {
   // felvillanasahoz (ZONE_4.fightImage) -- ld. js/zones.js.
   Engine.loadSound("vaporized", "assets/Sounds/snd_vaporized.wav");
   Engine.loadSound("ultraswing", "assets/Sounds/snd_ultraswing.wav");
+  // Karakterenkent kulon gepeles-hang -- ld. js/zones.js
+  // RECURRING_SPEAKER_TYPE_SOUNDS es a hasznalatat js/battle.js
+  // typeText()-jeben / js/overworld.js typeCornerText()-jeben. Az itt fel
+  // nem sorolt beszelok ("TE", "APA", "APA2") tovabbra is a mar betoltott
+  // "type" hangot hasznaljak (snd_txtasg.wav, ld. lejjebb).
+  Engine.loadSound("type_jax", "assets/Sounds/snd_txtral.wav");
+  Engine.loadSound("type_caine", "assets/Sounds/snd_txtsus.wav");
+  Engine.loadSound("type_bubble", "assets/Sounds/snd_txtund.wav");
+  Engine.loadSound("type_kecske", "assets/Sounds/snd_txtnoe.wav");
+  Engine.loadSound("type_queen", "assets/Sounds/snd_txtber.wav");
+  Engine.loadSound("type_tenna", "assets/Sounds/snd_txtlan.wav");
+  Engine.loadSound("type_konnyleny", "assets/Sounds/snd_text.wav");
 
   // --- Szoba-jelenet -------------------------------------------------
 
@@ -184,12 +196,15 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   // Tobb, valtakozo beszelos (portrait-onkent kulon) sor egymas utan, egy
   // Overworld.showCornerPopup()-lancolassal -- ld. flavorPopup() az egyetlen-
-  // beszelos valtozatert. Minden `lines[i]` egy { portrait, text, sound? }
-  // objektum (a `portrait` lehet null, ha "TE" beszelsz -- akkor nincs kep,
-  // mint a harci dialogus TE-sorainal). `line.sound` (opcionalis) egy
-  // Engine-hangnevet jatszik le a sor felugrasa elott -- ld. js/battle.js
+  // beszelos valtozatert. Minden `lines[i]` egy { portrait, text, sound?,
+  // speaker? } objektum (a `portrait` lehet null, ha "TE" beszelsz -- akkor
+  // nincs kep, mint a harci dialogus TE-sorainal). `line.sound` (opcionalis)
+  // egy Engine-hangnevet jatszik le a sor felugrasa elott -- ld. js/battle.js
   // showSequence() `line.sound`-jat, ugyanaz a mintazat, csak itt az
-  // overworld-dialogushoz. `onDone` a teljes sorozat vegen fut le.
+  // overworld-dialogushoz. `line.speaker` (opcionalis) a karakterenkenti
+  // gepeles-hangot valasztja ki (ld. js/overworld.js showCornerPopup()
+  // opts.speaker-jet es js/zones.js RECURRING_SPEAKER_TYPE_SOUNDS-ot).
+  // `onDone` a teljes sorozat vegen fut le.
   function showOverworldDialogue(lines, onDone) {
     Overworld.pause();
     Engine.playSound("flavorText");
@@ -203,7 +218,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       const line = lines[i];
       i++;
       if (line.sound) Engine.playSound(line.sound);
-      Overworld.showCornerPopup(line.portrait, line.text, next);
+      Overworld.showCornerPopup(line.portrait, line.text, next, undefined, { speaker: line.speaker });
     }
     next();
   }
@@ -266,7 +281,8 @@ window.addEventListener("DOMContentLoaded", async () => {
           highlightChoice();
           choiceBox.classList.remove("hidden");
         },
-        "room"
+        "room",
+        { speaker: "TENNA" }
       );
     } else {
       Overworld.showCornerPopup(
@@ -280,7 +296,8 @@ window.addEventListener("DOMContentLoaded", async () => {
           choiceBox.classList.remove("hidden");
           Engine.playSound("jokerLaugh");
         },
-        "room"
+        "room",
+        { speaker: "QUEEN" }
       );
     }
   });
@@ -414,6 +431,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   // beszel, a szoveg elejen egy rovid attribúcio jelzi, ki szolal meg.
   const CAINE_DIALOGUE_LINES = [
     {
+      speaker: "CAINE",
       portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
       text: [
         "Hölgyeim és uraim, illetve te: ISTEN HOZOTT A DIGITÁLIS CIRKUSZBAN!",
@@ -423,6 +441,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     },
     { portrait: null, text: "Szia Caine, ugye ki tudunk jutni Fekivel ebből a világból? Nekem szeptembertől suli." },
     {
+      speaker: "CAINE",
       portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
       text: "Suli? Suli?! Ó, te édes! Itt a Digitális Cirkuszban a tanulásnak is megvan a maga... kreatív módja!",
     },
@@ -434,6 +453,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       ],
     },
     {
+      speaker: "CAINE",
       portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
       text: [
         "Ne aggódj kölyök a suli miatt!",
@@ -443,6 +463,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       ],
     },
     {
+      speaker: "JAX",
       portrait: "assets/sprites/enemy_jax_placeholder_talk.png",
       text: [
         "* Valahonnan a háttérből: Én passzolom. Inkább nézem, ahogy az új gyerek megpróbálja...",
@@ -460,6 +481,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   // CAINE_GIFT_LOST_LINE), nem indul ujra a visszaszamlalas.
   const CAINE_GIFT_DIALOGUE_LINES = [
     {
+      speaker: "CAINE",
       portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
       text: [
         "Ó, hallom ez egy különleges 13-as szám!",
@@ -469,15 +491,17 @@ window.addEventListener("DOMContentLoaded", async () => {
     },
     { portrait: null, text: "Köszi, Caine! Remélem, az ajándék nem egy újabb krízis." },
     {
+      speaker: "CAINE",
       portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
       text: [
         "Ne légy már ilyen low hangulatban!",
         "Eldugtam neked egy ajándékot a szobádban, egy nagy zöld dobozban. Keresd meg!",
-        "De vigyázz: ha rossz helyre nyúlsz, a 13-as szám törvénye szerint...", 
+        "De vigyázz: ha rossz helyre nyúlsz, a 13-as szám törvénye szerint...",
         "...a szobád textúrája átvált egy végtelen, hústorony-labirintusba!",
       ],
     },
     {
+      speaker: "JAX",
       portrait: "assets/sprites/enemy_jax_placeholder_talk.png",
       text: [
         "*Jax: Ne is figyeld, csak próbálja beállítani a nehézséget.",
@@ -485,6 +509,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       ],
     },
     {
+      speaker: "CAINE",
       portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
       text: [
         "TIK-TAK, KÖLYÖK! Visszaszámlálás elindult, és ha nem találod meg fél \"stack\" másodperc alatt...",
@@ -495,10 +520,12 @@ window.addEventListener("DOMContentLoaded", async () => {
     },
   ];
   const CAINE_GIFT_WON_LINE = {
+    speaker: "CAINE",
     portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
     text: "Az ajándékod már megvan, kölyök. Mit akarsz még tőlem?",
   };
   const CAINE_GIFT_LOST_LINE = {
+    speaker: "CAINE",
     portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
     text: "Feki most már az enyém. Ne is próbáld visszaszerezni!",
   };
@@ -507,6 +534,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   // bevezetot -- a CAINE_GIFT_WON_LINE/CAINE_GIFT_LOST_LINE parja, ld.
   // handleCaineHotspot().
   const CAINE_INTRO_REPEAT_LINE = {
+    speaker: "CAINE",
     portrait: "assets/sprites/enemy_bohoc_placeholder_talk.png",
     text: "Nahh mivan, meguntad a sulit?",
   };
@@ -526,13 +554,13 @@ window.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     if (hotspotId === caineIntroHotspotId) {
-      corridorFlavor(CAINE_INTRO_REPEAT_LINE.portrait, CAINE_INTRO_REPEAT_LINE.text);
+      corridorFlavor(CAINE_INTRO_REPEAT_LINE.portrait, CAINE_INTRO_REPEAT_LINE.text, { speaker: "CAINE" });
       return;
     }
     if (zone2GiftOutcome === "won") {
-      corridorFlavor(CAINE_GIFT_WON_LINE.portrait, CAINE_GIFT_WON_LINE.text);
+      corridorFlavor(CAINE_GIFT_WON_LINE.portrait, CAINE_GIFT_WON_LINE.text, { speaker: "CAINE" });
     } else if (zone2GiftOutcome === "lost") {
-      corridorFlavor(CAINE_GIFT_LOST_LINE.portrait, CAINE_GIFT_LOST_LINE.text);
+      corridorFlavor(CAINE_GIFT_LOST_LINE.portrait, CAINE_GIFT_LOST_LINE.text, { speaker: "CAINE" });
     } else {
       showOverworldDialogue(CAINE_GIFT_DIALOGUE_LINES, startGiftCountdown);
     }
@@ -583,13 +611,22 @@ window.addEventListener("DOMContentLoaded", async () => {
       } else {
         Engine.playSound("awkward");
         fekiGone = true;
-        // 1000ms kesleltetessel + a szoba->folyoso atvezetesnel mar
-        // hasznalt glitch-animacioval tunik el, hogy a felhasznalo kerese
-        // szerint jobban eszreveheto legyen, ne a popup-szoveg mellett
-        // eszrevetlenul tunjon el -- ld. Overworld.removeFollowerWithEffect().
-        Overworld.removeFollowerWithEffect(1000);
-        Overworld.showCornerPopup("assets/sprites/enemy_bohoc_placeholder_talk.png", "GAME OVER, KÖLYÖK: mostantól az én digitális háziállatom Feki.", () =>
-          Overworld.resume()
+        // A felhasznalo kerese szerint Feki csak AKKOR tunjen el (a
+        // szoba->folyoso atvezetesnel mar hasznalt glitch-animacioval,
+        // ld. Overworld.removeFollowerWithEffect()), amikor a "GAME OVER..."
+        // uzenetet mar elolvasta es Enterrel/kattintassal bezarta a
+        // jatekos -- nem korabban, egyideju timerrel (az elozo valtozat
+        // ezt probalta, de a popup esetleg eltakarta/elvonta a figyelmet
+        // Feki poziciojarol, mielott a glitch lezajlott volna).
+        Overworld.showCornerPopup(
+          "assets/sprites/enemy_bohoc_placeholder_talk.png",
+          "GAME OVER, KÖLYÖK: mostantól az én digitális háziállatom Feki.",
+          () => {
+            Overworld.removeFollowerWithEffect(0);
+            Overworld.resume();
+          },
+          undefined,
+          { speaker: "CAINE" }
         );
       }
     }
@@ -671,10 +708,19 @@ window.addEventListener("DOMContentLoaded", async () => {
     // ebbe a dobozba `object-fit:contain`-nel (ld. .overworld-npc), a
     // `object-position:bottom` pedig -- a felhasznalo altal mar
     // also-kozeppontra igazitott kepekkel egyutt -- biztositja, hogy a
-    // kockak kozott ne "ugorjon" a szereplo. Korabban 60x60 volt (a regi,
-    // kisebb asgore-placeholder kephez hangolva) -- ha ez meg mindig nem
-    // stimmel meretben, itt kell allitani.
-    Overworld.addSprite("zone4-apa", { src: zone.enemy.sprite, xFrac: apaXFrac, yFrac: apaYFrac, w: 70, h: 80 });
+    // kockak kozott ne "ugorjon" a szereplo. A felhasznalo kerese szerint
+    // 30%-kal nagyobb, mint a korabbi 70x80 (91x104), es `noFloat: true`,
+    // hogy NE lebegjen fel-le (ld. .overworld-npc npcFloat-animaciojat) --
+    // Apa "dramai belepoje" alljon stabilan, ne bobbing-oljon, mint egy
+    // sima NPC.
+    Overworld.addSprite("zone4-apa", {
+      src: zone.enemy.sprite,
+      xFrac: apaXFrac,
+      yFrac: apaYFrac,
+      w: 91,
+      h: 104,
+      noFloat: true,
+    });
     await Battle.showSequence(zone.enemy.introLines, overworldDialogueTarget, overworldDialogueBox);
 
     overworldDialogueBox.classList.add("hidden");
@@ -753,6 +799,7 @@ window.addEventListener("DOMContentLoaded", async () => {
             corridorFlavor("assets/sprites/kecske_placeholder_talk.png", chat[0].text, {
               boxWidth: chat[0].boxWidth,
               portraitSize: chat[0].portraitSize,
+              speaker: "KECSKE",
             });
         }
         hotspots.push(companionHotspot);
@@ -828,6 +875,19 @@ window.addEventListener("DOMContentLoaded", async () => {
         doorHotspot.sprite = { src: zone.enemy.sprite, w: 48 };
         doorHotspot.onInteract = () => {
           showOverworldDialogue(BUBBLE_REUNION_LINES);
+        };
+      } else if (i === 1) {
+        // A 2. zona (Cirkusz, Bubble) ajtaja -- meg fegyvertelen/nem
+        // spared allapotban -- ugyanugy zenet valt, mint az 1. zona
+        // Isaac-szoba-ajtaja (ld. fent), csak roomMusic->bubbleMusic
+        // iranyban. Az enterZone() callback-je valtja vissza a harc utan.
+        doorHotspot.sprite = { src: zone.enemy.sprite, w: 48 };
+        doorHotspot.onInteract = () => {
+          Overworld.pause();
+          roomMusic.pause();
+          bubbleMusic.currentTime = 0;
+          bubbleMusic.play().catch(() => {});
+          enterZoneWithFade(i);
         };
       } else if (i === ZONES.length - 1) {
         // A zaro (Minecraft-temaju) zona MAR NEM a harc-kepernyore visz --
@@ -983,6 +1043,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   // ugyanugy, mint a harci dialogusban.
   const KONNYLENY_REUNION_LINES = [
     {
+      speaker: "KÖNNY-LÉNY",
       portrait: "assets/sprites/enemy_konnyleny_placeholder.png",
       text: "Te... te vagy az Bazsa. Azt hittem, a múltkori Combat után törlődtél, vagy legalábbis visszakerültem a Baseplate-re.",
     },
@@ -991,6 +1052,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       text: "Nyugi, nem jöttem harcolni. Csak... erre jártam. Emlékszem a múltkorira. Nem akartam, hogy a Debris alatt végezd.",
     },
     {
+      speaker: "KÖNNY-LÉNY",
       portrait: "assets/sprites/enemy_konnyleny_placeholder.png",
       text: [
         "Jól bántál velem. Pedig akkor a Health pontjaim a nullához konvergáltak. Senki sem állt még meg így... mindenki csak a robuxot hajszolja.",
@@ -1002,6 +1064,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       text: "Örülök, hogy segített. Tudod, néha csak egy kis jófejség kell.",
     },
     {
+      speaker: "KÖNNY-LÉNY",
       portrait: "assets/sprites/enemy_konnyleny_placeholder.png",
       text: [
         "Megyek, a Server Console jelzi, hogy lejár a limit, restartol a map. Vigyázz magadra!",
@@ -1016,11 +1079,13 @@ window.addEventListener("DOMContentLoaded", async () => {
   // konkret szoveget nem adott meg, ez helyettesito.
   const BUBBLE_REUNION_LINES = [
     {
+      speaker: "BUBBLE",
       portrait: "assets/sprites/enemy_bubble_placeholder_talk.png",
       text: "Ó, ismét ti vagytok! Nem pukkantam ki, ha esetleg aggódtatok -- csak egy kicsit lazulok itt tovább.",
     },
     { portrait: null, text: "Örülünk, hogy jól vagy, Bubble." },
     {
+      speaker: "BUBBLE",
       portrait: "assets/sprites/enemy_bubble_placeholder_talk.png",
       text: "A rendszerfrissítés még mindig fut valahol a háttérben, de engem már nem zavar annyira. Jó utat a további zónákhoz!",
     },
@@ -1107,6 +1172,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   const isaacMusic = new Audio("assets/music/Isaac_Innocence-Glitched-Binding-of-Isaac.mp3");
   isaacMusic.loop = true;
   isaacMusic.volume = 0.25;
+
+  // A 2. zona (Cirkusz, Bubble) sajat zeneje -- ugyanaz a pause/resume
+  // mintazat, mint az Isaac-szobanal (ld. fent): a 2. zona ajtajanal
+  // (buildCorridorScene() `i === 1` aga) leallitjuk a roomMusic-ot es ezt
+  // inditjuk el, a harc vegen (enterZone() callback-je) forditva.
+  const bubbleMusic = new Audio("assets/music/The-Amazing-Digital-Circus-Main-Theme.mp3");
+  bubbleMusic.loop = true;
+  bubbleMusic.volume = 0.25;
 
   startBtn.addEventListener("click", () => {
     titleScreen.classList.add("hidden");
@@ -1228,10 +1301,15 @@ window.addEventListener("DOMContentLoaded", async () => {
       // bevezeto szobaja, mint az 1. zonanak) -- a kimenetel csak azt
       // dontii el, hogy a buildCorridorScene() legkozelebbi ujraepitesekor
       // a Bubble-hotspot eltunik-e (defeated) vagy megmarad-e, mar nem
-      // auto-harccal (spared), ld. ott.
-      if (zoneIndex === 1 && result) {
-        if (result.outcome === "spare") zone2Spared = true;
-        if (result.outcome === "fight") zone2Defeated = true;
+      // auto-harccal (spared), ld. ott. A bubbleMusic-ot is itt valtjuk
+      // vissza roomMusic-ra, ugyanugy, mint az 1. zona Isaac-szobajanal.
+      if (zoneIndex === 1) {
+        bubbleMusic.pause();
+        roomMusic.play().catch(() => {});
+        if (result) {
+          if (result.outcome === "spare") zone2Spared = true;
+          if (result.outcome === "fight") zone2Defeated = true;
+        }
       }
       overworldScreen.classList.remove("hidden");
       Overworld.start(buildCorridorScene(zoneIndex));

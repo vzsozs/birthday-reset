@@ -210,7 +210,12 @@ js/battle.js          - a koraltalanos harc-folyamat: gepelos parbeszed-doboz, A
                         doboz elemei) -- ezt hasznalja a `showCornerBanter()` is, ami
                         a harc-kepernyo sajat sarok-buborekjebe (`#battle-corner-popup`)
                         ir ugyanazzal a gepelos logikaval, az Overworld-modultol
-                        fuggetlenul. A zaro (Minecraft-temaju) zona miatt
+                        fuggetlenul. A `typeText()` egy `typingSoundFor(speaker)`
+                        segedfuggvenyen keresztul a `js/zones.js`
+                        `RECURRING_SPEAKER_TYPE_SOUNDS` tablajabol valaszt
+                        karakterenkenti gepeles-hangot (alap `"type"`, ha a beszelo
+                        nincs a tablaban) -- ld. "Harci dialogus: arcvaltas idozitese
+                        es gepeles-hang" lejjebb. A zaro (Minecraft-temaju) zona miatt
                         `showSequence()` KET UJ, ALTALANOS sor-mezot ismer fel egy
                         dialogus-sor objektumon (`js/main.js`
                         `showOverworldDialogue()`-nak is van `line.sound`
@@ -285,14 +290,20 @@ js/overworld.js       - EGYETLEN, ÚJRAFELHASZNÁLHATÓ DOM-alapú szabad-mozgas
                         `Overworld.showCornerPopup(portrait, text, onDone, variant?, opts?)`
                         a kozos, ujrafelhasznalt sarok-buborek mind a szoba, mind a
                         folyoso rovid NPC-beszolasaihoz -- a szoveg gepelve jelenik
-                        meg (mindig hanggal), Enter/szokoz/kattintas eloszor kiirja a
+                        meg (mindig hanggal, karakterenkent a `js/zones.js`
+                        `RECURRING_SPEAKER_TYPE_SOUNDS` tablaja szerint, ld. "Harci
+                        dialogus: arcvaltas idozitese es gepeles-hang" lejjebb),
+                        Enter/szokoz/kattintas eloszor kiirja a
                         teljes (aktualis oldalnyi) szoveget, majd tovabblapoz a
                         kovetkezo oldalra, ha a `text` tomb (tobb "oldal"), vagy --
                         az utolso oldalon -- bezarja a buborekot. Az opcionalis
-                        `opts: {boxWidth?, portraitSize?}` soronkent felulirhatja a
-                        doboz/portré CSS-alapertelmezett meretet (300px/40px), pl.
-                        egy szokasosnal hosszabb sornal (ld. `js/zones.js` ZONE_1
-                        Kecske-soranak `boxWidth`/`portraitSize` mezoit). A
+                        `opts: {boxWidth?, portraitSize?, speaker?}` soronkent
+                        felulirhatja a doboz/portré CSS-alapertelmezett meretet
+                        (300px/40px), pl. egy szokasosnal hosszabb sornal (ld.
+                        `js/zones.js` ZONE_1 Kecske-soranak `boxWidth`/`portraitSize`
+                        mezoit), az `opts.speaker` pedig a fenti gepeles-hang
+                        kivalasztasahoz kell (a `typeCornerText()` ezt olvassa ki
+                        modul-allapotba, `cornerSpeaker` neven). A
                         `variant:"room"` a `.corner-popup-room` CSS-modositot
                         kapcsolja be (a "Speech Bubbles_rooms.png" buborek-hatter,
                         nagyobb portré jobb-alul, szoveg balra) -- ezt hasznalja a
@@ -304,12 +315,19 @@ js/overworld.js       - EGYETLEN, ÚJRAFELHASZNÁLHATÓ DOM-alapú szabad-mozgas
                         `true`) -- zold keret a jarhato teruletnek, piros kor a
                         hotspotok aktivalasi sugaranak, csak kodbol kapcsolhatoak.
                         Nem nyul a battle.js/engine.js-hez.
-                        `Overworld.removeFollower()` -- uj, altalanos fuggveny: azonnal
+                        `Overworld.removeFollower()` -- altalanos fuggveny: azonnal
                         eltunteti a kovető NPC-t (ha van) a JELENLEGI jelenetbol (nem
                         kell megvarni egy kovetkező `start()`-ot). A hivo felelossege,
                         hogy a scene-config `follower` mezojet is torolje/felulirja a
-                        kovetkező `buildX Scene()`-hivasokban, kulonben az visszahozna --
-                        ezt hasznalja a 2. zona "Feki-vesztes" mechanikaja (ld. lejjebb).
+                        kovetkező `buildX Scene()`-hivasokban, kulonben az visszahozna.
+                        `Overworld.removeFollowerWithEffect(delayMs)` -- UJ valtozat:
+                        `delayMs` ideig meg valtozatlanul kovet/ul a follower, majd egy
+                        `.follower-glitch-out` CSS-osztallyal lejatssza rajta ugyanazt a
+                        `worldGlitch` animaciot, amit a szoba->folyoso atmenet hasznal
+                        (ld. "Kepernyo-atmenetek" lejjebb), es csak ENNEK vegen tavolitja
+                        el tenylegesen -- ezt hasznalja a 2. zona "Feki-vesztes"
+                        mechanikaja (ld. lejjebb), a "GAME OVER..." popup bezarasa utan
+                        hivva meg, nem egy fuggetlen idozitovel.
 js/zones.js           - AZ EGYETLEN hely, ahol tényleges harc-tartalom van: szövegek,
                         ACT-ok, ellenfél-adatok, a `background` (zona-hatterkep) ES a
                         `companionChat` (a folyoson az adott zona elott felszedhetot
@@ -469,13 +487,23 @@ teszt-képek (ideiglenesek) — ha elkészülnek a végleges, több kifejezést 
 rajzaid, csak ezekre a fájlnevekre (vagy a `faces`-ben megadott bármilyen
 névre) kell cserélni őket.
 
-A gépelés közben megszólaló hang (`assets/Sounds/snd_txtasg.wav`) a
-`js/main.js`-ben van betöltve (`Engine.loadSound("type", ...)`), és a
-`js/battle.js` `typeText()`-je minden ki nem hagyott (nem szóköz) karakternél
-lejátssza (`Engine.playSound("type")`). Egyelőre minden karakternél ugyanaz a
-hang szól — ha később karakterenként eltérő gépelés-hangot szeretnél, ide
-(`typeText()` hívása a `showSequence()`-ben) kell egy `line.typingSound`-szerű
-mezőt bevezetni, ami felülírja az alapértelmezett `"type"` hangnevet.
+Az alapértelmezett gépelés-hang (`assets/Sounds/snd_txtasg.wav`,
+`Engine.loadSound("type", ...)`, `js/main.js`) minden ki nem hagyott (nem
+szóköz) karakternél lejátszódik, HA a beszélőnek nincs saját hangja beállítva.
+**Karakterenkénti gépelés-hang** ugyanis be van kötve: a `js/zones.js`
+`RECURRING_SPEAKER_TYPE_SOUNDS` (a `RECURRING_SPEAKER_PORTRAITS` párja, ld.
+fent) egy `speaker -> hangnév` térkép (KECSKE/QUEEN/TENNA/KÖNNY-LÉNY/BUBBLE/
+CAINE/JAX), amit MIND a `js/battle.js` `typeText()` (egy `typingSoundFor(speaker)`
+segédfüggvényen keresztül), MIND a `js/overworld.js` `typeCornerText()` (a
+sarok-buborék saját, független gépelős logikája) figyelembe vesz. A fel nem
+sorolt beszélők ("TE", "APA", "APA2") változatlanul az alapértelmezett
+`"type"` hangot kapják. A battle.js oldalon ez a már eddig is mindenhol adott
+`speaker` mezőn keresztül ingyen működik; az overworld.js oldalon
+`Overworld.showCornerPopup(portrait, text, onDone, variant, opts)` kapott egy
+`opts.speaker` mezőt, amit a hívóknak (Caine/Jax-vonalak, Kecske
+folyosó-csevegés, Tenna/Queen szoba-sorok, Könny-lény/Bubble
+viszontlátás-sorok, a Feki-vesztés utáni "GAME OVER" sor) explicit át kell
+adniuk — ld. "Ismert korlátok" a teljes hívási lista végett.
 
 ## Az 1. zóna FIGHT/ACT/SPARE harca
 
@@ -887,18 +915,23 @@ be, ld. lejjebb.
   1. `Battle.showSequence(zone.intro, overworldDialogueTarget,
      overworldDialogueBox)` — Kecske + Tenna.
   2. `Overworld.addSprite("zone4-apa", {src: zone.enemy.sprite, xFrac,
-     yFrac, w: 60})` — Apa "drámai belépője": egy ÚJ, ÁLTALÁNOS
-     `js/overworld.js` függvény-trió (`addSprite`/`updateSprite`/
+     yFrac, w: 91, h: 104, noFloat: true})` — Apa "drámai belépője": egy ÚJ,
+     ÁLTALÁNOS `js/overworld.js` függvény-trió (`addSprite`/`updateSprite`/
      `removeSprite`, ld. ott a dokumentációt) dinamikusan felbukkantja a
      sprite-ot PONTOSAN a záró-hotspot pozíciójában (ugyanaz az xFrac/yFrac,
      mint amit a generikus ajtó-mintázat egyébként is használna) — ezt
      hívjuk meg a `zone.enemy.introLines`-t megjelenítő `showSequence()`
-     ELŐTT, hogy a "BUMM" sorral egy időben tűnjön fel.
+     ELŐTT, hogy a "BUMM" sorral egy időben tűnjön fel. A `w:91,h:104`
+     (a korábbi `w:60`, majd `w:70,h:80` köztes értékekről véglegesítve) és
+     a `noFloat:true` a felhasználó kérésére lettek belőve — ld. lejjebb
+     "Valódi APA/APA2 grafika bekötve" utáni bullet-ök a pontos indoklásért.
   3. `Battle.showCenterImage(overworldImageFlash, zone.fightImage.src,
-     zone.fightImage.duration)` — a script "Megjelenik egy Kép a képernyő
-     közepén... 2mp-ig" sora, KÖZVETLENÜL a "Nahh jó, ezt nem hagyom..."
-     TE-sor után, gomb/menü-választás NÉLKÜL (a felhasználó kifejezett
-     kérése — korábban ez egy kattintható "FIGHT" ACT volt, azt eltávolítottuk).
+     zone.fightImage.duration, zone.fightImage.sound)` — a script "Megjelenik
+     egy Kép a képernyő közepén... 2mp-ig" sora, KÖZVETLENÜL a "Nahh jó, ezt
+     nem hagyom..." TE-sor után, gomb/menü-választás NÉLKÜL (a felhasználó
+     kifejezett kérése — korábban ez egy kattintható "FIGHT" ACT volt, azt
+     eltávolítottuk); a `zone.fightImage.sound` ("ultraswing") a kép
+     felvillanásával egy időben szól.
   4. `Battle.showStyleTag(overworldStyleTag, zone.styleTag,
      zone.styleTagDuration)` — "+APPPAAAAAAA", 2800ms kitartással (a script
      "Ha lehet ezt több ideig kitartva" kérése).
@@ -956,11 +989,10 @@ be, ld. lejjebb.
   meg (nem hagyatkozunk az `enemy.name`-matchelős fallback-re), mert ez
   volt az eredeti (corner-popup-alapú) megvalósítás mintázata, és nincs ok
   megváltoztatni.
-- **`enemy.sprite`/`talkSprite` egyelőre a meglévő, már kézzel kivágott
-  Asgore-portrékat használja** (`asgore_placeholder.png`/`_talk.png`, ld.
-  "Karakter-sprite-ok" fentebb) — a script "kocka alakú" (Minecraft-
-  blokkosított) vizuális poénjához egy tényleg kockás Apa-rajz szebb lenne,
-  de ez vizuál-fázis munka, jelenleg nincs ilyen kép.
+- **`enemy.sprite`/`talkSprite` mostantól a felhasználó valódi, Minecraft-
+  stílusú APA-rajzait használja** (`apa_placeholder.png`/`_talk.png`) — a
+  korábbi, ideiglenes Asgore-portrék erről a helyről már lecserélve, ld.
+  lejjebb "Valódi APA/APA2 grafika bekötve" a teljes leírásért.
 - **`line.sound`** (ÚJ, általános `js/battle.js` `showSequence()`-mező, ld.
   "js/battle.js" bejegyzés fentebb — `js/main.js` `showOverworldDialogue()`-
   nak is van egy azonos nevű, azonos célú mezője, a Caine-/viszontlátás-
@@ -976,55 +1008,52 @@ be, ld. lejjebb.
 - **`line.transitionAnim` (ÚJ, általános `showSequence()`-mező)** — egy
   N-kockás animációt játszik le a PORTRÉ HELYÉN, mielőtt a sor tényleges
   portréja megjelenne, hogy eltakarja a hirtelen karakter-váltást. Az
-  APA2-sor `transitionAnim: {frames: [...4 db apa_transition_0N.png...],
+  APA2-sor `transitionAnim: {frames: [...8 db apa_transition_0N.png...],
   frameMs: 150}` mezője használja — ld. `js/battle.js` `playTransitionAnim()`.
-  A 4 kocka egyelőre `tools/gen_assets.py`-stílusú blob-placeholder (a
-  felhasználó saját rajzra fogja cserélni), a színük szándékosan az
-  `apa2_placeholder.png` színe felé tart az utolsó kockán, hogy folyamatosnak
-  hasson az átmenet vége. Általános/újrafelhasználható mechanizmus, bármelyik
-  jövőbeli dialógus-sor használhatja, nem zóna-specifikus.
+  A 8 kocka a felhasználó kész, Minecraft-stílusú rajza (`apa_transition_01
+  -08.png`, 53×57px, ld. lejjebb "Valódi APA/APA2 grafika bekötve"), NEM
+  placeholder. Általános/újrafelhasználható mechanizmus, bármelyik jövőbeli
+  dialógus-sor használhatja, nem zóna-specifikus.
   - **A felhasználó kérésére UGYANEZ az átmenet a folyosón álló Apa-sprite-on
-    is lejátszódik, DE KÜLÖN fájlokkal** (`apa_world_transition_0N.png`,
-    ugyanaz a szín-progresszió, de saját `tools/gen_assets.py`-bejegyzés) —
-    a két animáció szinkronban fut, mert `playTransitionAnim(imgEl, anim,
-    onFrame)` kapott egy harmadik, opcionális `onFrame(i)` callback-et, ami
-    minden kockaváltáskor lefut. `js/main.js` `overworldDialogueTarget`
-    ezt `onTransitionFrame`-ként adja át (a `showSequence()`-nek átadott
-    `target` objektum SAJÁT mezőjeként, nem a `battle.js`-en keresztül),
-    és `Overworld.updateSprite("zone4-apa", ...)`-vel frissíti a világ-
-    sprite-ot — a `battle.js` szándékosan nem nyúl közvetlenül az
-    Overworld-modulhoz (ld. "Nem nyul a battle.js/engine.js-hez" elv),
-    ezért ez a hívó (`playZone4Finale()`) felelőssége a callback-en
-    keresztül. Az animáció után a világ-sprite az utolsó kockán
-    (`apa_world_transition_04.png`, ami szándékosan az apa2-szín) marad,
-    amíg a jelenet végén `Overworld.removeSprite()` el nem tünteti — nincs
-    külön "APA2 világ-sprite" kép, mert ezt a felhasználó nem kérte.
-- **`playFinalCinematic(domTarget, cfg, onDone)`** (`js/battle.js`) egy
-  teljesen egyedi, önálló záró-animáció, NEM a megosztott `#scene-fade`-re
-  építve (az csak feketére tud váltani, ez viszont előbb KIVILÁGOSODIK).
-  Sorrend: (1) a fedő átlátszóból FEHÉRRE fade-el (`.ending-visible`, 1.4s
-  CSS-átmenet), `"won"` hang; (2) a `cfg.heading` szöveg ("System Reset:
-  Happy 13th Birthday!") azonnal megjelenik (nem gépelve — a script
-  "megjelenik" szava alapján), `"splat"` hang; (3) hatásszünet (1.2s); (4) a
-  `cfg.finalLine` (Apa2 utolsó sora) egy ÚJ, önálló `autoType()`
-  segédfüggvénnyel gépelődik ki — ez SZÁNDÉKOSAN NEM a meglévő `typeText()`,
-  mert az mindig felhasználói kattintásra/Enterre vár a `advanceCallback`-en
-  keresztül, itt viszont a felhasználó kifejezett kérésére ("teljesen
-  automatikus") semmilyen inputra nem szabad várni; (5) rövid szünet (0.9s);
-  (6) a fedő `.ending-blackout` osztállyal feketére vált (1s CSS-átmenet),
-  `"step2"` hang — a szöveg színe szándékosan marad fekete, hogy a
-  háttérrel együtt "elnyelje" magát; (7) `onDone()` — a `playZone4Finale()`
-  ekkor vált a címképernyőre.
-- **A záró sor (Apa2 utolsó mondata) Enterrel/kattintással léptethető
-  tovább, NEM automatikusan** — a felhasználó pontosította a korábbi
-  "teljesen automatikus" döntést kifejezetten erre a sorra. A
-  `playFinalCinematic()` emiatt már NEM a régi `autoType()`-ot (törölve)
-  hasznalja, hanem a szokásos `typeText()`-et, egy `continueHint`
-  DOM-céllal (`#ending-continue-hint`/`#overworld-ending-continue-hint`,
-  ugyanaz a "▶ kattints / szóköz" stílus, mint a dialógus-dobozoknál) — a
-  `dom.endingOverlay`/`dom.overworldEndingOverlay` mindkettő kapott egy
-  `click`-listenert (`advanceOrSkip`) `initDom()`-ban, a billentyűzetes
-  Enter/szóköz pedig eleve globálisan működik.
+    is lejátszódik, DE KÜLÖN, NAGYOBB fájlokkal** (`apa_world_transition_01
+    -08.png`, 71×77px) — a két animáció szinkronban fut, mert
+    `playTransitionAnim(imgEl, anim, onFrame)` kapott egy harmadik,
+    opcionális `onFrame(i)` callback-et, ami minden kockaváltáskor lefut.
+    `js/main.js` `overworldDialogueTarget` ezt `onTransitionFrame`-ként adja
+    át (a `showSequence()`-nek átadott `target` objektum SAJÁT mezőjeként,
+    nem a `battle.js`-en keresztül), és `Overworld.updateSprite("zone4-apa",
+    ...)`-vel frissíti a világ-sprite-ot — a `battle.js` szándékosan nem
+    nyúl közvetlenül az Overworld-modulhoz (ld. "Nem nyul a
+    battle.js/engine.js-hez" elv), ezért ez a hívó (`playZone4Finale()`)
+    felelőssége a callback-en keresztül. Egy MÁSIK, opcionális
+    `target.onTransitionEnd`-hook PONTOSAN akkor fut le, amikor a
+    dialógus-doboz portréja már a végleges képre váltott —
+    `playZone4Finale()` ezt használja arra, hogy a világ-sprite-ot IS
+    ugyanekkor a végleges, valódi `apa2_placeholder.png`-re váltsa (nem csak
+    az utolsó átmenet-kockán marad).
+- **`playFinalCinematic(domTarget, cfg, onDone, onHeadingShown)`**
+  (`js/battle.js`) egy teljesen egyedi, önálló záró-animáció, NEM a
+  megosztott `#scene-fade`-re építve (az csak feketére tud váltani, ez
+  viszont előbb KIVILÁGOSODIK). Sorrend: (1) a fedő átlátszóból FEHÉRRE
+  fade-el (`.ending-visible`, 1.4s CSS-átmenet), `"won"` hang; (2) a
+  `cfg.heading` szöveg ("System Reset: Happy 13th Birthday!") azonnal
+  megjelenik (nem gépelve — a script "megjelenik" szava alapján), `"splat"`
+  hang, és lefut az opcionális `onHeadingShown()` callback (`js/main.js` ezt
+  használja a háttérzene ~2mp alatti elhalkítására, ld. lejjebb); (3)
+  hatásszünet (1.2s); (4) a `cfg.finalLine` (Apa2 utolsó sora) a szokásos
+  `typeText()`-tel gépelődik ki, egy `continueHint` DOM-céllal
+  (`#ending-continue-hint`/`#overworld-ending-continue-hint`, ugyanaz a "▶
+  kattints / szóköz" stílus, mint a dialógus-dobozoknál) — a felhasználó
+  eredetileg "teljesen automatikus" gépelést kért erre a sorra, majd
+  pontosította, hogy Enterrel/kattintással kell tovább léptetni, ezért ez
+  KATTINTÁS/ENTER-RE VÁR, nem a régi (azóta törölt) `autoType()`
+  segédfüggvénnyel megy; (5) rövid szünet (0.9s); (6) a fedő
+  `.ending-blackout` osztállyal feketére vált (1s CSS-átmenet), `"step2"`
+  hang — a szöveg színe szándékosan marad fekete, hogy a háttérrel együtt
+  "elnyelje" magát; (7) `onDone()` — a `playZone4Finale()` ekkor vált a
+  címképernyőre. A `dom.endingOverlay`/`dom.overworldEndingOverlay`
+  mindkettő kapott egy `click`-listenert (`advanceOrSkip`) `initDom()`-ban,
+  a billentyűzetes Enter/szóköz pedig eleve globálisan működik.
 - **A visszatérés a címképernyőre TELJES OLDAL-ÚJRATÖLTÉS
   (`window.location.reload()`), NEM csak képernyő-váltás** — a felhasználó
   kifejezett kérése ("frissíteni kellene a böngészőt, hogy minden cash,
@@ -1044,29 +1073,20 @@ be, ld. lejjebb.
   dialógus-portré, hanem a folyosón álló sprite képe, ld. lejjebb). Az
   `enemy.sprite`/`talkSprite` és minden explicit `portrait` mező ezekre lett
   átállítva a régi asgore-fájlnevek helyett.
-- **Az átmenet-animációk 4-ről 8 kockára bővültek**, és MÁR NEM
-  `tools/gen_assets.py`-generált blob-placeholderek, hanem a felhasználó
-  kész, Minecraft-stílusú rajzai (`apa_transition_01-08.png` 53×57px,
-  `apa_world_transition_01-08.png` 71×77px — utóbbi szándékosan nagyobb).
-  A `tools/gen_assets.py`-ből a megfelelő `blob_sprite()` hívások törölve
-  lettek, egy FIGYELEM-kommenttel helyettesítve, nehogy valaki véletlenül
-  újragenerálja (felülírva) a kész rajzokat.
-- **`Overworld.addSprite("zone4-apa", ...)` mérete `w:60`-ról `w:70,
-  h:80`-ra nőtt** (`js/main.js` `playZone4Finale()`), hogy a nagyobb
-  `apa_world_transition_0N.png` (71×77) kockák ne zsugorodjanak össze —
-  mivel a felhasználó minden kockát (idle ÉS átmenet) explicit
+- **`tools/gen_assets.py`-ből a `apa2_placeholder`/`apa_transition_0N`/
+  `apa_world_transition_0N` `blob_sprite()`-hívások törölve lettek**, egy
+  FIGYELEM-kommenttel helyettesítve, nehogy valaki véletlenül újragenerálja
+  (felülírva) ezeket a mára valódi, kézzel rajzolt fájlokat.
+- **`Overworld.addSprite("zone4-apa", ...)` végleges mérete `w:91,h:104,
+  noFloat:true`** (`js/main.js` `playZone4Finale()` — a fejlesztés közben
+  volt egy `w:60`, majd egy köztes `w:70,h:80` állapot is, ld. "Ismert
+  korlátok" a végső 30%-os méretnövelés/`noFloat` indoklásáért), hogy a
+  nagyobb `apa_world_transition_0N.png` (71×77) kockák ne zsugorodjanak
+  össze — mivel a felhasználó minden kockát (idle ÉS átmenet) explicit
   vízszintesen-középre/függőlegesen-alulra igazított
   (`object-fit:contain`+`object-position:bottom`, ld. `.overworld-npc`),
   egy ÁLLANDÓ dobozméret (ami `addSprite()`-tól `updateSprite()`-ig sosem
-  változik) biztosítja, hogy a kockák között ne "ugorjon" a szereplő. Ez a
-  szám vizuálisan nincs leellenőrizve (böngésző nélkül nem lehet), a
-  felhasználó saját tesztelése alapján finomítható.
-- **`target.onTransitionEnd` (ÚJ, `showSequence()`-hook)** — a
-  `line.transitionAnim` lejátszása UTÁN, PONTOSAN akkor fut le, amikor a
-  dialógus-doboz portréja már a végleges képre váltott. A `playZone4Finale()`
-  ezt használja arra, hogy a folyosón álló Apa-sprite-ot is UGYANEKKOR
-  váltsa a végleges `apa2_placeholder.png`-re (ne csak az utolsó
-  átmenet-kockán maradjon, ld. `onTransitionFrame`).
+  változik) biztosítja, hogy a kockák között ne "ugorjon" a szereplő.
 
 ## Az overworld-jelenetek (szoba + folyosó) hangolása
 
@@ -1243,6 +1263,42 @@ a `ZONE_2` pedig a többszörös elágazást igénylő eset (`preLinesByChoice`,
 
 ## Ismert korlátok / amire figyelni kell (még nem tesztelt / hiányos)
 
+- **Karakterenkénti gépelés-hang** — a felhasználó kérésére a `js/battle.js`
+  `typeText()` ÉS a `js/overworld.js` `typeCornerText()` (a sarok-buborék
+  saját, független gépelős logikája) is a `js/zones.js`
+  `RECURRING_SPEAKER_TYPE_SOUNDS` (ÚJ, mindkét modul számára közös) térképet
+  használja `speaker` szerint — a fel nem sorolt beszélők ("TE", "APA",
+  "APA2") változatlanul az alapértelmezett `"type"` hangot kapják. A
+  battle.js oldalon ez ingyen működik minden zónánál, mert a `speaker` már
+  eddig is mindenhol adott volt; az overworld.js oldalon viszont
+  `Overworld.showCornerPopup(portraitSrc, text, onDone, variant, opts)`
+  kapott egy ÚJ `opts.speaker` mezőt, amit `showOverworldDialogue()`
+  (`line.speaker`) és több `js/main.js`-beli hívás (Caine/Jax vonalak,
+  Kecske folyosó-csevegés, Tenna/Queen szoba-sorok, Könny-lény/Bubble
+  viszontlátás-sorok, a Feki-vesztés utáni "GAME OVER" sor) explicit ad át.
+- **A 2. zóna (Cirkusz, Bubble) saját zenét kapott** —
+  `The-Amazing-Digital-Circus-Main-Theme.mp3` (`bubbleMusic`), ugyanazzal a
+  pause/resume mintázattal, mint az 1. zóna Isaac-szobája (`isaacMusic`):
+  `buildCorridorScene()` `i === 1` ága (a még le nem győzött/kegyelmezett
+  Bubble-ajtó) állítja le a `roomMusic`-ot és indítja el a `bubbleMusic`-ot,
+  az `enterZone()` callback-je (`zoneIndex === 1`) váltja vissza, függetlenül
+  a harc kimenetelétől.
+- **Feki eltűnése MOST MÁR a "GAME OVER..." popup Enterrel/kattintással
+  történő bezárása UTÁN indul**, nem egy fix 1000ms-es időzítővel — a
+  felhasználó visszajelzése szerint a korábbi (egyidejű) verziónál nem volt
+  látható a glitch-effekt (feltehetően a popup eltakarta Feki pozícióját,
+  vagy a figyelem máshol volt). `Overworld.removeFollowerWithEffect(0)`-t
+  most a popup `onDone`-jából hívjuk. A CSS-animáció is kapott egy
+  `forwards` fill-mode-ot, hogy a végén (fekete/láthatatlan állapotban)
+  maradjon a törlésig, ne "pattanjon vissza" látszólag egy kockára.
+- **Az APA "világ-sprite"-ja (`Overworld.addSprite("zone4-apa", ...)`,
+  `js/main.js` `playZone4Finale()`) `noFloat: true`-t kapott** (nem lebeg
+  fel-le, mint egy sima NPC) **és 30%-kal nagyobb lett** (91×104, a korábbi
+  70×80 helyett) — mindkettő a felhasználó kifejezett kérése. Ugyanez a
+  doboz (`w`/`h`/`xFrac`/`yFrac`) határozza meg az APA→APA2 világ-átmenet
+  (8 kockás `apa_world_transition_0N.png`) méretét/pozícióját is, mivel a
+  teljes jelenet (álló Apa → átmenet → álló Apa2) UGYANAZT a fix dobozt
+  használja — ha ezt kell módosítani, ez az egyetlen hely.
 - **KRITIKUS HIBA, JAVÍTVA: `finishZone()` (`js/battle.js`) egy régi,
   elavult szignatúrával hívta a `showStyleTag()`-et** (`showStyleTag(text)`
   a jelenlegi `showStyleTag(tagEl, text, holdMs)` helyett, ld. "js/battle.js"
@@ -1484,7 +1540,9 @@ végén friss):
   sorrend-független hotspotja (`handleCaineHotspot()`) egy beépített
   szülinapi ajándék-visszaszámláló minijátékkal (Enter/szóköz-
   billentyűzet-támogatással), és egy Feki-vesztés mechanika
-  (`Overworld.removeFollower()`, `fekiGone`).
+  (`Overworld.removeFollowerWithEffect()`, `fekiGone` — a "glitch"-es
+  eltűnés a "GAME OVER..." popup bezárása után indul, ld. "Ismert
+  korlátok").
 - **A `bazsa_szoba.png` (a gyerek szobája), az Isaac-szoba/Könny-lény harc ÉS
   a 2. zóna (Cirkusz/Bubble) a felhasználó szerint EBBEN A FORMÁJÁBAN KÉSZ.**
 - **Új: a 3. zóna kikerült, a (immár utolsó, 3. helyen álló) ZONE_4
@@ -1517,10 +1575,20 @@ végén friss):
   szintén exportált `Battle.showSequence()`-et, egy ÚJ `#overworld-dialogue-box`
   elemmel (a harci `#dialogue-box` pontos párja, ugyanazzal a
   `dialogue_box_frame.png` kerettel) — ld. "A záró (Minecraft) zóna" a
-  teljes leírásért. Nyitva maradt: `apa2_placeholder.png` még
-  vizuál-fázisra vár (ld. "A záró (Minecraft) zóna" utolsó pontja) — a
-  harc-képernyős `zone4_bg_placeholder.png` pedig immár teljesen
-  használaton kívül van.
+  teljes leírásért. A harc-képernyős `zone4_bg_placeholder.png` immár
+  teljesen használaton kívül van.
+- **Negyedik/ötödik kör (vizuál-fázis + hibajavítások, felhasználói
+  tesztelés alapján): valódi APA/APA2 grafika, 8 kockás átmenet-animációk,
+  karakterenkénti gépelés-hang, a 2. zóna saját zenéje, és több kritikus
+  bugfix** — ld. "Ismert korlátok" a teljes, friss listáért. Röviden: a
+  `finishZone()` elavult `showStyleTag()`-hívása (ami minden fordulós zóna
+  végén lefagyasztotta a játékot) javítva; a "spiral" dodge-minta
+  visszapattanása zóna-szinten konfigurálhatóvá vált (az 1. zóna 3.
+  fordulóján kikapcsolva, a 2. zónáén megtartva); `Overworld.pause()` már
+  nem fagyasztja meg a lépés-animációt; a hint-szöveg csak a Bazsa-szobában
+  látszik; Feki eltűnése a "GAME OVER..." popup bezárása után indul, glitch-
+  effekttel; és az APA világ-sprite-ja `noFloat`-ot kapott, 30%-kal nagyobb
+  lett.
 
 1. ~~Motor-prototípus~~ — kész (1. zóna)
 2. ~~Tartalom~~ — kész (a 3, egyenlő súlyú zóna megírva, lásd `js/zones.js`);
@@ -1538,21 +1606,26 @@ végén friss):
    `corridor_zone4_bg_placeholder.png`) már kész, végleges rajz — a
    harc-képernyők HÁTTERE (`zoneN_bg_placeholder.png`, a `#zone-bg`-be
    kerülő kép, nem a folyosóé) viszont még mindegyik zónánál a régi,
-   generált placeholder, ahogy `apa2_placeholder.png` és egy "kocka alakú"
-   Apa-portré is még hátravan (ld. "A záró (Minecraft) zóna" utolsó pontja).
+   generált placeholder — az APA/APA2 grafika ezzel szemben már valódi,
+   kézzel rajzolt Minecraft-stílusú art (ld. "A záró (Minecraft) zóna",
+   "Valódi APA/APA2 grafika bekötve").
    A harc-képernyő UI-ja (HP-csík, ACT-doboz, párbeszéd-keret, SOUL, Game
    Over) már valódi, kibányászott Deltarune-assetekkel megy (lásd
    `tools/slice_ui_assets.py`) — ide tartozó, még kihasznált stretch goal: a
    `Battle Box`/`Battleback` animáció-sorozatok (jelenleg csak statikus
    kockaként/nem használva) pop-in/animált háttérré alakítása.
-4. **Hang**: a szoba/folyosó és az Isaac-szoba háttérzenéje már be van kötve
-   (`roomMusic`/`isaacMusic`, ld. "Jelenlegi állapot"), néhány effekt is
-   (gépelés, zóna-indítás, glitch, joker-nevetés, flavor-szöveg, a 2. zóna
-   ajándék-visszaszámlálója, és MOST MÁR a záró-zóna négy hangja is —
-   `heavydamage`/`won`/`splat`/`step2`, ld. `js/main.js` `Engine.loadSound()`
-   hívásait) — de a legtöbb generált beep (`assets/sfx/*.wav`) még cserére
-   vár a beszerzett valódi `assets/Sounds/`-beli hangokra, és a 2-3.
-   zónának nincs saját háttérzenéje.
+4. **Hang**: a szoba/folyosó, az Isaac-szoba ÉS MOST MÁR a 2. zóna (Cirkusz/
+   Bubble) is saját háttérzenét kapott (`roomMusic`/`isaacMusic`/
+   `bubbleMusic`, ld. "Jelenlegi állapot" és "A 2. zóna FIGHT/ACT/SPARE
+   harca (Bubble)"), néhány effekt is (gépelés — MOST MÁR karakterenként
+   eltérő, ld. "Harci dialógus: arcváltás időzítése és gépelés-hang" —,
+   zóna-indítás, glitch, joker-nevetés, flavor-szöveg, a 2. zóna
+   ajándék-visszaszámlálója, és a záró-zóna hangjai —
+   `heavydamage`/`ultraswing`/`vaporized`/`won`/`splat`/`step2`, ld.
+   `js/main.js` `Engine.loadSound()` hívásait) — de a legtöbb generált beep
+   (`assets/sfx/*.wav`) még cserére vár a beszerzett valódi
+   `assets/Sounds/`-beli hangokra, és a záró (Minecraft-témájú) zónának
+   nincs saját háttérzenéje.
 5. ~~Összefűzés~~ — kész (cím → szoba → gép-választás → folyosó → mind a 3 zóna
    → Apa-zárás/`playFinalCinematic()` → automatikus visszatérés a
    címképernyőre, egyben, teljesképernyős skálázással)

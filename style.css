@@ -200,7 +200,7 @@ h1 {
    sprite-jan, kulon szabalykent, mert az eredeti szelektor `#game-viewport`
    ID-hez van kotve. */
 .overworld-follower.follower-glitch-out {
-  animation: worldGlitch 0.9s steps(1, end) 1;
+  animation: worldGlitch 0.9s steps(1, end) 1 forwards;
 }
 
 /* Fejlesztoi debug-keret a walkBounds teruletekhez -- csak akkor jelenik

@@ -145,6 +145,15 @@ const Battle = (() => {
     };
   }
 
+  // A felhasznalo kerese szerint karakterenkent kulon gepeles-hang szol --
+  // `RECURRING_SPEAKER_TYPE_SOUNDS` (js/zones.js) egy kozos, mindket
+  // gepelos-implementacio (ez itt es js/overworld.js typeCornerText()-je)
+  // szamara elerheto terkep. Ha a `speaker` nincs benne (pl. "TE", "APA",
+  // "APA2"), az alapertelmezett "type" hang szol tovabbra is.
+  function typingSoundFor(speaker) {
+    return (typeof RECURRING_SPEAKER_TYPE_SOUNDS !== "undefined" && RECURRING_SPEAKER_TYPE_SOUNDS[speaker]) || "type";
+  }
+
   function typeText(speaker, text, portrait, faces, target) {
     target = target || defaultTarget();
     return new Promise((resolve) => {
@@ -176,7 +185,7 @@ const Battle = (() => {
         }
         if (i < displayText.length) {
           target.dialogueText.textContent += displayText[i];
-          if (displayText[i] !== " ") Engine.playSound("type");
+          if (displayText[i] !== " ") Engine.playSound(typingSoundFor(speaker));
           applyFaceChangesUpTo(i);
           i++;
           setTimeout(step, speed);
