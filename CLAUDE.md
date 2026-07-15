@@ -1263,6 +1263,59 @@ a `ZONE_2` pedig a többszörös elágazást igénylő eset (`preLinesByChoice`,
 
 ## Ismert korlátok / amire figyelni kell (még nem tesztelt / hiányos)
 
+- **KRITIKUS HIBA, KÉT KÖRBEN JAVÍTVA: a Feki-glitch (`removeFollowerWithEffect()`)
+  a gyakorlatban láthatatlan volt / "1-2px arrébb ugrik, aztán hirtelen
+  eltűnik" (felhasználói visszajelzés).** Az ELSŐ javítási kísérlet (a közös
+  `worldGlitch` helyett egy `filter`/`clip-path`-only `followerGlitch`
+  keyframes bevezetése) csak részben oldotta meg a problémát — a gyökér-ok
+  ugyanis KÉTFÉLE volt:
+  1. Feki pozícióját egy JS-beli inline `transform` adja
+     (`updateFollowerVisualPosition()`); egy CSS-animáció ugyanazon
+     property-jének keyframe-jei FELÜLÍRJÁK (nem összeadják) az inline
+     értéket — az első javítás ezt úgy kerülte ki, hogy a keyframes
+     EGYÁLTALÁN NEM animált `transform`-ot, de ez viszont elvette a
+     "remegés" vizuális jelét is, és a filter-animáció önmagában (GPU-réteg
+     váltás/subpixel-kerekítés) apró, oda nem illő pozíció-ugrást
+     okozhatott.
+  2. Az animáció `filter:brightness(0)`-ra végződött, ami egy átlátszó
+     hátterű PNG ALFA-csatornáját NEM érinti — Feki emiatt egy fekete
+     sziluetté vált, majd az `el.remove()` ezt a még látható sziluettet
+     tüntette el hirtelen, "pukkanás"-szerűen.
+  **Végleges javítás:** `js/overworld.js` `removeFollowerWithEffect()` a
+  glitch indításakor a MÁR BEFAGYASZTOTT `style.transform` értéket egy
+  `--glitch-base-transform` CSS-változóba menti; a `style.css`
+  `followerGlitch` keyframes minden lépése `transform: var(--glitch-base-
+  transform) translate(...)`-ot ad meg — a JS-beli pozíció így MINDIG
+  benne marad az animált transformban (nem íródik felül), a keyframe-ek
+  csak egy kis, SZÁNDÉKOS remegést adnak hozzá. A keyframes emellett
+  `opacity`-t is fokozatosan 0-ra viszi (nem csak a `filter`-t), így az
+  `el.remove()` már egy teljesen láthatatlan elemet távolít el.
+- **Feki eltűnése előtt 1000ms késleltetés** — a felhasználó kérésére a
+  "GAME OVER..." popup bezárása UTÁN is vár még 1mp-et (`js/main.js`,
+  `Overworld.removeFollowerWithEffect(1000)`), mielőtt elindulna a fenti
+  glitch — így van egy észrevehető pillanat, amikor Feki még ott áll,
+  mielőtt eltűnne.
+- **`line.transitionAnim` (záró zóna, APA→APA2) indítása előtt 500ms
+  szünet** — a felhasználó kérésére `js/battle.js` `showSequence()` az
+  előző sor (a "Ha HA HAAAA" nevetés) tovább-léptetése UTÁN, de MÉG a
+  `playTransitionAnim()` (a 8 kockás átmenet) elindítása ELŐTT egy
+  `wait(500)`-at szúr be — így van egy érzékelhető szünet, mielőtt a
+  karakter-váltás elkezdődne, nem azonnal, ugrásszerűen indul.
+- **`Overworld.updateSprite(id, src, sizeOpts?)`** — a harmadik, opcionális
+  `sizeOpts:{w,h?}` paraméterrel a dinamikus sprite DOBOZÁNAK mérete is
+  újraállítható hívásonként (nem csak a kép), az `addSprite()`-nál megadott
+  `xFrac`/`yFrac` ALSÓ-KÖZÉPPONT körül (ez az elemen `dataset.xFrac`/
+  `dataset.yFrac`-ként van elmentve) — a doboz alja és vízszintes közepe
+  rögzítve marad, csak felfelé/oldalra nő vagy zsugorodik. Ezt használja a
+  záró (Minecraft-témájú) zóna: az `apa_placeholder.png`/`apa2_placeholder.png`
+  állókép mérete (`ZONE4_APA_SIZE`, `js/main.js`, 91×104) és a 8 kockás
+  `apa_world_transition_0N.png` átmenet-animáció mérete korábban UGYANAZT a
+  fix dobozt használta (nem lehetett külön méretezni őket anélkül, hogy a
+  szereplő "ugorjon" a kockák között) — a felhasználó kérésére szétválasztva:
+  az átmenet-animáció a `ZONE4_APA_TRANSITION_SCALE` (1.35) szorzóval
+  LÁTHATÓAN NAGYOBB, mint az állókép, majd `onTransitionEnd`-nél
+  visszaáll `ZONE4_APA_SIZE`-ra. A szorzó a `ZONE4_APA_TRANSITION_SCALE`
+  konstans módosításával egyszerűen hangolható.
 - **Karakterenkénti gépelés-hang** — a felhasználó kérésére a `js/battle.js`
   `typeText()` ÉS a `js/overworld.js` `typeCornerText()` (a sarok-buborék
   saját, független gépelős logikája) is a `js/zones.js`

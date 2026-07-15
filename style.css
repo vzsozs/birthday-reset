@@ -193,14 +193,50 @@ h1 {
   pointer-events: none;
 }
 
-/* A felhasznalo kerese szerint a kovető NPC (Feki) vegleges eltunese
-   (ld. js/overworld.js removeFollowerWithEffect()) UGYANAZT a `worldGlitch`
-   animaciot hasznalja, mint a szoba->folyoso atvezetes (ld.
-   #game-viewport.screen-glitch lejjebb) -- csak KOZVETLENUL a kovető
-   sprite-jan, kulon szabalykent, mert az eredeti szelektor `#game-viewport`
-   ID-hez van kotve. */
+/* A kovető NPC (Feki) vegleges eltunese (ld. js/overworld.js
+   removeFollowerWithEffect()) egy SAJAT `followerGlitch` keyframes-t
+   hasznal (NEM a `worldGlitch`-et, ld. lejjebb) -- Feki poziciojat egy
+   JS-beli inline `transform` adja (updateFollowerVisualPosition()), amit a
+   glitch-inditaskor a JS egy `--glitch-base-transform` CSS-valtozoba ment
+   at (ld. removeFollowerWithEffect()). MINDEN keyframe ezzel a
+   `var(--glitch-base-transform)`-mal KEZDI a sajat transform-erteket, majd
+   ehhez ADJA HOZZA a kis "reszkeles"-eltolast -- igy Feki tenyleges
+   vilag-pozicioja megmarad (nem "ugrik" a doboz sarkaba, mint egy korabbi
+   valtozatban, ahol a keyframe transform-ja EGYSZERUEN FELULIRTA az inline
+   erteket), a remeges pedig SZANDEKOS resze a glitch-hatasnak, nem
+   veletlen mellekhatas. A vegen `opacity` is 0-ra fade-el (nem csak
+   `filter:brightness(0)`-ra, ami egy atlatszo-hatteru PNG ALFA-csatornajat
+   nem erinti, csak fekete sziluettet hagyna a helyen) -- igy mire az
+   `el.remove()` lefut, az elem mar lathatatlan, nem "pukkan el" szemmel
+   lathatoan. */
 .overworld-follower.follower-glitch-out {
-  animation: worldGlitch 0.9s steps(1, end) 1 forwards;
+  animation: followerGlitch 0.9s steps(1, end) 1 forwards;
+}
+
+@keyframes followerGlitch {
+  0%   { transform: var(--glitch-base-transform); filter: none; opacity: 1; clip-path: none; }
+  6%   { transform: var(--glitch-base-transform) translate(4px, -3px);
+         filter: invert(1) hue-rotate(90deg) drop-shadow(3px 0 0 #ff2b6e) drop-shadow(-3px 0 0 #23e0ff);
+         opacity: 1; clip-path: inset(10% 0 40% 0); }
+  12%  { transform: var(--glitch-base-transform) translate(-5px, 2px);
+         filter: contrast(2) saturate(0); opacity: 1; clip-path: inset(55% 0 5% 0); }
+  18%  { transform: var(--glitch-base-transform) translate(3px, -2px);
+         filter: none; opacity: 0.9; clip-path: inset(20% 0 60% 0); }
+  24%  { transform: var(--glitch-base-transform) translate(-4px, 3px);
+         filter: invert(1) drop-shadow(4px 0 0 #ff2b6e) drop-shadow(-4px 0 0 #23e0ff);
+         opacity: 0.85; clip-path: none; }
+  30%  { transform: var(--glitch-base-transform); filter: none; opacity: 0.8; clip-path: inset(70% 0 0 0); }
+  38%  { transform: var(--glitch-base-transform) translate(5px, 0);
+         filter: contrast(3) brightness(1.4); opacity: 0.7; clip-path: none; }
+  46%  { transform: var(--glitch-base-transform) translate(-3px, 2px);
+         filter: none; opacity: 0.6; clip-path: inset(0 0 80% 0); }
+  54%  { transform: var(--glitch-base-transform) translate(2px, -3px);
+         filter: invert(1) hue-rotate(180deg); opacity: 0.5; clip-path: none; }
+  62%  { transform: var(--glitch-base-transform); filter: none; opacity: 0.35; clip-path: inset(35% 0 35% 0); }
+  70%  { transform: var(--glitch-base-transform) translate(-4px, 1px);
+         filter: contrast(2.5); opacity: 0.2; clip-path: none; }
+  80%  { transform: var(--glitch-base-transform); filter: brightness(0.15); opacity: 0.08; clip-path: none; }
+  100% { transform: var(--glitch-base-transform); filter: brightness(0); opacity: 0; clip-path: none; }
 }
 
 /* Fejlesztoi debug-keret a walkBounds teruletekhez -- csak akkor jelenik

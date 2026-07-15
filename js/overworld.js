@@ -81,18 +81,26 @@
  *     ha a scene-nek nincs `follower` mezoje, nincs kovető (pl. a folyoso).
  *
  * Overworld.addSprite(id, {src, xFrac, yFrac, w, h?, noFloat?}) /
- * Overworld.updateSprite(id, src) / Overworld.removeSprite(id) -- altalanos,
- * DINAMIKUS (a scene-config-tol fuggetlen, JELENET KOZBEN barmikor hivhato)
- * sprite-kezeles egy egyszeru id-kulcsu terkeppel. Erre akkor van szukseg,
- * ha egy NPC/szereplo nem a jelenet BETOLTESEKOR mar ott all (mint a
- * hotspot.sprite/decorations), hanem egy esemeny/dialogus kozepén "bukkan
- * fel" -- pl. Apa dramai belepoje a zaro (Minecraft-temaju) zona
- * folyoso-jelenetében. Ugyanazt a `.overworld-npc` CSS-osztalyt hasznalja
- * (lebego `npcFloat`-animacio, `object-fit:contain`), mint a hotspot-
- * sprite-ok, hacsak `noFloat` nincs true-ra allitva. `updateSprite()` csak a
- * kepet cserelji (poziciot nem), `removeSprite()` eltunteti. Mindegyik
- * NO-OP-kent viselkedik, ha a jelenet kozben scene-valtas (start()) tortent
- * -- a `dynamicSprites` terkep minden start()-nal kiurul.
+ * Overworld.updateSprite(id, src, sizeOpts?) / Overworld.removeSprite(id) --
+ * altalanos, DINAMIKUS (a scene-config-tol fuggetlen, JELENET KOZBEN
+ * barmikor hivhato) sprite-kezeles egy egyszeru id-kulcsu terkeppel. Erre
+ * akkor van szukseg, ha egy NPC/szereplo nem a jelenet BETOLTESEKOR mar ott
+ * all (mint a hotspot.sprite/decorations), hanem egy esemeny/dialogus
+ * kozepén "bukkan fel" -- pl. Apa dramai belepoje a zaro (Minecraft-temaju)
+ * zona folyoso-jelenetében. Ugyanazt a `.overworld-npc` CSS-osztalyt
+ * hasznalja (lebego `npcFloat`-animacio, `object-fit:contain`), mint a
+ * hotspot-sprite-ok, hacsak `noFloat` nincs true-ra allitva. `updateSprite()`
+ * alapbol csak a kepet cserelji (poziciot/meretet nem), de egy opcionalis
+ * harmadik `sizeOpts:{w,h?}` parameterrel a doboz MERETE is ujraallithato
+ * hivasonkent -- ilyenkor a doboz also-kozeppontja (a `xFrac`/`yFrac`, amit
+ * `addSprite()`-nal adtal meg) VALTOZATLAN marad, csak a szelesseg/magassag
+ * no vagy csokken korule (also szel rogzitve, vizszintesen kozeppontositva)
+ * -- ezt hasznalja pl. a zaro zona, hogy az APA->APA2 atmenet-animacio
+ * lathatoan NAGYOBB legyen, mint az allo Apa/Apa2 kep, majd az atmenet
+ * vegen visszaalljon az eredeti meretre (ld. CLAUDE.md "A záró (Minecraft)
+ * zóna"). `removeSprite()` eltunteti. Mindegyik NO-OP-kent viselkedik, ha a
+ * jelenet kozben scene-valtas (start()) tortent -- a `dynamicSprites` terkep
+ * minden start()-nal kiurul.
  *
  * Nem nyul a battle.js/engine.js-hez.
  */
@@ -279,18 +287,31 @@ const Overworld = (() => {
     });
   }
 
+  // Kozos pozicionalo: also-kozeppontot (xFrac/yFrac) rogzitve allitja be a
+  // doboz meretet/helyet -- w/h valtoztatasakor a doboz ALJA es VIZSZINTES
+  // KOZEPE marad helyben, csak felfele/oldalra no vagy zsugorodik. Ld.
+  // updateSprite() sizeOpts hasznalatat.
+  function positionSprite(img, xFrac, yFrac, w, h) {
+    img.style.width = w + "px";
+    img.style.height = h + "px";
+    img.style.left = xFrac * worldW - w / 2 + "px";
+    img.style.top = yFrac * stageH - h + "px";
+  }
+
   // Ld. a fajl elejen levo dokumentaciot. `opts.w` kotelezo, `opts.h`
-  // hianyaban negyzetes (mint a hotspot-sprite-oknal/dekoracioknal).
+  // hianyaban negyzetes (mint a hotspot-sprite-oknal/dekoracioknal). Az
+  // xFrac/yFrac-ot elmentjuk az elemen (dataset), hogy updateSprite()
+  // kesobb, meretvaltaskor is ugyanahhoz az also-kozepponthoz tudjon
+  // igazitani.
   function addSprite(id, opts) {
     removeSprite(id);
     const w = opts.w;
     const h = opts.h || opts.w;
     const img = document.createElement("img");
     img.className = "overworld-npc";
-    img.style.width = w + "px";
-    img.style.height = h + "px";
-    img.style.left = opts.xFrac * worldW - w / 2 + "px";
-    img.style.top = opts.yFrac * stageH - h + "px";
+    img.dataset.xFrac = opts.xFrac;
+    img.dataset.yFrac = opts.yFrac;
+    positionSprite(img, opts.xFrac, opts.yFrac, w, h);
     img.src = opts.src;
     if (opts.noFloat) img.style.animation = "none";
     dom.npcLayer.appendChild(img);
@@ -298,8 +319,19 @@ const Overworld = (() => {
     return img;
   }
 
-  function updateSprite(id, src) {
-    if (dynamicSprites[id]) dynamicSprites[id].src = src;
+  // sizeOpts (opcionalis): {w, h?} -- ha meg van adva, a doboz meretet is
+  // ujraallitja (ld. positionSprite()), az addSprite()-nal elmentett
+  // xFrac/yFrac also-kozeppont korul. sizeOpts nelkul csak a kep cserelodik,
+  // a meret/pozicio valtozatlan marad (korabbi viselkedes).
+  function updateSprite(id, src, sizeOpts) {
+    const img = dynamicSprites[id];
+    if (!img) return;
+    if (src) img.src = src;
+    if (sizeOpts && sizeOpts.w) {
+      const w = sizeOpts.w;
+      const h = sizeOpts.h || sizeOpts.w;
+      positionSprite(img, parseFloat(img.dataset.xFrac), parseFloat(img.dataset.yFrac), w, h);
+    }
   }
 
   function removeSprite(id) {
@@ -363,18 +395,33 @@ const Overworld = (() => {
   // ESZREVEHETO legyen: `delayMs` ideig Feki tovabbra is rendesen
   // viselkedik (kovet/ul, ld. updateFollower()) -- ez ido alatt pl. egy
   // ugyanekkor felugro parbeszed-buborek szovege mar olvashato legyen,
-  // mielott a jatekos figyelme Fekire terelodik --, majd a mar meglevo
-  // `worldGlitch` CSS-animaciot (ugyanaz, mint amit `main.js`
-  // enterGlitchWorld()-je a szoba->folyoso atvezetesnel az egesz
-  // #game-viewport-re alkalmaz) jatssza le KOZVETLENUL a kovető
-  // sprite-jan (`.follower-glitch-out`, ld. style.css -- kulon szabaly,
-  // mert a `#game-viewport.screen-glitch` szelektor ID-hez van kotve), es
-  // csak ennek vegen tavolitja el ténylegesen a DOM-bol. A `followerCfg`
-  // csak a glitch-animacio KEZDETEKOR nullazodik (nem mar a hivaskor) --
-  // igy updateFollower() a delayMs alatt meg tovabbra is frissiti a
-  // pozicio-transformot, es csak a glitch idejere all le, nehogy a
-  // JS-beli `style.transform` es a CSS-animacio egymassal versengjen.
-  const FOLLOWER_GLITCH_MS = 900; // ugyanaz, mint a worldGlitch CSS-animacio hossza
+  // mielott a jatekos figyelme Fekire terelodik --, majd egy SAJAT
+  // `followerGlitch` CSS-animaciot (ld. style.css -- NEM a `worldGlitch`-et,
+  // ld. lejjebb miert) jatssza le KOZVETLENUL a kovető sprite-jan
+  // (`.follower-glitch-out`), es csak ennek vegen tavolitja el tenylegesen
+  // a DOM-bol. A `followerCfg` csak a glitch-animacio KEZDETEKOR nullazodik
+  // (nem mar a hivaskor) -- igy updateFollower() a delayMs alatt meg
+  // tovabbra is frissiti a pozicio-transformot, es csak a glitch idejere
+  // all le.
+  //
+  // FONTOS: a poziciot NEM a sima inline `style.transform` adja tovabb a
+  // CSS-animacio alatt, hanem egy `--glitch-base-transform` CSS-valtozo,
+  // amit PONTOSAN a glitch-inditas pillanataban rogzitunk a mar befagyott
+  // `style.transform` ertekebol. Ha a keyframes kozvetlenul a `transform`
+  // property-t animalna, akkor MINDEN keyframe teljesen FELULIRNA (nem
+  // hozzaadna) az inline erteket, es Feki minden kockavaltasnal a doboz
+  // also-felso sarkaba (a `top:0;left:0` alapallasba) "ugrana" -- ez a
+  // korabbi valtozat hibaja volt (a felhasznalo szerint "1-2px arrebb
+  // ugrik, aztan hirtelen eltunik"). A `var(--glitch-base-transform)`
+  // keyframe-ekben valo hasznalataval a JS-beli pozicio MINDIG resze marad
+  // az animalt transformnak, a keyframe-ek csak egy kis, SZANDEKOS
+  // "reszkeles"-t adnak hozza tetejere -- igy a remegesnek latszania kell,
+  // nem veletlen pozicio-ugrasnak. Az animacio vegen `opacity:0`-ra is
+  // fade-el (nem csak `filter:brightness(0)`-ra, ami a szinatmenetes PNG
+  // ALFA-csatornajat nem erinti, csak fekete sziluettet hagyna) -- igy az
+  // `el.remove()` mar egy teljesen lathatatlan elemet tavolit el, nem
+  // "pukkan el" lathatoan.
+  const FOLLOWER_GLITCH_MS = 900;
   function removeFollowerWithEffect(delayMs) {
     if (!follower) {
       followerCfg = null;
@@ -384,6 +431,7 @@ const Overworld = (() => {
     setTimeout(() => {
       if (follower !== el) return; // kozben mar mashogy eltavolitottak/lecserelodott
       followerCfg = null;
+      el.style.setProperty("--glitch-base-transform", el.style.transform || "none");
       el.classList.add("follower-glitch-out");
       setTimeout(() => {
         el.remove();

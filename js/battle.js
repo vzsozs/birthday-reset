@@ -311,8 +311,13 @@ const Battle = (() => {
       // portreja/szovege csak EZUTAN jelenik meg. target.onTransitionFrame
       // (opcionalis, ld. playTransitionAnim()) engedi a hivonak, hogy egy
       // MASIK elemet (pl. az Overworld-vilag Apa-sprite-jat) is
-      // szinkronban animaljon ugyanezzel az utemezessel.
+      // szinkronban animaljon ugyanezzel az utemezessel. A felhasznalo
+      // kerese szerint az animacio inditasa elott van egy rovid, 500ms-es
+      // szunet (miutan a jatekos mar tovabblepett az elozo soron) -- igy
+      // van egy eszreveheto pillanat-megallas, mielott a karakter-valtas
+      // elkezdodne, nem azonnal, ugrasszeruen indul.
       if (line.transitionAnim) {
+        await wait(500);
         await playTransitionAnim(target.portrait, line.transitionAnim, target.onTransitionFrame);
       }
       const portrait = resolvePortrait(line);
