@@ -130,10 +130,14 @@ const Engine = (() => {
       });
     } else if (pattern === "spiral") {
       // A doboz kozepebol korbeforgo lovedek-karok -- a jatekosnak korbe
-      // kell mozognia a szivvel a tulelshez. A felhasznalo kerese szerint
-      // ezek is visszapattannak a doboz falairol (bounce:true), ugyanugy
-      // mint a "bounce" mintazat, `life` ms utan eltunve (alapertelmezett
-      // 2600ms, ha a zona-config nem ad meg sajatot).
+      // kell mozognia a szivvel a tulelshez. A visszapattanas (bounce) a
+      // spawnConfig.bounce mezotol fugg (alapertelmezetten NEM pattan
+      // vissza, hanem egyszeruen tovabbmegy a falon at es a margin-alapu
+      // kilepesi logikaval tunik el, ld. update()) -- a 2. zona (Cirkusz)
+      // kerte kifejezetten a visszapattanast (`dodge.bounce: true`, ugyanaz
+      // a `life`-alapu eltunes, mint a "bounce" mintazatnal), az 1. zona
+      // viszont NEM (a felhasznalo kerese szerint ott a lovedekek csak
+      // tovabbmennek a falon at).
       spiralAngle += spawnConfig.spiralStep || 0.5;
       const armCount = spawnConfig.arms || 1;
       for (let a = 0; a < armCount; a++) {
@@ -144,7 +148,7 @@ const Engine = (() => {
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           r: size,
-          bounce: true,
+          bounce: !!spawnConfig.bounce,
           life: spawnConfig.life || 2600,
         });
       }

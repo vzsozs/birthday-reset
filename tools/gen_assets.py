@@ -223,28 +223,13 @@ if __name__ == "__main__":
     blob_sprite("enemy_csoautomata_placeholder.png", (200, 30, 30, 255), "CSO-AUTOMATA")
     blob_sprite("enemy_blokkfeju_placeholder.png", (60, 200, 90, 255), "BLOKKFEJU")
     blob_sprite("asgore_placeholder.png", (170, 60, 50, 255), "ASGORE")
-    # APA2 -- a ZONE_4 zaro-jelenetenek "pukk eltunik es megjelenik helyette
-    # APA2" arcvaltasahoz (ld. CLAUDE.md/js/zones.js ZONE_4.victoryLines).
-    # Meg nincs kezzel kivagott kep az Apa.png lapjabol, a felhasznalo
-    # kerese szerint addig ez az egyszeru blob-placeholder all a helyen.
-    blob_sprite("apa2_placeholder.png", (250, 170, 60, 255), "APA2")
-    # Az APA->APA2 atvaltast eltakaro 4-kockas placeholder-animacio (ld.
-    # js/battle.js playTransitionAnim()/js/zones.js ZONE_4.victoryLines
-    # "transitionAnim" mezojet) -- a felhasznalo majd sajat rajzra csereli.
-    # A szinek szandekosan tartanak az apa2_placeholder szine (250,170,60)
-    # fele az utolso kockara, hogy folyamatosnak hasson az atvaltas vege.
-    blob_sprite("apa_transition_01.png", (255, 255, 255, 255), "POOF 1", shape="ellipse")
-    blob_sprite("apa_transition_02.png", (255, 225, 140, 255), "POOF 2", shape="ellipse")
-    blob_sprite("apa_transition_03.png", (255, 195, 90, 255), "POOF 3", shape="ellipse")
-    blob_sprite("apa_transition_04.png", (250, 170, 60, 255), "POOF 4", shape="ellipse")
-    # Ugyanez az atmenet, de a folyoson allo (Overworld.addSprite()) "vilag-
-    # sprite"-hoz -- KULON fajlok, a felhasznalo kifejezett kerese szerint,
-    # hogy a ket animacio (doboz-portre vs vilag-sprite) fuggetlenul
-    # cserelheto legyen kesz rajzra.
-    blob_sprite("apa_world_transition_01.png", (255, 255, 255, 255), "W-POOF 1", shape="ellipse")
-    blob_sprite("apa_world_transition_02.png", (255, 225, 140, 255), "W-POOF 2", shape="ellipse")
-    blob_sprite("apa_world_transition_03.png", (255, 195, 90, 255), "W-POOF 3", shape="ellipse")
-    blob_sprite("apa_world_transition_04.png", (250, 170, 60, 255), "W-POOF 4", shape="ellipse")
+    # FIGYELEM: apa_placeholder.png/apa_placeholder_talk.png,
+    # apa2_placeholder.png/apa2_placeholder_talk.png, valamint az
+    # apa_transition_01-08.png es apa_world_transition_01-08.png kockak
+    # MAR NEM ezzel a scripttel generalt blob-placeholderek -- a felhasznalo
+    # sajat, kesz Minecraft-stilusu pixel-artra cserelte oket (ld. CLAUDE.md
+    # "A záró (Minecraft) zóna"). NE generald ujra oket blob_sprite()-tal,
+    # az felulirna a kesz rajzokat.
 
     zone_bg("zone1_bg_placeholder.png", (210, 200, 180, 255), "ZONA 1: A SIRAS", pattern="tile")
     zone_bg("zone2_bg_placeholder.png", (200, 60, 160, 255), "ZONA 2: A CIRKUSZ", pattern="stripes")

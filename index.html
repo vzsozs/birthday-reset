@@ -15,7 +15,6 @@
       <h1>PROJECT: BIRTHDAY RESET</h1>
       <p class="subtitle">Boldog szülinapot Töki ♡</p>
       <button id="start-btn" class="pixel-btn">KATTINTS A KEZDÉSHEZ</button>
-      <p class="hint-small">Mozgás harcban: nyilak / WASD · ACT-menü: nyilak/WASD + Enter/szóköz (vagy kattintás)</p>
     </div>
 
     <div id="overworld-screen" class="screen hidden">
@@ -68,12 +67,13 @@
           </div>
         </div>
       </div>
-      <p class="hint-small">Mozgás: nyilak / WASD · Interakció: Enter / szóköz / kattintás</p>
+      <!-- Csak a Bazsa-szobaban lathato -- a felhasznalo kerese szerint a
+           tobbi jelenetbol (folyoso, isaac-szoba) mar leszedve. JS-ben
+           toggle-olva (ld. main.js roomHint), ld. enterGlitchWorld(). -->
+      <p id="room-hint" class="hint-small">Mozgás: nyilak / WASD · Interakció: Enter / szóköz / kattintás</p>
     </div>
 
     <div id="game-screen" class="screen hidden">
-      <p class="hint-small">Mozgás harcban: nyilak / WASD · ACT-menü: nyilak/WASD + Enter/szóköz (vagy kattintás)</p>
-
       <div id="battle-stage">
         <img id="zone-bg" src="" alt="" />
 

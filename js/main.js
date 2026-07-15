@@ -24,6 +24,13 @@ window.addEventListener("DOMContentLoaded", async () => {
   const startBtn = document.getElementById("start-btn");
   const restartBtn = document.getElementById("restart-btn");
   const zoneBg = document.getElementById("zone-bg");
+  // A felhasznalo kerese szerint a "Mozgás: nyilak / WASD..." hint-szoveg
+  // MOST MAR csak a Bazsa-szobaban lathato -- a folyoso/isaac-szoba mar nem
+  // mutatja (a cimkepernyo es a harc-kepernyo sajat hint-szoveget pedig
+  // teljesen toroltuk). Elrejtve az enterGlitchWorld()-ben, amikor a
+  // jatekos elhagyja a szobat -- a jatek soha nem ter vissza ROOM_SCENE-be,
+  // igy nincs szukseg arra, hogy valaha ujra megjelenjen.
+  const roomHint = document.getElementById("room-hint");
 
   const choiceBox = document.getElementById("computer-choice-box");
   const choiceText = document.getElementById("choice-text");
@@ -51,23 +58,31 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
   const overworldDialogueBox = document.getElementById("overworld-dialogue-box");
   // Az APA->APA2 atvaltast a folyoson allo Apa-sprite-on (nem csak a
-  // dialogus-doboz portrejan) is eltakarja egy 4-kockas placeholder-animacio
-  // -- KULON fajlkeszlet, a felhasznalo kifejezett kerese szerint, hogy a
-  // ket animacio (doboz vs vilag-sprite) fuggetlenul cserelheto legyen kesz
+  // dialogus-doboz portrejan) is eltakarja egy 8-kockas animacio -- KULON
+  // fajlkeszlet, a felhasznalo kifejezett kerese szerint, hogy a ket
+  // animacio (doboz vs vilag-sprite) fuggetlenul cserelheto legyen kesz
   // rajzra. `onTransitionFrame` a js/battle.js showSequence()/
   // playTransitionAnim() altal minden kockavaltaskor meghivott hook (ld.
-  // ott) -- igy a ket animacio pontosan szinkronban fut.
+  // ott) -- igy a ket animacio pontosan szinkronban fut. `onTransitionEnd`
+  // a transitionAnim vegen fut le EGYSZER, es a vegleges "APA2 vilag-sprite"
+  // kepre valt (nem hagyja az utolso atmenet-kockan allva) -- ld.
+  // js/battle.js showSequence() `target.onTransitionEnd` hivasat.
   const APA_WORLD_TRANSITION_FRAMES = [
     "assets/sprites/apa_world_transition_01.png",
     "assets/sprites/apa_world_transition_02.png",
     "assets/sprites/apa_world_transition_03.png",
     "assets/sprites/apa_world_transition_04.png",
+    "assets/sprites/apa_world_transition_05.png",
+    "assets/sprites/apa_world_transition_06.png",
+    "assets/sprites/apa_world_transition_07.png",
+    "assets/sprites/apa_world_transition_08.png",
   ];
   const overworldDialogueTarget = {
     dialogueText: document.getElementById("overworld-dialogue-text"),
     portrait: document.getElementById("overworld-portrait"),
     continueHint: document.getElementById("overworld-continue-hint"),
     onTransitionFrame: (i) => Overworld.updateSprite("zone4-apa", APA_WORLD_TRANSITION_FRAMES[i]),
+    onTransitionEnd: () => Overworld.updateSprite("zone4-apa", "assets/sprites/apa2_placeholder.png"),
   };
 
   Overworld.init({
@@ -568,7 +583,11 @@ window.addEventListener("DOMContentLoaded", async () => {
       } else {
         Engine.playSound("awkward");
         fekiGone = true;
-        Overworld.removeFollower();
+        // 1000ms kesleltetessel + a szoba->folyoso atvezetesnel mar
+        // hasznalt glitch-animacioval tunik el, hogy a felhasznalo kerese
+        // szerint jobban eszreveheto legyen, ne a popup-szoveg mellett
+        // eszrevetlenul tunjon el -- ld. Overworld.removeFollowerWithEffect().
+        Overworld.removeFollowerWithEffect(1000);
         Overworld.showCornerPopup("assets/sprites/enemy_bohoc_placeholder_talk.png", "GAME OVER, KÖLYÖK: mostantól az én digitális háziállatom Feki.", () =>
           Overworld.resume()
         );
@@ -647,7 +666,15 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     await Battle.showSequence(zone.intro, overworldDialogueTarget, overworldDialogueBox);
 
-    Overworld.addSprite("zone4-apa", { src: zone.enemy.sprite, xFrac: apaXFrac, yFrac: apaYFrac, w: 60 });
+    // w/h: a felhasznalo altal keszitett apa_placeholder.png (43x55) es a
+    // nagyobb apa_world_transition_0N.png (71x77) kockak mindegyike befer
+    // ebbe a dobozba `object-fit:contain`-nel (ld. .overworld-npc), a
+    // `object-position:bottom` pedig -- a felhasznalo altal mar
+    // also-kozeppontra igazitott kepekkel egyutt -- biztositja, hogy a
+    // kockak kozott ne "ugorjon" a szereplo. Korabban 60x60 volt (a regi,
+    // kisebb asgore-placeholder kephez hangolva) -- ha ez meg mindig nem
+    // stimmel meretben, itt kell allitani.
+    Overworld.addSprite("zone4-apa", { src: zone.enemy.sprite, xFrac: apaXFrac, yFrac: apaYFrac, w: 70, h: 80 });
     await Battle.showSequence(zone.enemy.introLines, overworldDialogueTarget, overworldDialogueBox);
 
     overworldDialogueBox.classList.add("hidden");
@@ -1113,6 +1140,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       sceneFade.classList.remove("scene-fade-in");
       sceneFade.classList.add("scene-fade-black");
       setTimeout(() => {
+        roomHint.classList.add("hidden");
         Overworld.start(buildCorridorScene(null));
         sceneFade.classList.remove("scene-fade-black");
         sceneFade.classList.add("scene-fade-in");

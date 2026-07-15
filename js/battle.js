@@ -313,6 +313,13 @@ const Battle = (() => {
       } else {
         target.portrait.style.display = "none";
       }
+      // target.onTransitionEnd (opcionalis): pontosan akkor fut le, amikor
+      // az atmenet-animacio utan a VALODI (vegleges) portre mar be van
+      // allitva -- ezt hasznalja a ZONE_4, hogy ugyanekkor a folyoson allo
+      // Apa-sprite-ot is a vegleges "APA2" kepre valtsa (ld. js/main.js
+      // playZone4Finale() `onTransitionEnd` hivasat), ne csak az utolso
+      // atmenet-kockan maradjon.
+      if (line.transitionAnim && target.onTransitionEnd) target.onTransitionEnd();
       await typeText(line.speaker, line.text, portrait, line.faces, target);
     }
   }
@@ -774,7 +781,7 @@ const Battle = (() => {
       centerEnemySprite = branch.enemyField;
       dom.battleEnemySprite.src = centerEnemySprite;
     }
-    await showStyleTag(zoneData.styleTag || "+STYLE");
+    await showStyleTag(dom.styleTag, zoneData.styleTag || "+STYLE");
     await showSequence(branch.lines);
     dom.mercyRow.classList.add("hidden");
     if (onCompleteZone) onCompleteZone({ outcome, roomDecoration: !!branch.roomDecoration });

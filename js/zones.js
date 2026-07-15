@@ -87,10 +87,10 @@ const ZONE_1 = {
       // FIGHT eseten a rovidebb preLinesIfPrevFight.
       preLines: [
         { speaker: "TENNA", portrait: "assets/sprites/tenna_placeholder.png", text: "Átverés a virtuális kisállatokkal? Ez a legősibb trükk a tévézés történetében! Imádom!" },
-        { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder.png", text: "Ez Tragikus. Én Is Elcseréltem Volna A Macskát. De Csak Azért Mert A Macskák Nem Tudnak Kereket Csereként Használni." },
+        { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder_talk.png", text: "Ez Tragikus. Én Is Elcseréltem Volna A Macskát. De Csak Azért Mert A Macskák Nem Tudnak Kereket Csereként Használni." },
       ],
       preLinesIfPrevFight: [
-        { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder.png", text: "Tyíí, Ebből Baj Lesz. System_Crashed_Error: 0x00000D" },
+        { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder_talk.png", text: "Tyíí, Ebből Baj Lesz. System_Crashed_Error: 0x00000D" },
       ],
       dodge: { duration: 6800, rate: 560, speed: 250, size: [6, 11], pattern: "bounce", life: 3600 },
       options: [
@@ -133,6 +133,11 @@ const ZONE_1 = {
       // runRound() "lastChoiceId"), egyebkent kimarad.
       enemyLine: { speaker: "KÖNNY-LÉNY", text: "Lehet, hogy... nem vagyok egyedül a szerveren?" },
       enemyLineRequiresPrevChoice: "roblox_tanc",
+      // Szandekosan NINCS bounce:true -- a felhasznalo kerese szerint itt a
+      // spiral-lovedekek NEM pattannak vissza a falrol, csak tovabbmennek
+      // rajta at (ld. js/engine.js spawnBullet() "spiral" aganak
+      // spawnConfig.bounce-ellenorzeset). A 2. zona spiral-ja (ZONE_2)
+      // kifejezetten bounce:true-t kap, ott marad a visszapattanas.
       dodge: { duration: 6800, rate: 220, speed: 250, size: [6, 10], pattern: "spiral", spiralStep: 0.35, arms: 3 },
       options: [
         {
@@ -155,9 +160,9 @@ const ZONE_1 = {
           mercy: 50,
           reactionLines: [
             { speaker: "TE", text: "Megkéred Queent és Tennát, hogy veled együtt utánozzák a klasszikus Roblox halál-hangot." },
-            { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder.png", text: "Rendben. OOF." },
+            { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder_talk.png", text: "Rendben. OOF." },
             { speaker: "TENNA", portrait: "assets/sprites/tenna_placeholder.png", text: "OOF! (Ez jó volt a mikrofonba?)" },
-            { speaker: "KÖNNY-LÉNY", text: "*Teljesen megdöbben.*" },
+            { speaker: "KÖNNY-LÉNY", text: "*Teljesen megdöbben." },
           ],
         },
       ],
@@ -174,7 +179,7 @@ const ZONE_1 = {
         { speaker: "KÖNNY-LÉNY", text: "Köszönöm. Azt hiszem, ideje kicsit offline lennem és sétálni egyet." },
         { speaker: "KÖNNY-LÉNY", text: "Amúgy is lejárt a képernyőidőm." },
         { speaker: "TE", text: "A Könny-lény elpárolog, és hátrahagy egy kis sárga kockát." },
-        { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder.png", text: "EGY VIRTUÁLIS KIEGÉSZÍTŐ. FELSZERELHETED VÉDEKEZÉS GYANÁNT. HA MÁR MINDENKI EZT CSINÁLJA." },
+        { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder_talk.png", text: "EGY VIRTUÁLIS KIEGÉSZÍTŐ. FELSZERELHETED VÉDEKEZÉS GYANÁNT. HA MÁR MINDENKI EZT CSINÁLJA." },
       ],
       failLines: [
         { speaker: "KÖNNY-LÉNY", text: "*Még nem áll készen erre." },
@@ -189,7 +194,7 @@ const ZONE_1 = {
       roomDecoration: true,
       lines: [
         { speaker: "TE", text: "A Könny-lény elcsendesedik." },
-        { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder.png", text: "Ez Kicsit Durva Volt. De Legalább Megszáradt A Padló." },
+        { speaker: "QUEEN", portrait: "assets/sprites/queen_placeholder_talk.png", text: "Ez Kicsit Durva Volt. De Legalább Megszáradt A Padló." },
       ],
     },
   },
@@ -311,8 +316,9 @@ const ZONE_2 = {
         ],
       },
       // A felhasznalo kerese szerint a spiral-lovedekek is visszapattannak
-      // (ld. js/engine.js spawnBullet() "spiral" aga), es ugyanazt a meret
-      // szerinti buborek-textura-keszletet hasznaljak, mint az 1. fordulo.
+      // (bounce:true, ld. js/engine.js spawnBullet() "spiral" aga), es
+      // ugyanazt a meret szerinti buborek-textura-keszletet hasznaljak,
+      // mint az 1. fordulo.
       dodge: {
         duration: 6800,
         rate: 260,
@@ -321,6 +327,7 @@ const ZONE_2 = {
         pattern: "spiral",
         spiralStep: 0.35,
         arms: 3,
+        bounce: true,
         tearImages: { small: "bubbleSmall", normal: "bubbleNormal", large: "bubbleLarge" },
       },
       options: [
@@ -440,9 +447,10 @@ const ZONE_2 = {
 // nincs `acts`/`dodge`/`background` mezoje -- helyettuk egy `fightImage`
 // mezo (a korabbi, egyetlen ACT reactionLines-abol kiemelve) es explicit
 // `portrait` minden soron (a resolvePortrait()-fele automatikus arckep-
-// kitoltes csak battle.js-en keresztul mukodik, ezt a zonat viszont
-// showOverworldDialogue()/Overworld.showCornerPopup() jeleniti meg). A
-// `speaker` mezokben "APA"/"APA2" szerepel (nem "ASGORE") -- a folyoson
+// kitoltes csak battle.js `Battle.start()`-os utvonalon mukodik, ezt a
+// zonat viszont `js/main.js` `playZone4Finale()` jeleniti meg a
+// `Battle.showSequence()` kozvetlen hivasaval, sajat overworld-dobozzal).
+// A `speaker` mezokben "APA"/"APA2" szerepel (nem "ASGORE") -- a folyoson
 // sincs lathato beszelo-nev, ez csak a kod olvashatosagat szolgalja.
 const ZONE_4 = {
   id: "zone4_minecraft",
@@ -454,9 +462,10 @@ const ZONE_4 = {
   enemy: {
     name: "APA",
     // A folyoson dinamikusan felbukkano "dramai belepo" sprite kepe --
-    // ld. js/main.js playZone4Finale() Overworld.addSprite() hivasat.
-    sprite: "assets/sprites/asgore_placeholder.png",
-    talkSprite: "assets/sprites/asgore_placeholder_talk.png",
+    // ld. js/main.js playZone4Finale() Overworld.addSprite() hivasat. Mar a
+    // felhasznalo altal keszitett vegleges APA-kep (nem az asgore-placeholder).
+    sprite: "assets/sprites/apa_placeholder.png",
+    talkSprite: "assets/sprites/apa_placeholder_talk.png",
     introLines: [
       // sound: a script "(snd_heavydamage.wav)" jelolese Apa drámai
       // belepojenel -- ld. js/main.js showOverworldDialogue() line.sound
@@ -465,7 +474,7 @@ const ZONE_4 = {
       {
         speaker: "APA",
         text: "BUMM. Drámai belépő, a sors elkerülhetetlen végzete... még mindig működik, vagy már túl öreg vagyok ehhez a digitális bohóckodáshoz?",
-        portrait: "assets/sprites/asgore_placeholder_talk.png",
+        portrait: "assets/sprites/apa_placeholder_talk.png",
         sound: "heavydamage",
       },
       { speaker: "TE", text: "Apa? Miért vagy... kocka alakú?", portrait: null },
@@ -483,21 +492,21 @@ const ZONE_4 = {
   // szokasos 1100ms-nel jval tovabb kitart -- ld. showStyleTag(text, holdMs).
   styleTagDuration: 2800,
   victoryLines: [
-    { speaker: "APA", text: "Ha HA HAAAA", portrait: "assets/sprites/asgore_placeholder_talk.png" },
+    { speaker: "APA", text: "Ha HA HAAAA", portrait: "assets/sprites/apa_placeholder_talk.png" },
     // "pukk eltűnik és megjelenik helyette APA2" -- kulon sor, kulon
-    // (meg kesz kepre varo, egyelore gen_assets.py-stilusu placeholder)
-    // portrettal, ld. tools/gen_assets.py "apa2_placeholder" bejegyzeset.
-    // sound: a felhasznalo kerese szerint pontosan az atvaltas
-    // pillanataban (a portre APA2-re cserelodesekor) szol. transitionAnim:
-    // egy 4-kockas placeholder-animacio (ld. tools/gen_assets.py
-    // "apa_transition_0N" bejegyzeseit), ami eltakarja a hirtelen
-    // karakter-valtast, mielott a valodi APA2-portre megjelenne -- a
-    // felhasznalo sajat rajzra fogja cserelni kesobb, ld.
-    // js/battle.js playTransitionAnim().
+    // portrettal (`apa2_placeholder_talk.png`, a felhasznalo vegleges
+    // kepe -- KULONBOZIK az `apa2_placeholder.png`-tol, ami a folyoson
+    // allo "vilag-sprite" kepe, ld. js/main.js playZone4Finale()
+    // Overworld.addSprite()/onTransitionEnd hivasat). sound: a
+    // felhasznalo kerese szerint pontosan az atvaltas pillanataban (a
+    // portre APA2-re cserelodesekor) szol. transitionAnim: egy 8-kockas
+    // animacio (ld. tools/gen_assets.py "apa_transition_0N" bejegyzeseit),
+    // ami eltakarja a hirtelen karakter-valtast, mielott a valodi
+    // APA2-portre megjelenne -- ld. js/battle.js playTransitionAnim().
     {
       speaker: "APA2",
       text: "Tudom, tudom. A világok, a harcok, a szép grafikák. De figyelj...",
-      portrait: "assets/sprites/apa2_placeholder.png",
+      portrait: "assets/sprites/apa2_placeholder_talk.png",
       sound: "vaporized",
       transitionAnim: {
         frames: [
@@ -505,6 +514,10 @@ const ZONE_4 = {
           "assets/sprites/apa_transition_02.png",
           "assets/sprites/apa_transition_03.png",
           "assets/sprites/apa_transition_04.png",
+          "assets/sprites/apa_transition_05.png",
+          "assets/sprites/apa_transition_06.png",
+          "assets/sprites/apa_transition_07.png",
+          "assets/sprites/apa_transition_08.png",
         ],
         frameMs: 150,
       },

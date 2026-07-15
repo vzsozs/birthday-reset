@@ -193,6 +193,16 @@ h1 {
   pointer-events: none;
 }
 
+/* A felhasznalo kerese szerint a kovető NPC (Feki) vegleges eltunese
+   (ld. js/overworld.js removeFollowerWithEffect()) UGYANAZT a `worldGlitch`
+   animaciot hasznalja, mint a szoba->folyoso atvezetes (ld.
+   #game-viewport.screen-glitch lejjebb) -- csak KOZVETLENUL a kovető
+   sprite-jan, kulon szabalykent, mert az eredeti szelektor `#game-viewport`
+   ID-hez van kotve. */
+.overworld-follower.follower-glitch-out {
+  animation: worldGlitch 0.9s steps(1, end) 1;
+}
+
 /* Fejlesztoi debug-keret a walkBounds teruletekhez -- csak akkor jelenik
    meg, ha a js/overworld.js DEBUG_WALKBOUNDS konstansa true. Ld. ott. */
 .overworld-debug-bounds {

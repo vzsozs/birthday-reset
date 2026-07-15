@@ -358,6 +358,40 @@ const Overworld = (() => {
     followerCfg = null;
   }
 
+  // removeFollower() lathato atmenet nelkuli, azonnali valtozata -- a
+  // felhasznalo kerese szerint (Feki-vesztes a 2. zonaban) inkabb
+  // ESZREVEHETO legyen: `delayMs` ideig Feki tovabbra is rendesen
+  // viselkedik (kovet/ul, ld. updateFollower()) -- ez ido alatt pl. egy
+  // ugyanekkor felugro parbeszed-buborek szovege mar olvashato legyen,
+  // mielott a jatekos figyelme Fekire terelodik --, majd a mar meglevo
+  // `worldGlitch` CSS-animaciot (ugyanaz, mint amit `main.js`
+  // enterGlitchWorld()-je a szoba->folyoso atvezetesnel az egesz
+  // #game-viewport-re alkalmaz) jatssza le KOZVETLENUL a kovető
+  // sprite-jan (`.follower-glitch-out`, ld. style.css -- kulon szabaly,
+  // mert a `#game-viewport.screen-glitch` szelektor ID-hez van kotve), es
+  // csak ennek vegen tavolitja el ténylegesen a DOM-bol. A `followerCfg`
+  // csak a glitch-animacio KEZDETEKOR nullazodik (nem mar a hivaskor) --
+  // igy updateFollower() a delayMs alatt meg tovabbra is frissiti a
+  // pozicio-transformot, es csak a glitch idejere all le, nehogy a
+  // JS-beli `style.transform` es a CSS-animacio egymassal versengjen.
+  const FOLLOWER_GLITCH_MS = 900; // ugyanaz, mint a worldGlitch CSS-animacio hossza
+  function removeFollowerWithEffect(delayMs) {
+    if (!follower) {
+      followerCfg = null;
+      return;
+    }
+    const el = follower;
+    setTimeout(() => {
+      if (follower !== el) return; // kozben mar mashogy eltavolitottak/lecserelodott
+      followerCfg = null;
+      el.classList.add("follower-glitch-out");
+      setTimeout(() => {
+        el.remove();
+        if (follower === el) follower = null;
+      }, FOLLOWER_GLITCH_MS);
+    }, delayMs || 0);
+  }
+
   // scene.follower (opcionalis, ld. a fajl elejen a dokumentaciot) -- ha
   // nincs megadva, nincs kovető NPC (pl. a szobaban, ahol Feki statikus
   // dekoraciokent ul az ablakban -- ld. scene.decorations).
@@ -928,5 +962,17 @@ const Overworld = (() => {
     setTimeout(cb, 0);
   }
 
-  return { init, start, pause, resume, showCornerPopup, dismissCornerPopup, removeFollower, addSprite, updateSprite, removeSprite };
+  return {
+    init,
+    start,
+    pause,
+    resume,
+    showCornerPopup,
+    dismissCornerPopup,
+    removeFollower,
+    removeFollowerWithEffect,
+    addSprite,
+    updateSprite,
+    removeSprite,
+  };
 })();

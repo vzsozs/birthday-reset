@@ -1036,15 +1036,37 @@ be, ld. lejjebb.
   a játékos manuálisan frissítette volna az oldalt — NEM a régi
   `#end-screen`/`restartBtn` utat használja (az továbbra is a kódban van,
   elérhetetlen, ártalmatlan tartalék UI-ként).
-- **Nyitva maradt, vizuál-fázisra váró pontok**: `apa2_placeholder.png`
-  jelenleg egy egyszerű, `tools/gen_assets.py`-stílusú blob-placeholder (a
-  felhasználó kifejezett választása, amíg nincs kézzel kivágott kép az
-  `Apa.png` lapról); a harc-képernyős `zone4_bg_placeholder.png` immár
-  TELJESEN HASZNÁLATON KÍVÜL van (a `ZONE_4`-nek nincs is `background`
-  mezője többé) — a folyosó `corridor_zone4_bg_placeholder.png`-je viszont a
-  végleges, kézzel/AI-jal készült Minecraft-rajz (1024px széles, a
-  felhasználó már elhelyezte/beméretezte), ez látszik a teljes jelenet
-  alatt.
+- **Valódi APA/APA2 grafika bekötve** — a felhasználó kész, Minecraft-stílusú
+  pixel-artot készített, ez váltotta fel a régi `asgore_placeholder*.png`
+  placeholdereket: `apa_placeholder.png`/`apa_placeholder_talk.png` (APA
+  világ-sprite/portré), `apa2_placeholder.png`/`apa2_placeholder_talk.png`
+  (APA2 világ-sprite/portré — FONTOS, hogy `apa2_placeholder.png` NEM a
+  dialógus-portré, hanem a folyosón álló sprite képe, ld. lejjebb). Az
+  `enemy.sprite`/`talkSprite` és minden explicit `portrait` mező ezekre lett
+  átállítva a régi asgore-fájlnevek helyett.
+- **Az átmenet-animációk 4-ről 8 kockára bővültek**, és MÁR NEM
+  `tools/gen_assets.py`-generált blob-placeholderek, hanem a felhasználó
+  kész, Minecraft-stílusú rajzai (`apa_transition_01-08.png` 53×57px,
+  `apa_world_transition_01-08.png` 71×77px — utóbbi szándékosan nagyobb).
+  A `tools/gen_assets.py`-ből a megfelelő `blob_sprite()` hívások törölve
+  lettek, egy FIGYELEM-kommenttel helyettesítve, nehogy valaki véletlenül
+  újragenerálja (felülírva) a kész rajzokat.
+- **`Overworld.addSprite("zone4-apa", ...)` mérete `w:60`-ról `w:70,
+  h:80`-ra nőtt** (`js/main.js` `playZone4Finale()`), hogy a nagyobb
+  `apa_world_transition_0N.png` (71×77) kockák ne zsugorodjanak össze —
+  mivel a felhasználó minden kockát (idle ÉS átmenet) explicit
+  vízszintesen-középre/függőlegesen-alulra igazított
+  (`object-fit:contain`+`object-position:bottom`, ld. `.overworld-npc`),
+  egy ÁLLANDÓ dobozméret (ami `addSprite()`-tól `updateSprite()`-ig sosem
+  változik) biztosítja, hogy a kockák között ne "ugorjon" a szereplő. Ez a
+  szám vizuálisan nincs leellenőrizve (böngésző nélkül nem lehet), a
+  felhasználó saját tesztelése alapján finomítható.
+- **`target.onTransitionEnd` (ÚJ, `showSequence()`-hook)** — a
+  `line.transitionAnim` lejátszása UTÁN, PONTOSAN akkor fut le, amikor a
+  dialógus-doboz portréja már a végleges képre váltott. A `playZone4Finale()`
+  ezt használja arra, hogy a folyosón álló Apa-sprite-ot is UGYANEKKOR
+  váltsa a végleges `apa2_placeholder.png`-re (ne csak az utolsó
+  átmenet-kockán maradjon, ld. `onTransitionFrame`).
 
 ## Az overworld-jelenetek (szoba + folyosó) hangolása
 
@@ -1221,17 +1243,60 @@ a `ZONE_2` pedig a többszörös elágazást igénylő eset (`preLinesByChoice`,
 
 ## Ismert korlátok / amire figyelni kell (még nem tesztelt / hiányos)
 
+- **KRITIKUS HIBA, JAVÍTVA: `finishZone()` (`js/battle.js`) egy régi,
+  elavult szignatúrával hívta a `showStyleTag()`-et** (`showStyleTag(text)`
+  a jelenlegi `showStyleTag(tagEl, text, holdMs)` helyett, ld. "js/battle.js"
+  architektúra-bejegyzés fentebb) — ez a `showCenterImage`/`showStyleTag`/
+  `playFinalCinematic` DOM-cél-paraméterezős átalakítása (ld. "A záró
+  (Minecraft) zóna") után maradt le egyetlen hívási helyen. A `tagEl`
+  helyén egy STRING (`zoneData.styleTag`) érkezett, aminek nincs
+  `.classList`-je — ez egy elkapatlan `TypeError`-t dobott
+  (`Cannot read properties of undefined (reading 'remove')`), ami
+  CSENDBEN megszakította a promise-láncot. Mivel `finishZone()` MINDEN
+  fordulós (rounds-módú) zóna FIGHT/SPARE zárásánál lefut
+  (`resolveEnding()`-ből), ez lefagyasztotta a játékot minden fordulós
+  zóna végén (1. zóna Isaac-szoba ÉS 2. zóna Cirkusz egyaránt) — a
+  felhasználó élesben megtalálta és jelentette. Javítva: a hívás mostantól
+  `showStyleTag(dom.styleTag, ...)`.
+- **A "spiral" dodge-mintázat visszapattanása (`bounce`) mostantól
+  KONFIGURÁLHATÓ, nem hardkódolt** — korábban `js/engine.js`
+  `spawnBullet()` MINDEN spiral-lövedéket automatikusan
+  `bounce:true`-val hozott létre (eredetileg a 2. zóna kérésére), ami az
+  1. zóna 3. fordulóján NEM kívánt viselkedés volt (a felhasználó szerint
+  ott a lövedékeknek csak tovább kellene menniük a falon, nem
+  visszapattanniuk). Mostantól `spawnConfig.bounce` dönti el (alapból
+  `false`) — a `ZONE_2` 2. fordulója explicit `bounce: true`-t kapott a
+  korábbi viselkedés megőrzéséhez, a `ZONE_1` 3. fordulója változatlanul
+  nem ad meg semmit (tehát nem pattan).
+- **A "Mozgás: nyilak / WASD..." hint-szöveg mostantól csak a Bazsa-szobában
+  látható** — a felhasználó kérésére a címképernyő és a harc-képernyő saját
+  hint-szövege teljesen törölve lett (`index.html`), az overworld-screen
+  `#room-hint`-je pedig `js/main.js` `enterGlitchWorld()`-jében explicit
+  elrejtődik, amint a játékos elhagyja a szobát (a játék soha nem tér
+  vissza `ROOM_SCENE`-be, így nincs szükség arra, hogy valaha újra
+  megjelenjen).
+- **Feki (2. zóna, ajándék-vesztés) eltűnése most már "glitch"-es, nem
+  azonnali** — a felhasználó kérésére `Overworld.removeFollowerWithEffect(delayMs)`
+  (ÚJ, `js/overworld.js`) 1000ms késleltetés után lejátssza rajta UGYANAZT
+  a `worldGlitch` CSS-animációt, amit a szoba→folyosó átvezetés használ
+  (`.follower-glitch-out`, ld. style.css — külön szabály, mert az eredeti
+  `#game-viewport.screen-glitch` szelektor ID-hez van kötve), és csak ennek
+  végén távolítja el ténylegesen. A `followerCfg` csak a glitch KEZDETÉN
+  nullázódik (nem már a híváskor), hogy a `delayMs` alatt Feki még
+  rendesen kövessen/üljön, és a JS-beli pozíció-frissítés ne ütközzön a
+  CSS-animáció `transform`-jával.
 - A teljes játék fix 800×640 belső felbontásra épül, amit a `main.js` felskáláz
   az ablakmérethez (letterboxolva) — ez szándékos (Undertale/Deltarune-minta),
   nem hiba, ha oldalt/felül-alul fekete sáv látszik.
-- A halál/újraindítás ág (`gameOver()` a battle.js-ben) az 1. zóna fordulós
-  harcában már élesben letesztelve (böngészőben, a dodge-fázis nehézségét
-  ideiglenesen felturbózva, hogy tényleg elfogyjon a HP) — a retry helyesen
-  a haláleset szerinti fordulót próbálja újra, ld. "Az 1. zóna FIGHT/ACT/
-  SPARE harca". A záró (Minecraft-témájú) zóna régi (legacy) ACT-listás
-  halál-ága még leteszteletlen (bár a `ZONE_4`-nek jelenleg nincs is
-  dodge-fázisa, ld. "A záró (Minecraft) zóna", így ez az ág valójában nem
-  is fut le nála).
+- A halál/újraindítás ág (`gameOver()` a battle.js-ben, HP elfogyása egy
+  dodge-fázisban) az 1. zóna fordulós harcában már élesben letesztelve
+  (böngészőben, a dodge-fázis nehézségét ideiglenesen felturbózva, hogy
+  tényleg elfogyjon a HP) — a retry helyesen a haláleset szerinti fordulót
+  próbálja újra, ld. "Az 1. zóna FIGHT/ACT/SPARE harca". EZ A
+  `finishZone()`-fedő bugtól FÜGGETLEN ág, azt nem érintette. A záró
+  (Minecraft-témájú) zóna régi (legacy) ACT-listás halál-ága még
+  leteszteletlen (bár a `ZONE_4`-nek jelenleg nincs is dodge-fázisa, ld.
+  "A záró (Minecraft) zóna", így ez az ág valójában nem is fut le nála).
 - **A 3. zóna kivétele miatt újraszámolt folyosó-`walkBounds`-fractionök
   (`js/main.js` `buildCorridorScene()`) még NEM lettek élesben
   letesztelve** (ld. a fájl tetején lévő szabályt: a tesztelést a
