@@ -112,8 +112,8 @@
 // megfelelo terulet(ek) kirajzolodjanak a jelenetben -- hasznos uj
 // hotspot/walkBounds hangolasakor. Csak kodbol kapcsolhatoak, nincs hozzajuk
 // kulon UI (szandekosan, ezek fejlesztoi eszkozok, nem jatek-elemek).
-const DEBUG_WALKBOUNDS = false; // halvany neonzold keret a jarhato teruletnek
-const DEBUG_HOTSPOTS = false; // piros kor a hotspotok aktivalasi sugaranak (radius)
+const DEBUG_WALKBOUNDS = true; // halvany neonzold keret a jarhato teruletnek
+const DEBUG_HOTSPOTS = true; // piros kor a hotspotok aktivalasi sugaranak (radius)
 
 const Overworld = (() => {
   let dom = {};

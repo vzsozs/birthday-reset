@@ -888,6 +888,20 @@ window.addEventListener("DOMContentLoaded", async () => {
           prompt: layout ? layout.minecraftPrompt : "* Minecraft... mi más :)",
         });
       }
+      // A felhasznalo kerese szerint egy nema "COMING SOON..." felirat all
+      // az utolso (Minecraft-temaju) zona folyoso-szakaszan is -- FUGGETLENUL
+      // a companionChat-tol (a fenti `if (chat[0])` blokktol), mert a
+      // ZONE_4-nek szandekosan nincs companionChat-je (ld. CLAUDE.md "A záró
+      // (Minecraft) zóna"), igy az a blokk sosem futna le ennel a zonanal.
+      if (i === ZONES.length - 1) {
+        hotspots.push({
+          id: `minecraft${i}`,
+          xFrac: (CORRIDOR_SEGMENT_OFFSETS[i] + 952) / CORRIDOR_TOTAL_WIDTH,
+          yFrac: 0.5,
+          radius: 45,
+          prompt: "COMING SOON...",
+        });
+      }
       if (layout) {
         // Masodik Caine-hotspot, csak a 2. zonaban -- ld. handleCaineHotspot()
         // a bevezeto/ajandek-beszelgetes sorrend-fuggo eldontesehez.
@@ -978,7 +992,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         // masik zona ajtajat erintene.
         doorHotspot.xFrac = doorFrac - 0.03;
         doorHotspot.yFrac = 0.82;
-        doorHotspot.radius = 55;
+        doorHotspot.radius = 85;
         doorHotspot.id = "final";
         doorHotspot.onInteract = () => {
           Overworld.pause();
@@ -1032,7 +1046,8 @@ window.addEventListener("DOMContentLoaded", async () => {
       { xMin: 0.454, xMax: 0.473, yMin: 0.65, yMax: 0.88 },
       { xMin: 0.542, xMax: 0.575, yMin: 0.65, yMax: 0.88 },
       { xMin: 0.581, xMax: 0.95, yMin: 0.8, yMax: 0.88 },
-      { xMin: 0.65, xMax: 0.95, yMin: 0.6, yMax: 0.85 },
+      { xMin: 0.65, xMax: 0.96, yMin: 0.6, yMax: 0.85 },
+      { xMin: 0.75, xMax: 0.983, yMin: 0.48, yMax: 0.76 },
       ],
       spawn: playerSpawn,
       hotspots,
