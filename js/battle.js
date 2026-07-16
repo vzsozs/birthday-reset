@@ -185,7 +185,13 @@ const Battle = (() => {
         }
         if (i < displayText.length) {
           target.dialogueText.textContent += displayText[i];
-          if (displayText[i] !== " ") Engine.playSound(typingSoundFor(speaker));
+          // Mobilon (erintokepes eszkozon) a karakterenkenti gepeles-hang
+          // (Audio-klonok gyors, ismetelt lejatszasa) erezhetoen belassitja
+          // a jatekot (pl. iPhone-on) -- a felhasznalo kerese szerint ott
+          // kikapcsolva, ld. mobile-controls.js "touch-device" osztalyat.
+          if (displayText[i] !== " " && !document.documentElement.classList.contains("touch-device")) {
+            Engine.playSound(typingSoundFor(speaker));
+          }
           applyFaceChangesUpTo(i);
           i++;
           setTimeout(step, speed);

@@ -941,3 +941,91 @@ h1 {
   width: 70%;
   image-rendering: pixelated;
 }
+
+/* Mobil erintos iranyitas (joystick + Enter gomb) -- ld. js/mobile-controls.js.
+   Alapbol rejtve, csak akkor jelenik meg, ha a JS erintokepes eszkozt
+   detektal es <html class="touch-device">-t allit be. Szandekosan
+   position:fixed a #game-viewport-hez (nem a #game-stage-hez) kepest, hogy
+   a fix 800x640-es, skalazott/letterboxolt jatek-tartalomtol fuggetlenul,
+   mindig a TENYLEGES kepernyo sarkaban/oldalan maradjon. Alapertelmezett
+   (allo) elrendezes: joystick jobbra lent, Enter balra lent -- a
+   `(orientation: landscape)` media query fekvo modban a doboz jobb/bal
+   OLDALARA (fuggolegesen kozepre) mozgatja oket, a felhasznalo kerese
+   szerint. Az `env(safe-area-inset-*)` a bevagasos/home-indikatoros
+   telefonokon (pl. iPhone) tartja tavol a gombokat a kepernyo szelso
+   szeletol. */
+#mobile-joystick,
+#mobile-enter-btn {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html.touch-device #mobile-joystick,
+html.touch-device #mobile-enter-btn {
+  display: flex;
+}
+
+#mobile-joystick {
+  right: calc(20px + env(safe-area-inset-right));
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  border: 3px solid rgba(255, 255, 255, 0.6);
+  align-items: center;
+  justify-content: center;
+}
+
+#mobile-joystick-knob {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75);
+  border: 2px solid #fff;
+  pointer-events: none;
+  /* A tenyleges elmozdulast a js/mobile-controls.js allitja be inline
+     transform: translate(dx, dy)-vel, huzas kozben. */
+}
+
+#mobile-enter-btn {
+  left: calc(20px + env(safe-area-inset-left));
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  border: 3px solid rgba(255, 255, 255, 0.6);
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  padding: 0;
+}
+
+#mobile-enter-btn.pressed {
+  background: rgba(255, 255, 255, 0.85);
+  color: #000;
+}
+
+@media (orientation: landscape) {
+  #mobile-joystick {
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+  }
+
+  #mobile-enter-btn {
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+  }
+}

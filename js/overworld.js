@@ -987,7 +987,11 @@ const Overworld = (() => {
       }
       if (i < text.length) {
         dom.cornerText.textContent += text[i];
-        if (text[i] !== " ") Engine.playSound(sound);
+        // Mobilon kikapcsolva -- ld. ugyanezt a megjegyzest js/battle.js
+        // typeText()-jeben.
+        if (text[i] !== " " && !document.documentElement.classList.contains("touch-device")) {
+          Engine.playSound(sound);
+        }
         i++;
         cornerTypeTimer = setTimeout(step, speed);
       } else {

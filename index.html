@@ -2,8 +2,9 @@
 <html lang="hu">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>Project: Birthday Reset</title>
-<link rel="stylesheet" href="style.css?v=75" />
+<link rel="stylesheet" href="style.css?v=77" />
 </head>
 <body>
 
@@ -134,13 +135,29 @@
     </div>
 
   </div>
+
+  <!-- Mobil erintos iranyitas -- csak erintokepes eszkozon jelenik meg
+       (js/mobile-controls.js allitja be a <html class="touch-device">-t).
+       Szandekosan a #game-stage-en KIVUL, kozvetlenul a #game-viewport
+       gyereke: position:fixed-del a teljes kepernyohoz kepest pozicionalt,
+       fuggetlenul a #game-stage belso 800x640-es skalazasatol/letterboxjatol
+       -- ld. style.css. Nem kuld sajat mozgas-/interakcio-logikat, csak
+       szintetikus KeyboardEvent-eket general a window-ra (nyilak + Enter),
+       amit MINDEN meglevo billentyu-figyelo (overworld.js, engine.js dodge-
+       fazis, battle.js ACT-menu/dialogus-lapozas, main.js valaszto-dobozok)
+       mar amugy is figyel -- ld. js/mobile-controls.js. -->
+  <div id="mobile-joystick">
+    <div id="mobile-joystick-knob"></div>
+  </div>
+  <button id="mobile-enter-btn" type="button">ENTER</button>
 </div>
 
-<script src="js/engine.js?v=75"></script>
-<script src="js/battle.js?v=75"></script>
-<script src="js/overworld.js?v=75"></script>
-<script src="js/zones.js?v=75"></script>
-<script src="js/main.js?v=75"></script>
+<script src="js/engine.js?v=77"></script>
+<script src="js/battle.js?v=77"></script>
+<script src="js/overworld.js?v=77"></script>
+<script src="js/zones.js?v=77"></script>
+<script src="js/main.js?v=77"></script>
+<script src="js/mobile-controls.js?v=77"></script>
 
 </body>
 </html>
