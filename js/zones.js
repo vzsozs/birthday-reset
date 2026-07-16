@@ -547,7 +547,12 @@ const ZONE_4 = {
   // automatikus visszaters a cimkepernyore) -- ld. js/battle.js
   // playFinalCinematic(), meghivva js/main.js playZone4Finale()-bol.
   finalCinematic: {
-    heading: "System Reset: Happy 13th Birthday!",
+    // Ket sorra tordelve (a felhasznalo kerese szerint): `headingTop` egy
+    // kisebb, sima sor, `headingMain` pedig karakterenkent random szint
+    // valto "disco" sor (feher szin nelkul) -- ld. js/battle.js
+    // playFinalCinematic()/renderDiscoHeading().
+    headingTop: "System Reset:",
+    headingMain: "Happy 13th Birthday!",
     finalLine:
       "Reseteljük ezt az egészet. A legjobb dolgok úgysem a kódokban vannak, menjünk inkább medencézni. A valódi víznek legalább nincsenek textúrahibái.",
   },

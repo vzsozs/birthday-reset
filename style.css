@@ -654,9 +654,50 @@ h1 {
 
 #ending-heading,
 #overworld-ending-heading {
-  font-size: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   font-weight: bold;
   letter-spacing: 1px;
+}
+
+/* "System Reset:" -- a felhasznalo kerese szerint egy kicsit kisebb, mint a
+   diszko-sor (ld. .ending-heading-main). */
+.ending-heading-sub {
+  font-size: 20px;
+}
+
+/* "Happy 13th Birthday!" -- karakterenkent kulon <span>, amit
+   js/battle.js renderDiscoHeading()-je random szinnel (feher nelkul, ld.
+   DISCO_COLORS) valtogat egy setInterval-lel, "diszkos" hatast adva. */
+.ending-heading-main {
+  font-size: 26px;
+}
+
+/* A "diszko" felirat kepernyon 5mp utan felbukkano meglepetes-poen (ld.
+   js/battle.js playGuyGag()) -- balrol csuszik be (`left` atmenet, mert a
+   640px-es fix stage-szelesseg miatt ez egyszerubb/pontosabb, mint egy
+   szazalekos transform), majd 1mp mulva megszolal egy hang, aztan egy 2
+   kockas "eltunes"-animacio utan elrejtozik. Alapallapotban a stage-en
+   (#overworld-stage-en, ahol overflow:hidden van) kivul, balra -- ld. a
+   .guy-visible modositot a behuzott allapothoz. */
+#ending-guy,
+#overworld-ending-guy {
+  position: absolute;
+  bottom: -20px;
+  left: -240px;
+  width: 200px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 7;
+  transition: left 0.05s ease-out;
+}
+
+#ending-guy.guy-visible,
+#overworld-ending-guy.guy-visible {
+  left: 50px;
 }
 
 #ending-final-line,

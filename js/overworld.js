@@ -80,7 +80,7 @@
  *     spawnFollower()/updateFollower(). Csak egyszerre egy follower tamogatott jelenetenkent;
  *     ha a scene-nek nincs `follower` mezoje, nincs kovető (pl. a folyoso).
  *
- * Overworld.addSprite(id, {src, xFrac, yFrac, w, h?, noFloat?}) /
+ * Overworld.addSprite(id, {src, xFrac, yFrac, w, h?, noFloat?, offsetY?}) /
  * Overworld.updateSprite(id, src, sizeOpts?) / Overworld.removeSprite(id) --
  * altalanos, DINAMIKUS (a scene-config-tol fuggetlen, JELENET KOZBEN
  * barmikor hivhato) sprite-kezeles egy egyszeru id-kulcsu terkeppel. Erre
@@ -98,7 +98,11 @@
  * -- ezt hasznalja pl. a zaro zona, hogy az APA->APA2 atmenet-animacio
  * lathatoan NAGYOBB legyen, mint az allo Apa/Apa2 kep, majd az atmenet
  * vegen visszaalljon az eredeti meretre (ld. CLAUDE.md "A záró (Minecraft)
- * zóna"). `removeSprite()` eltunteti. Mindegyik NO-OP-kent viselkedik, ha a
+ * zóna"). Az opcionalis `offsetY` (addSprite()-nal VAGY sizeOpts-ban) tovabbi
+ * fuggoleges px-eltolast ad az also-kozepponthoz (pozitiv = lejebb) -- ezt
+ * hasznalja pl. a confetti-effektus, hogy lejebb jelenjen meg, mint az allo
+ * Apa2-kep, anelkul hogy a kozos xFrac/yFrac-horgonyt megváltoztatná.
+ * `removeSprite()` eltunteti. Mindegyik NO-OP-kent viselkedik, ha a
  * jelenet kozben scene-valtas (start()) tortent -- a `dynamicSprites` terkep
  * minden start()-nal kiurul.
  *
@@ -108,8 +112,8 @@
 // megfelelo terulet(ek) kirajzolodjanak a jelenetben -- hasznos uj
 // hotspot/walkBounds hangolasakor. Csak kodbol kapcsolhatoak, nincs hozzajuk
 // kulon UI (szandekosan, ezek fejlesztoi eszkozok, nem jatek-elemek).
-const DEBUG_WALKBOUNDS = true; // halvany neonzold keret a jarhato teruletnek
-const DEBUG_HOTSPOTS = true; // piros kor a hotspotok aktivalasi sugaranak (radius)
+const DEBUG_WALKBOUNDS = false; // halvany neonzold keret a jarhato teruletnek
+const DEBUG_HOTSPOTS = false; // piros kor a hotspotok aktivalasi sugaranak (radius)
 
 const Overworld = (() => {
   let dom = {};
@@ -291,18 +295,18 @@ const Overworld = (() => {
   // doboz meretet/helyet -- w/h valtoztatasakor a doboz ALJA es VIZSZINTES
   // KOZEPE marad helyben, csak felfele/oldalra no vagy zsugorodik. Ld.
   // updateSprite() sizeOpts hasznalatat.
-  function positionSprite(img, xFrac, yFrac, w, h) {
+  function positionSprite(img, xFrac, yFrac, w, h, offsetY) {
     img.style.width = w + "px";
     img.style.height = h + "px";
     img.style.left = xFrac * worldW - w / 2 + "px";
-    img.style.top = yFrac * stageH - h + "px";
+    img.style.top = yFrac * stageH - h + (offsetY || 0) + "px";
   }
 
   // Ld. a fajl elejen levo dokumentaciot. `opts.w` kotelezo, `opts.h`
   // hianyaban negyzetes (mint a hotspot-sprite-oknal/dekoracioknal). Az
-  // xFrac/yFrac-ot elmentjuk az elemen (dataset), hogy updateSprite()
-  // kesobb, meretvaltaskor is ugyanahhoz az also-kozepponthoz tudjon
-  // igazitani.
+  // xFrac/yFrac-ot (es az opcionalis offsetY-t) elmentjuk az elemen
+  // (dataset), hogy updateSprite() kesobb, meretvaltaskor is ugyanahhoz az
+  // also-kozepponthoz tudjon igazitani.
   function addSprite(id, opts) {
     removeSprite(id);
     const w = opts.w;
@@ -311,7 +315,8 @@ const Overworld = (() => {
     img.className = "overworld-npc";
     img.dataset.xFrac = opts.xFrac;
     img.dataset.yFrac = opts.yFrac;
-    positionSprite(img, opts.xFrac, opts.yFrac, w, h);
+    img.dataset.offsetY = opts.offsetY || 0;
+    positionSprite(img, opts.xFrac, opts.yFrac, w, h, opts.offsetY);
     img.src = opts.src;
     if (opts.noFloat) img.style.animation = "none";
     dom.npcLayer.appendChild(img);
@@ -319,18 +324,49 @@ const Overworld = (() => {
     return img;
   }
 
-  // sizeOpts (opcionalis): {w, h?} -- ha meg van adva, a doboz meretet is
-  // ujraallitja (ld. positionSprite()), az addSprite()-nal elmentett
-  // xFrac/yFrac also-kozeppont korul. sizeOpts nelkul csak a kep cserelodik,
-  // a meret/pozicio valtozatlan marad (korabbi viselkedes).
+  // sizeOpts (opcionalis): {w, h?, offsetY?} -- ha `w` meg van adva, a doboz
+  // meretet is ujraallitja (ld. positionSprite()), az addSprite()-nal
+  // elmentett xFrac/yFrac also-kozeppont korul. `offsetY` (ha meg van adva)
+  // felulirja/elmenti a tovabbi fuggoleges px-eltolast a kesobbi hivasokra is
+  // (ld. a confetti-effektust, ami a normal Apa2-kepnel lejebb jelenik meg).
+  // sizeOpts nelkul csak a kep cserelodik, a meret/pozicio valtozatlan marad
+  // (korabbi viselkedes).
+  //
+  // FONTOS: ha EGYSZERRE valtozik a `src` ES a meret (sizeOpts.w), a
+  // meret-valtast megvarjuk, amig az UJ kep ténylegesen dekodolodik
+  // (img.decode()) -- kulonben a bongeszo meg a REGI kepet rajzolja ki, csak
+  // mar az UJ (pl. 3x nagyobb) dobozmeretben, ami egy pillanatra
+  // felnagyitott regi-kep-villanaskent latszik (ezt a felhasznalo eszrevette
+  // a zaro zona confetti-atmeneteneл). Ha csak a `src` valtozik (nincs
+  // `sizeOpts.w`), nincs ilyen kockazat, a valtas azonnal tortenik.
   function updateSprite(id, src, sizeOpts) {
     const img = dynamicSprites[id];
     if (!img) return;
-    if (src) img.src = src;
-    if (sizeOpts && sizeOpts.w) {
-      const w = sizeOpts.w;
-      const h = sizeOpts.h || sizeOpts.w;
-      positionSprite(img, parseFloat(img.dataset.xFrac), parseFloat(img.dataset.yFrac), w, h);
+    if (sizeOpts && sizeOpts.offsetY != null) img.dataset.offsetY = sizeOpts.offsetY;
+    function applySize() {
+      if (sizeOpts && sizeOpts.w) {
+        const w = sizeOpts.w;
+        const h = sizeOpts.h || sizeOpts.w;
+        positionSprite(
+          img,
+          parseFloat(img.dataset.xFrac),
+          parseFloat(img.dataset.yFrac),
+          w,
+          h,
+          parseFloat(img.dataset.offsetY) || 0
+        );
+      }
+    }
+    if (src && sizeOpts && sizeOpts.w) {
+      img.src = src;
+      if (img.decode) {
+        img.decode().then(applySize).catch(applySize);
+      } else {
+        img.onload = applySize;
+      }
+    } else {
+      if (src) img.src = src;
+      applySize();
     }
   }
 

@@ -17,6 +17,7 @@ const Engine = (() => {
   let onHit = null; // callback(damage)
   let images = {};
   let sounds = {};
+  let soundVolumes = {};
   let spawnTimer = 0;
   let spawnConfig = null;
   let elapsed = 0;
@@ -34,10 +35,15 @@ const Engine = (() => {
     });
   }
 
-  function loadSound(name, src) {
+  // `volume` (opcionalis, alapertelmezett 0.6): a legtobb hangeffekt jo
+  // ezen az alapertelmezett szinten, de nehany (pl. egy rovid, halkabbnak
+  // erzekelt effekt) egyedileg felulirhatja -- ld. js/main.js "chainExtend"
+  // hivasat (1.0, a natív <audio> maximuma).
+  function loadSound(name, src, volume) {
     const audio = new Audio(src);
     audio.preload = "auto";
     sounds[name] = audio;
+    soundVolumes[name] = volume != null ? volume : 0.6;
   }
 
   function playSound(name) {
@@ -45,7 +51,7 @@ const Engine = (() => {
     if (!s) return;
     try {
       const clone = s.cloneNode(true);
-      clone.volume = 0.6;
+      clone.volume = soundVolumes[name] != null ? soundVolumes[name] : 0.6;
       clone.play().catch(() => {});
     } catch (e) {
       /* nem baj, ha a bongeszo blokkolja hang nelkuli interakcio elott */

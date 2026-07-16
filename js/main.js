@@ -55,6 +55,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     heading: document.getElementById("overworld-ending-heading"),
     finalLine: document.getElementById("overworld-ending-final-line"),
     continueHint: document.getElementById("overworld-ending-continue-hint"),
+    guy: document.getElementById("overworld-ending-guy"),
   };
   const overworldDialogueBox = document.getElementById("overworld-dialogue-box");
   // Az APA->APA2 atvaltast a folyoson allo Apa-sprite-on (nem csak a
@@ -92,14 +93,49 @@ window.addEventListener("DOMContentLoaded", async () => {
     w: Math.round(ZONE4_APA_SIZE.w * ZONE4_APA_TRANSITION_SCALE),
     h: Math.round(ZONE4_APA_SIZE.h * ZONE4_APA_TRANSITION_SCALE),
   };
+  // A confetti-effekt (ld. onTransitionAdvance lejjebb) a felhasznalo
+  // kerese szerint 3x akkora, mint az allo Apa2-kep, de ugyanaz az
+  // also-kozeppont (xFrac/yFrac) rogziti -- ld. ZONE4_APA_SIZE megjegyzeset.
+  // `offsetY` (px, lejjebb = pozitiv) a felhasznalo kerese szerint kb. 100px-
+  // szel lejjebb tolja a confettit az allo Apa2-kephez kepest.
+  const ZONE4_CONFETTI_SIZE = { w: ZONE4_APA_SIZE.w * 3, h: ZONE4_APA_SIZE.h * 3, offsetY: 100 };
+  // A confetti.gif egy 59 kockas, orokre hurkolodo (loop=0) animacio, 30ms/
+  // kocka -- azaz egy teljes lejatszas kb. 1770ms. Mivel a felhasznalo
+  // kerese szerint az animacio CSAK EGYSZER jatszodjon le (ne loopoljon),
+  // ennyi ido utan egy statikus, az utolso kockabol kiexportalt kepre
+  // (confetti_still.png, ld. eloallitasat a git-tortenetben/a menetben
+  // hasznalt egyszeri Python-parancsban) valtunk, ami "megfagyasztja" a
+  // gif-et a sajat utolso allapotaban ahelyett, hogy ujraindulna.
+  const CONFETTI_LOOP_MS = 1770;
   const overworldDialogueTarget = {
     dialogueText: document.getElementById("overworld-dialogue-text"),
     portrait: document.getElementById("overworld-portrait"),
     continueHint: document.getElementById("overworld-continue-hint"),
     onTransitionFrame: (i) =>
       Overworld.updateSprite("zone4-apa", APA_WORLD_TRANSITION_FRAMES[i], ZONE4_APA_TRANSITION_SIZE),
+    // Az atmenet vegen (meg a "Tudom, tudom..." sor gepelese ELOTT) a
+    // folyoson allo vilag-sprite a vegleges, valodi APA2-kepre valt.
     onTransitionEnd: () =>
       Overworld.updateSprite("zone4-apa", "assets/sprites/apa2_placeholder.png", ZONE4_APA_SIZE),
+    // A felhasznalo kerese szerint a confetti.gif csak AZUTAN jelenik meg,
+    // hogy a "Tudom, tudom..." sort mar elolvasta es tovabblepett (Enter/
+    // kattintas) -- ld. js/battle.js showSequence() onTransitionAdvance
+    // hivasat. 3x meret, 100px-el lejjebb tolva (ZONE4_CONFETTI_SIZE
+    // offsetY-ja), a "chainExtend" hang PONTOSAN akkor szol, amikor a gif
+    // megjelenik. Egy Promise-t ad vissza, amit showSequence() megvar -- igy
+    // a sprite csak a teljes loop (CONFETTI_LOOP_MS) lejatszasa utan
+    // (statikus kepre fagyva) tavolittatik el a playZone4Finale() kovetkezo
+    // lepeseben (Overworld.removeSprite()), nem "vagja el" idejekorán a gifet.
+    onTransitionAdvance: () => {
+      Overworld.updateSprite("zone4-apa", "assets/sprites/confetti.gif", ZONE4_CONFETTI_SIZE);
+      Engine.playSound("chainExtend");
+      return new Promise((resolve) =>
+        setTimeout(() => {
+          Overworld.updateSprite("zone4-apa", "assets/sprites/confetti_still.png", ZONE4_CONFETTI_SIZE);
+          resolve();
+        }, CONFETTI_LOOP_MS)
+      );
+    },
   };
 
   Overworld.init({
@@ -141,6 +177,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     endingHeading: document.getElementById("ending-heading"),
     endingFinalLine: document.getElementById("ending-final-line"),
     endingContinueHint: document.getElementById("ending-continue-hint"),
+    endingGuy: document.getElementById("ending-guy"),
     overworldDialogueBox: document.getElementById("overworld-dialogue-box"),
     overworldEndingOverlay: document.getElementById("overworld-ending-overlay"),
   });
@@ -156,6 +193,17 @@ window.addEventListener("DOMContentLoaded", async () => {
     Engine.loadImage("bubbleSmall", "assets/sprites/bubbles-bulett-small.png"),
     Engine.loadImage("bubbleNormal", "assets/sprites/bubbles-bulett-normal.png"),
     Engine.loadImage("bubbleLarge", "assets/sprites/bubbles-bulett-large.png"),
+    // Elore betoltve (nem hasznalt a canvas-motorban, csak a bongeszo
+    // kep-gyorsitotaraba kerul) -- kulonben a zaro zona onTransitionAdvance()
+    // hivasakor a meg le nem toltott/dekodolt gif helyett egy pillanatra a
+    // regi apa2_placeholder.png latszott, felnagyitva az uj (3x-os)
+    // doboz-meretre, amig a confetti.gif be nem toltott.
+    Engine.loadImage("confetti", "assets/sprites/confetti.gif"),
+    // A "System Reset..." kepernyon 5mp utan felbukkano guy-poen 3 kockaja
+    // -- ld. js/battle.js playGuyGag().
+    Engine.loadImage("guy1", "assets/sprites/disappearing-guy-01.png"),
+    Engine.loadImage("guy2", "assets/sprites/disappearing-guy-02.png"),
+    Engine.loadImage("guy3", "assets/sprites/disappearing-guy-03.png"),
   ]);
   Engine.loadSound("blip", "assets/sfx/menu_blip.wav");
   Engine.loadSound("move", "assets/sfx/menu_move.wav");
@@ -183,6 +231,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   // felvillanasahoz (ZONE_4.fightImage) -- ld. js/zones.js.
   Engine.loadSound("vaporized", "assets/Sounds/snd_vaporized.wav");
   Engine.loadSound("ultraswing", "assets/Sounds/snd_ultraswing.wav");
+  // A confetti-effekt megjelenesekor szolo hang (ld. onTransitionAdvance
+  // fentebb) -- a felhasznalo visszajelzese szerint alig hallhato volt az
+  // alapertelmezett 0.6-os hangeronel, ezert itt a natív <audio> maximumara
+  // (1.0) van allitva, ld. Engine.loadSound() opcionalis volume-parametere.
+  Engine.loadSound("chainExtend", "assets/Sounds/snd_chain_extend.wav", 1.0);
+  // A "System Reset..." kepernyon 5mp utan felbukkano guy-poen hangja --
+  // ld. js/battle.js playGuyGag().
+  Engine.loadSound("helloEverybody", "assets/Sounds/Hello-Everybody-My-Name-Is.wav");
   // Karakterenkent kulon gepeles-hang -- ld. js/zones.js
   // RECURRING_SPEAKER_TYPE_SOUNDS es a hasznalatat js/battle.js
   // typeText()-jeben / js/overworld.js typeCornerText()-jeben. Az itt fel

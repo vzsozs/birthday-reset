@@ -335,6 +335,15 @@ const Battle = (() => {
       // atmenet-kockan maradjon.
       if (line.transitionAnim && target.onTransitionEnd) target.onTransitionEnd();
       await typeText(line.speaker, line.text, portrait, line.faces, target);
+      // target.onTransitionAdvance (opcionalis): a target.onTransitionEnd
+      // parja, de csak AZUTAN fut le, hogy a jatekos mar tovabblepett
+      // (Enter/kattintas) a transitionAnim-os soron -- ezt hasznalja a
+      // ZONE_4, hogy a folyoson allo Apa2-sprite csak a "Tudom, tudom..."
+      // sor elolvasasa utan valtson at (pl. egy confetti-effektre). Ha egy
+      // Promise-t ad vissza, showSequence() megvarja, mielott folytatna --
+      // igy a hivo (pl. egy idozitett effektus) idot kap lefutni, mielott a
+      // kovetkezo sor/lepes (pl. a sprite eltavolitasa) megtortenne.
+      if (line.transitionAnim && target.onTransitionAdvance) await target.onTransitionAdvance();
     }
   }
 
@@ -544,6 +553,7 @@ const Battle = (() => {
         heading: dom.endingHeading,
         finalLine: dom.endingFinalLine,
         continueHint: dom.endingContinueHint,
+        guy: dom.endingGuy,
       };
       await playFinalCinematic(endingDom, zoneData.finalCinematic, () => onCompleteZone({ finalReset: true }));
       return;
@@ -564,29 +574,144 @@ const Battle = (() => {
   // showCenterImage()-nel. Onallo fedot hasznal (NEM a megosztott
   // #scene-fade-et) -- az utobbi csak fekete fedesre kepes, ez a jelenet
   // viszont elobb KIVILAGOSODIK (feher), csak a legvegen valt feketere.
-  // `onHeadingShown` (opcionalis): pontosan akkor fut le, amikor a `cfg.heading`
+  // `onHeadingShown` (opcionalis): pontosan akkor fut le, amikor a cim
   // felirat megjelenik -- a felhasznalo kerese szerint ekkor kell elkezdeni
   // elhalkitani a hatterzenet (ld. js/main.js playZone4Finale()
   // fadeOutMusic()-hivasat), de ez a zene-kezeles maga a Battle-modulon
   // KIVUL, main.js-ben tortenik (a Battle nem ismeri a roomMusic-ot).
+  //
+  // A cim ket sorra tordelve jelenik meg (a felhasznalo kerese szerint):
+  // `cfg.headingTop` egy kisebb, sima sor, `cfg.headingMain` pedig
+  // karakterenkent random szinre valto "diszko" sor (feher szin nelkul) --
+  // ld. renderDiscoHeading()/stopDiscoHeading().
+  const DISCO_COLORS = ["#ff3b30", "#ff9500", "#ffcc00", "#34c759", "#00c7be", "#3078ff", "#7c4dff", "#ff2d95"];
+  let discoTimer = null;
+
+  function stopDiscoHeading(container) {
+    if (discoTimer) {
+      clearInterval(discoTimer);
+      discoTimer = null;
+    }
+    if (container) {
+      container.querySelectorAll(".ending-heading-main span").forEach((s) => {
+        s.style.color = "";
+      });
+    }
+  }
+
+  function renderDiscoHeading(container, top, main) {
+    stopDiscoHeading(container);
+    container.innerHTML = "";
+    const topEl = document.createElement("div");
+    topEl.className = "ending-heading-sub";
+    topEl.textContent = top || "";
+    const mainEl = document.createElement("div");
+    mainEl.className = "ending-heading-main";
+    for (const ch of main || "") {
+      const span = document.createElement("span");
+      span.textContent = ch;
+      mainEl.appendChild(span);
+    }
+    container.appendChild(topEl);
+    container.appendChild(mainEl);
+    const spans = mainEl.querySelectorAll("span");
+    discoTimer = setInterval(() => {
+      spans.forEach((s) => {
+        if (!s.textContent.trim()) return;
+        s.style.color = DISCO_COLORS[Math.floor(Math.random() * DISCO_COLORS.length)];
+      });
+    }, 150);
+  }
+
+  // A "System Reset..." kepernyon 5mp utan felbukkano meglepetes-poen (a
+  // felhasznalo konkret forgatokonyve alapján): egy figura beúszik balrol
+  // (ld. .guy-visible CSS-atmenet), 1mp mulva megszolal egy hang, majd a
+  // hangminta lejatszasa utan egy 2 kockas "eltunes"-animacio kovetkezik,
+  // aztan elrejtozik. Sajat, egymasba agyazott setTimeout-lanccal fut,
+  // FUGGETLENUL a fo szekvenciatol (a jatekos barmikor tovabblephet a
+  // finalLine-on, mielott ez lefutna) -- ezert cancelGuyGag()-et MINDIG meg
+  // kell hivni a feketebe-valtas ELOTT, kulonben egy "elszabadult" idozito
+  // meg felbukkanhatna/lathato maradhatna a mar sotet kepernyon.
+  let guyTimers = [];
+
+  // A #ending-guy/#overworld-ending-guy alapszabalyanak van egy `transition:
+  // left`-je (a beuszo belepeshez, ld. style.css .guy-visible) -- ha az
+  // eltunes VEGEN egyszeruen levesszuk a "guy-visible" osztalyt, ez a
+  // tranzicio a hazameneteli (50px -> -240px) valtozast is animalna, ami
+  // egy jobbrol-balra csuszasnak latszik a felhasznalo szerint, pedig az
+  // eltunesnek egyaltalan nem szabadna mozdulnia. Ezert a tranziciot
+  // ideiglenesen kikapcsoljuk (inline `transition:none`, egy reflow-val
+  // kikenyszeritve), mielott az osztalyt levesszuk, majd visszaallitjuk.
+  function hideGuyInstantly(imgEl) {
+    imgEl.style.transition = "none";
+    imgEl.classList.remove("guy-visible");
+    void imgEl.offsetWidth; // reflow kikenyszeritese, hogy a transition:none tenyleg ervenyesuljon
+    imgEl.style.transition = "";
+  }
+
+  function cancelGuyGag(imgEl) {
+    guyTimers.forEach(clearTimeout);
+    guyTimers = [];
+    if (imgEl) hideGuyInstantly(imgEl);
+  }
+
+  function playGuyGag(imgEl) {
+    if (!imgEl) return;
+    cancelGuyGag(imgEl);
+    guyTimers.push(
+      setTimeout(() => {
+        imgEl.src = "assets/sprites/disappearing-guy-01.png";
+        imgEl.classList.add("guy-visible");
+        guyTimers.push(
+          setTimeout(() => {
+            Engine.playSound("helloEverybody");
+            guyTimers.push(
+              setTimeout(() => {
+                // A felhasznalo kerese szerint az eltunes-animacio mar NEM mozdul
+                // el semerre -- csak a kockak valtakoznak helyben.
+                imgEl.src = "assets/sprites/disappearing-guy-02.png";
+                guyTimers.push(
+                  setTimeout(() => {
+                    imgEl.src = "assets/sprites/disappearing-guy-03.png";
+                    guyTimers.push(setTimeout(() => hideGuyInstantly(imgEl), 20));
+                  }, 20)
+                );
+              }, 1000) // a "Hello-Everybody-My-Name-Is.wav" kb. ekkora hosszaig fut le
+            );
+          }, 100) // a felhasznalo kerese szerint 200ms-el korabban, mint eredetileg (500ms)
+        );
+      }, 9000)
+    );
+  }
+
   async function playFinalCinematic(domTarget, cfg, onDone, onHeadingShown) {
     domTarget.overlay.classList.remove("ending-blackout");
-    domTarget.heading.textContent = "";
+    stopDiscoHeading(domTarget.heading);
+    cancelGuyGag(domTarget.guy);
+    domTarget.heading.innerHTML = "";
     domTarget.finalLine.textContent = "";
     domTarget.overlay.classList.add("ending-visible");
     Engine.playSound("won");
     await wait(1400); // a CSS opacity-atmenet hossza, ld. style.css
-    domTarget.heading.textContent = cfg.heading;
+    renderDiscoHeading(domTarget.heading, cfg.headingTop, cfg.headingMain);
     Engine.playSound("splat");
+    playGuyGag(domTarget.guy);
     if (onHeadingShown) onHeadingShown();
     await wait(1200); // "hatasszunet"
     await typeText(null, cfg.finalLine, null, null, {
       dialogueText: domTarget.finalLine,
       continueHint: domTarget.continueHint,
     });
+    // A diszko-effektet ES a guy-poent is MEG A feketebe-valtas ELOTT le
+    // kell allitani -- a szoveg szine szandekosan fekete a blackout alatt
+    // (ld. #ending-overlay CSS-megjegyzes: "elnyeli magat" a fekete
+    // hatterrel), egy felejtett szines span vagy lathato figura ezt
+    // elrontana.
+    stopDiscoHeading(domTarget.heading);
+    cancelGuyGag(domTarget.guy);
     domTarget.overlay.classList.add("ending-blackout");
     Engine.playSound("step2");
-    await wait(1200);
+    await wait(600);
     if (onDone) onDone();
   }
 
