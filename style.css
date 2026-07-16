@@ -179,6 +179,30 @@ h1 {
   pointer-events: none;
 }
 
+/* Vilag-terben (a hatterrel egyutt mozgo) szoveg-buborek -- ld.
+   Overworld.addWorldText()/spawnDecorations() (js/overworld.js). A
+   bal-felso sarok a JS-ben beallitott left/top (xFrac*worldW/yFrac*stageH),
+   a `translate(-50%, -100%)` allitja also-kozeppontossa a horgonyzast,
+   UGYANUGY, mint a sprite-oknal/dekoracioknal (ld. positionSprite()) --
+   igy akkor is kozepen marad a szoveg a horgonyponton, ha a szoveg
+   (pl. gepeles kozben) kozben novekszik, mert a szazalekos transform
+   mindig az AKTUALIS (mar megnott) szelesseghez igazodik, nincs JS-beli
+   ujraszamolas szukseg hozza. */
+.overworld-world-text {
+  position: absolute;
+  box-sizing: border-box;
+  transform: translate(-50%, -100%);
+  /*background: #000;*/
+  color: #fff;
+  padding: 4px 6px;
+  font-size: 5px;
+  line-height: 1.7;
+  text-align: left;
+  white-space: normal;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 /* Kovető NPC (pl. Feki) -- top:0/left:0 + JS-beli translate() pozicionalja
    (mint a jatekost), nem left/top px-ekkel (mint a statikus dekoraciokat),
    mert folyamatosan mozog. A scaleX(-1)-et (iranyvaltas) is a JS transformja

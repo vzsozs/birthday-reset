@@ -496,6 +496,93 @@ window.addEventListener("DOMContentLoaded", async () => {
     giftPrompt: "▶ Enter: odaszólsz Caine-nek",
   };
 
+  // --- "Roblox baráti kérelem" easter egg (1. zona folyoso-szakasza) ------
+  // A felhasznalo kerese szerint egy uj, AUTOMATIKUS hotspot ("roblox"), 300
+  // pixellel jobbra a "minecraft0" nema-beszolas hotspottol (a "* Minecraft...
+  // mi más :)" felirat helyetol, ld. lejjebb a fo ciklusban) -- odaerve
+  // egyszeri, animalt jelenet indul (ld. triggerRobloxScene()): megjelenik a
+  // roblox_character.png, mellette rovid "friend request?" szoveg, majd az
+  // lecserelodik egy hosszabb szovegre, ami onnantol VEGLEG (scene-
+  // ujratoltesek -- pl. masik jelenetbe lepes es visszaterés -- utan is) a
+  // helyen marad, ld. buildCorridorScene() `robloxTriggered` aga. Minden
+  // xFrac/yFrac/meret itt, egy helyen konnyen hangolhato/pontosithato a
+  // tenyleges hatterhez kepest -- a kezdeti ertekek szemre vannak belőve.
+  const ROBLOX_HOTSPOT_XFRAC = DOOR_FRACTIONS[0] - 0.13 + 685 / CORRIDOR_TOTAL_WIDTH;
+  const ROBLOX_HOTSPOT_YFRAC = 0.8;
+  // roblox_character.png eredetileg 29x29px -- itt nagyobb, jol lathato
+  // meretben jelenik meg (nem 1:1-ben).
+  const ROBLOX_CHARACTER_SIZE = { w: 29, h: 29 };
+  const ROBLOX_CHARACTER_XFRAC = ROBLOX_HOTSPOT_XFRAC;
+  const ROBLOX_CHARACTER_YFRAC = 0.619;
+  // A szoveg-buborek a karakter mellett/felett -- kulon xFrac/yFrac-cal
+  // fuggetlenul allithato a karakter poziciojatol.
+  const ROBLOX_TEXT_XFRAC = ROBLOX_HOTSPOT_XFRAC + 75 / CORRIDOR_TOTAL_WIDTH;
+  const ROBLOX_TEXT_YFRAC = 0.612;
+  // A felhasznalo kerese szerint a szoveg-doboz FIX meretu (nem a
+  // szoveghez igazodo, novekvo doboz) -- ld. Overworld.addWorldText()
+  // width/height dokumentaciojat.
+  const ROBLOX_TEXT_WIDTH = 120; // px
+  const ROBLOX_TEXT_HEIGHT = 30; // px
+  const ROBLOX_SHORT_TEXT = "friend request?";
+  const ROBLOX_SHORT_TEXT_HOLD_MS = 3200; // mennyi ideig all a rovid szoveg, mielott lecserelodik
+  const ROBLOX_LONG_TEXT = "Would you like to send a friend request to NPC_01? Cost: 100 Robux.";
+  const ROBLOX_TYPE_SPEED_MS = 24; // ugyanaz az utem, mint a tobbi gepelos szovegnel (ld. js/battle.js typeText())
+
+  function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  // Karakterenkent "begepeli" a szoveget egy mar letezo vilag-szoveg-
+  // buborekba (Overworld.addWorldText()-tel mar letrehozva) -- nincs hangja,
+  // mert ez egy hatter-diszites, nem modalis dialogus (ld. a felhasznalo
+  // kerese szerint a mobilos gepeles-hang-kikapcsolast is, CLAUDE.md).
+  function typeWorldTextInto(id, fullText) {
+    return new Promise((resolve) => {
+      let i = 0;
+      function step() {
+        i++;
+        Overworld.updateWorldText(id, fullText.slice(0, i));
+        if (i < fullText.length) {
+          setTimeout(step, ROBLOX_TYPE_SPEED_MS);
+        } else {
+          resolve();
+        }
+      }
+      step();
+    });
+  }
+
+  // A jatekos mozgasa NEM all meg ehhez a jelenethez -- ez egy hatterbe
+  // agyazott "easter egg", nem egy modalis cutscene, ld. a felhasznalo
+  // kerese szerint ("a háttér része és folyamatosan követnie kell a háttér
+  // elmozdulását"). `robloxTriggered` MAR A JELENET ELEJEN igazra valt (nem
+  // csak a vegen), hogy ha a jatekos idokozben elhagyna ezt a jelenetet
+  // (pl. bemenne az 1. zona ajtajan), a kovetkezo buildCorridorScene()-hivas
+  // mar a VEGLEGES, lezart allapotot (kep + hosszu szoveg) epitse fel
+  // dekoraciokent, ne az animaciot inditsa ujra elolrol.
+  async function triggerRobloxScene() {
+    robloxTriggered = true;
+    Overworld.addSprite("roblox-character", {
+      src: "assets/sprites/roblox_character.png",
+      xFrac: ROBLOX_CHARACTER_XFRAC,
+      yFrac: ROBLOX_CHARACTER_YFRAC,
+      w: ROBLOX_CHARACTER_SIZE.w,
+      h: ROBLOX_CHARACTER_SIZE.h,
+      noFloat: true,
+    });
+    Overworld.addWorldText("roblox-text", {
+      text: "",
+      xFrac: ROBLOX_TEXT_XFRAC,
+      yFrac: ROBLOX_TEXT_YFRAC,
+      width: ROBLOX_TEXT_WIDTH,
+      height: ROBLOX_TEXT_HEIGHT,
+    });
+    await typeWorldTextInto("roblox-text", ROBLOX_SHORT_TEXT);
+    await wait(ROBLOX_SHORT_TEXT_HOLD_MS);
+    Overworld.updateWorldText("roblox-text", "");
+    await typeWorldTextInto("roblox-text", ROBLOX_LONG_TEXT);
+  }
+
   // Caine (2. zona) bevezeto beszelgetese -- tobb, valtakozo beszelos sor,
   // ld. showOverworldDialogue()/KONNYLENY_REUNION_LINES mintajat. Caine
   // sorai a placeholder portrejat kapjak (meg mindig nincs vegleges "_talk"
@@ -888,6 +975,38 @@ window.addEventListener("DOMContentLoaded", async () => {
           prompt: layout ? layout.minecraftPrompt : "* Minecraft... mi más :)",
         });
       }
+      // "Roblox baráti kérelem" easter egg -- kizarolag az 1. zona folyoso-
+      // szakaszan (ld. ROBLOX_* konstansok/triggerRobloxScene() fentebb).
+      // Amig nincs kivaltva, egy AUTOMATIKUS hotspot varja a jatekost; utana
+      // (robloxTriggered) mar csak a jelenet VEGLEGES, statikus allapota
+      // (kep + hosszu szoveg) all a helyen, dekoraciokent.
+      if (i === 0) {
+        if (robloxTriggered) {
+          decorations.push({
+            xFrac: ROBLOX_CHARACTER_XFRAC,
+            yFrac: ROBLOX_CHARACTER_YFRAC,
+            w: ROBLOX_CHARACTER_SIZE.w,
+            h: ROBLOX_CHARACTER_SIZE.h,
+            src: "assets/sprites/roblox_character.png",
+          });
+          decorations.push({
+            xFrac: ROBLOX_TEXT_XFRAC,
+            yFrac: ROBLOX_TEXT_YFRAC,
+            width: ROBLOX_TEXT_WIDTH,
+            height: ROBLOX_TEXT_HEIGHT,
+            text: ROBLOX_LONG_TEXT,
+          });
+        } else {
+          hotspots.push({
+            id: "roblox",
+            xFrac: ROBLOX_HOTSPOT_XFRAC,
+            yFrac: ROBLOX_HOTSPOT_YFRAC,
+            radius: 45,
+            auto: true,
+            onInteract: triggerRobloxScene,
+          });
+        }
+      }
       // A felhasznalo kerese szerint egy nema "COMING SOON..." felirat all
       // az utolso (Minecraft-temaju) zona folyoso-szakaszan is -- FUGGETLENUL
       // a companionChat-tol (a fenti `if (chat[0])` blokktol), mert a
@@ -1125,6 +1244,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   // (BUBBLE_REUNION_LINES).
   let zone2Defeated = false;
   let zone2Spared = false;
+
+  // A "roblox" easter-egg hotspot (1. zona folyoso-szakasza) mar egyszer
+  // lefutott -- ld. triggerRobloxScene()/ROBLOX_* konstansok fentebb. Igazra
+  // valtva buildCorridorScene() mar nem a hotspotot, hanem a jelenet VEGLEGES
+  // allapotat (kep + hosszu szoveg) epiti fel statikus dekoraciokent.
+  let robloxTriggered = false;
 
   // A SPARE utan visszatero jatekost fogado, egyszeri "viszontlatas"-jelenet
   // -- ld. buildIsaacRoomScene() isaac-room-enemy hotspotjat. Valtakozo

@@ -51,12 +51,25 @@
  *     fut le. A hivo felelossege, hogy Overworld.pause()/resume()-t
  *     hasznaljon, ha a mozgast fel kell fuggeszteni a interakcio idejere.
  *
- * Decoration = { xFrac, yFrac, w, h?, frames:[...] | src, frameMs? }
+ * Decoration = { xFrac, yFrac, w, h?, frames:[...] | src, frameMs? } |
+ *               { xFrac, yFrac, text, width?, height? }
  *   - tisztan vizualis, nem interaktiv elem (pl. macska az ablakparkanyon).
  *     xFrac/yFrac/w/h ugyanugy mukodik, mint a hotspot sprite-jainal. Ha
  *     `frames` tobb kepet tartalmaz, korkoros animaciokent valtakoznak
  *     `frameMs`-enkent (alapertelmezett 220ms); egyetlen kephez eleg az
- *     `src` mezo.
+ *     `src` mezo. HA a bejegyzesnek `text` mezoje van kep helyett, egy
+ *     allando, vilag-terben pozicionalt, FIX MERETU SZOVEG-buborek jon letre
+ *     (a `.overworld-world-text` CSS-osztallyal, ld. style.css) `src`/`w`/`h`
+ *     nelkul -- `width`/`height` (px, opcionalis) a doboz fix merete (nem
+ *     csak egy felso korlat: a doboz MINDIG ekkora, fuggetlenul a szoveg
+ *     hosszatol, hogy pl. gepeles kozben ne "nojon"/rendezodjon at). A
+ *     szoveg a doboz BAL szelehez igazodik (ld. `.overworld-world-text`
+ *     `text-align:left`-je). Ezt hasznalja pl. a roblox-easter-egg (ld.
+ *     js/main.js), hogy a
+ *     jelenet VEGLEGES allapota (kep + zaro szoveg) egy scene-ujratoltes
+ *     (pl. masik jelenetbe lepes es visszaterés) utan is a helyen maradjon
+ *     -- az addWorldText()-tel (lejjebb) indított ELSO, animalt lejatszas
+ *     ugyanis a dynamicTexts-szel egyutt torlodik minden start()-nal.
  *
  * scene.follower = { spawn:{xFrac,yFrac}|fn, w, h?, sitFrames:[...], runFrames:[...], jumpFrames:[...] }
  *   - opcionalis, egyetlen "kovető" NPC (pl. Feki, a macska a folyoson --
@@ -106,6 +119,17 @@
  * jelenet kozben scene-valtas (start()) tortent -- a `dynamicSprites` terkep
  * minden start()-nal kiurul.
  *
+ * Overworld.addWorldText(id, {text, xFrac, yFrac, width?, height?}) /
+ * Overworld.updateWorldText(id, text) / Overworld.removeWorldText(id) --
+ * az addSprite()-trio SZOVEGES parja: egy vilag-terben (a hatterrel egyutt
+ * mozgo) szoveg-buborekot hoz letre/frissit/tuntet el, `.overworld-world-text`
+ * CSS-osztallyal. Ugyanaz az also-kozeppontos (xFrac/yFrac) horgonyzas, mint
+ * a sprite-oknal. `updateWorldText()` egyszeruen lecsereli a `textContent`-et
+ * (nincs sajat gepelos animacioja -- ha karakterenkenti "gepeles" kell egy
+ * ilyen szoveghez, a hivo felelossege idozitve, reszlet-reszlet hivogatni,
+ * ld. js/main.js roblox-easter-egg-jet). Ugyanugy `dynamicTexts`-ben tarolva
+ * es minden start()-nal kiurulve, mint a dynamicSprites.
+ *
  * Nem nyul a battle.js/engine.js-hez.
  */
 // Fejlesztoi debug-kapcsolok: allitsd true-ra barmelyiket, hogy a
@@ -138,6 +162,9 @@ const Overworld = (() => {
   // ld. addSprite()/updateSprite()/removeSprite() a fajl elejen levo
   // dokumentacioban.
   let dynamicSprites = {};
+  // Ugyanez, de szoveg-buborekokhoz (<div>) -- ld. addWorldText()/
+  // updateWorldText()/removeWorldText().
+  let dynamicTexts = {};
 
   // Kovető NPC (pl. Feki) allapota -- ld. a fajl elejen a "scene.follower"
   // dokumentaciot es a spawnFollower()/updateFollower() fuggvenyeket.
@@ -377,12 +404,58 @@ const Overworld = (() => {
     }
   }
 
+  // Ld. a fajl elejen levo dokumentaciot -- az addSprite()-trio szoveges
+  // parja. `opts.width`/`opts.height` (opcionalis, px) a doboz FIX merete
+  // (nem csak felso korlat) -- hianyaban a buborek a szoveghez igazodik.
+  function addWorldText(id, opts) {
+    removeWorldText(id);
+    const div = document.createElement("div");
+    div.className = "overworld-world-text";
+    if (opts.width) div.style.width = opts.width + "px";
+    if (opts.height) div.style.height = opts.height + "px";
+    div.textContent = opts.text || "";
+    div.style.left = opts.xFrac * worldW + "px";
+    div.style.top = opts.yFrac * stageH + "px";
+    dom.npcLayer.appendChild(div);
+    dynamicTexts[id] = div;
+    return div;
+  }
+
+  function updateWorldText(id, text) {
+    const div = dynamicTexts[id];
+    if (!div) return;
+    div.textContent = text;
+  }
+
+  function removeWorldText(id) {
+    if (dynamicTexts[id]) {
+      dynamicTexts[id].remove();
+      delete dynamicTexts[id];
+    }
+  }
+
   function spawnDecorations() {
     decorEls.forEach((el) => el.remove());
     decorEls = [];
     decorTimers.forEach((t) => clearInterval(t));
     decorTimers = [];
     (scene.decorations || []).forEach((d) => {
+      // Szoveges dekoracio (ld. Decoration dokumentacio a fajl elejen) --
+      // kep helyett egy allando `.overworld-world-text` buborek, ugyanazzal
+      // az anchor-logikaval (bal-felso sarok = xFrac*worldW/yFrac*stageH),
+      // mint az addWorldText()-tel letrehozott, animalt valtozata.
+      if (d.text != null) {
+        const div = document.createElement("div");
+        div.className = "overworld-world-text";
+        if (d.width) div.style.width = d.width + "px";
+        if (d.height) div.style.height = d.height + "px";
+        div.textContent = d.text;
+        div.style.left = d.xFrac * worldW + "px";
+        div.style.top = d.yFrac * stageH + "px";
+        dom.npcLayer.appendChild(div);
+        decorEls.push(div);
+        return;
+      }
       const frames = d.frames || [d.src];
       const w = d.w;
       const h = d.h || d.w;
@@ -778,6 +851,8 @@ const Overworld = (() => {
     // majd kiuritjuk a terkepet.
     Object.keys(dynamicSprites).forEach((id) => dynamicSprites[id].remove());
     dynamicSprites = {};
+    Object.keys(dynamicTexts).forEach((id) => dynamicTexts[id].remove());
+    dynamicTexts = {};
     facing = "down";
     walkFrame = 0;
     walkTimer = 0;
@@ -1072,5 +1147,8 @@ const Overworld = (() => {
     addSprite,
     updateSprite,
     removeSprite,
+    addWorldText,
+    updateWorldText,
+    removeWorldText,
   };
 })();
